@@ -1,0 +1,101 @@
+<div class="min-h-screen bg-base-200 flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4 shadow-lg">
+        <svg class="w-8 h-8 text-primary-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold">Create Account</h1>
+      <p class="text-base-content/60 text-sm mt-1">SSV Document Management System</p>
+    </div>
+
+    @if (success()) {
+      <div class="card bg-base-100 shadow-xl border border-base-300">
+        <div class="card-body items-center text-center gap-4">
+          <div class="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center">
+            <svg class="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <h2 class="text-lg font-bold">Account Created</h2>
+          <p class="text-base-content/70 text-sm">
+            Your account has been created and is pending administrator activation.
+            You will be able to log in once an admin approves your account.
+          </p>
+          <a routerLink="/login" class="btn btn-primary w-full">Back to Login</a>
+        </div>
+      </div>
+    } @else {
+      <div class="card bg-base-100 shadow-xl border border-base-300">
+        <div class="card-body gap-4">
+
+          @if (error()) {
+            <div class="alert alert-error text-sm py-2">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {{ error() }}
+            </div>
+          }
+
+          <div class="grid grid-cols-1 gap-4">
+            <div class="form-control">
+              <label class="label"><span class="label-text font-medium">Full Name</span></label>
+              <input type="text" class="input input-bordered"
+                     placeholder="John Silva" [(ngModel)]="form.fullName" />
+            </div>
+
+            <div class="form-control">
+              <label class="label"><span class="label-text font-medium">Company / Organization</span></label>
+              <input type="text" class="input input-bordered"
+                     placeholder="Vendor Company Ltd" [(ngModel)]="form.company" />
+            </div>
+
+            <div class="form-control">
+              <label class="label"><span class="label-text font-medium">Email Address</span></label>
+              <input type="email" class="input input-bordered"
+                     placeholder="you@company.com" [(ngModel)]="form.email"
+                     autocomplete="email" />
+            </div>
+
+            <div class="form-control">
+              <label class="label"><span class="label-text font-medium">Password</span></label>
+              <input [type]="showPass() ? 'text' : 'password'" class="input input-bordered"
+                     placeholder="Min. 8 characters" [(ngModel)]="form.password" />
+            </div>
+
+            <div class="form-control">
+              <label class="label"><span class="label-text font-medium">Confirm Password</span></label>
+              <input [type]="showPass() ? 'text' : 'password'" class="input input-bordered"
+                     placeholder="Repeat password" [(ngModel)]="form.confirmPassword" />
+            </div>
+
+            <label class="label cursor-pointer justify-start gap-2">
+              <input type="checkbox" class="checkbox checkbox-xs"
+                     [checked]="showPass()" (change)="showPass.set(!showPass())" />
+              <span class="label-text text-xs">Show passwords</span>
+            </label>
+          </div>
+
+          <button
+            class="btn btn-primary w-full mt-2"
+            (click)="register()"
+            [disabled]="loading()"
+          >
+            @if (loading()) {
+              <span class="loading loading-spinner loading-sm"></span>
+            }
+            Create Account
+          </button>
+
+          <div class="divider text-xs text-base-content/40">Already have an account?</div>
+          <a routerLink="/login" class="btn btn-outline w-full btn-sm">Sign In</a>
+        </div>
+      </div>
+    }
+  </div>
+</div>

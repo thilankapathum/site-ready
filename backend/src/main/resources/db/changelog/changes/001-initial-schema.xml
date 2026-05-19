@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="001-enums" author="ssv-dms">
+        <sql>
+            CREATE TYPE user_role AS ENUM ('VENDOR', 'ENGINEER', 'ADMIN');
+            CREATE TYPE report_status AS ENUM (
+            'PENDING_REVIEW',
+            'APPROVED',
+            'CONDITIONALLY_APPROVED',
+            'REJECTED',
+            'RESUBMISSION_REQUIRED'
+            );
+            CREATE TYPE responsibility AS ENUM ('VENDOR', 'ENGINEER', 'CLOSED');
+            CREATE TYPE audit_action AS ENUM (
+            'UPLOADED',
+            'ASSIGNED',
+            'APPROVED',
+            'CONDITIONALLY_APPROVED',
+            'REJECTED',
+            'RESUBMISSION_REQUIRED',
+            'DOWNLOADED',
+            'USER_CREATED',
+            'ROLE_CHANGED',
+            'PASSWORD_CHANGED'
+            );
+        </sql>
+        <rollback>
+            <sql>
+                DROP TYPE IF EXISTS audit_action;
+                DROP TYPE IF EXISTS responsibility;
+                DROP TYPE IF EXISTS report_status;
+                DROP TYPE IF EXISTS user_role;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="001-users" author="ssv-dms">
+        <createTable tableName="users">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="password_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="full_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="company" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="user_role" defaultValue="VENDOR">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMPTZ" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMPTZ" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="users" indexName="idx_users_email">
+            <column name="email"/>
+        </createIndex>
+        <createIndex tableName="users" indexName="idx_users_role">
+            <column name="role"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="001-reports" author="ssv-dms">
+        <createTable tableName="reports">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- Parsed from filename: KY0001_4G-upgrade-26 -->
+            <column name="site_id" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Composite natural key: site_id + "_" + project -->
+            <column name="naming_key" type="VARCHAR(320)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="assigned_engineer_id" type="UUID">
+                <!-- Nullable: vendor may select "unassigned" -->
+                <constraints nullable="true"
+                             foreignKeyName="fk_report_engineer"
+                             references="users(id)"/>
+            </column>
+            <column name="created_by_vendor_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_report_vendor"
+                             references="users(id)"/>
+            </column>
+            <column name="current_status" type="report_status" defaultValue="PENDING_REVIEW">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_version" type="INT" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_responsibility" type="responsibility" defaultValue="ENGINEER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMPTZ" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMPTZ" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="reports" indexName="idx_reports_naming_key">
+            <column name="naming_key"/>
+        </createIndex>
+        <createIndex tableName="reports" indexName="idx_reports_engineer">
+            <column name="assigned_engineer_id"/>
+        </createIndex>
+        <createIndex tableName="reports" indexName="idx_reports_vendor">
+            <column name="created_by_vendor_id"/>
+        </createIndex>
+        <createIndex tableName="reports" indexName="idx_reports_status">
+            <column name="current_status"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="001-report-versions" author="ssv-dms">
+        <createTable tableName="report_versions">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="report_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_version_report"
+                             references="reports(id)"/>
+            </column>
+            <column name="version_number" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Original filename as uploaded by vendor/engineer -->
+            <column name="original_filename" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- MinIO object key for original (pre-stamp) file -->
+            <column name="original_storage_key" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- MinIO object key for stamped + signed file served to users -->
+            <column name="stamped_storage_key" type="VARCHAR(1024)">
+                <constraints nullable="true"/>
+            </column>
+            <!-- SHA-256 of original bytes — used for tamper verification -->
+            <column name="sha256_hash" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- PAdES signature reference -->
+            <column name="pades_signature_id" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="uploaded_by" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_version_uploader"
+                             references="users(id)"/>
+            </column>
+            <column name="uploaded_at" type="TIMESTAMPTZ" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Status at the time this version was created -->
+            <column name="status_at_upload" type="report_status">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Status set by engineer after review (null until reviewed) -->
+            <column name="review_status" type="report_status">
+                <constraints nullable="true"/>
+            </column>
+            <column name="reviewer_notes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <!-- For CONDITIONALLY_APPROVED: the list of conditions -->
+            <column name="conditions" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="reviewed_by" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_version_reviewer"
+                             references="users(id)"/>
+            </column>
+            <column name="reviewed_at" type="TIMESTAMPTZ">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="report_versions"
+                             columnNames="report_id,version_number"
+                             constraintName="uq_report_version"/>
+
+        <createIndex tableName="report_versions" indexName="idx_version_report">
+            <column name="report_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="001-audit-log" author="ssv-dms">
+        <createTable tableName="audit_log">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="report_version_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_audit_version"
+                             references="report_versions(id)"/>
+            </column>
+            <column name="actor_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_audit_actor"
+                             references="users(id)"/>
+            </column>
+            <column name="action" type="audit_action">
+                <constraints nullable="false"/>
+            </column>
+            <!-- JSONB for flexible additional metadata -->
+            <column name="metadata" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ip_address" type="VARCHAR(45)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="occurred_at" type="TIMESTAMPTZ" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="audit_log" indexName="idx_audit_version">
+            <column name="report_version_id"/>
+        </createIndex>
+        <createIndex tableName="audit_log" indexName="idx_audit_actor">
+            <column name="actor_id"/>
+        </createIndex>
+        <createIndex tableName="audit_log" indexName="idx_audit_occurred">
+            <column name="occurred_at"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Seed a default admin user (password: Admin@123 — CHANGE IMMEDIATELY) -->
+    <changeSet id="001-seed-admin" author="ssv-dms">
+        <sql>
+            INSERT INTO users (email, password_hash, full_name, company, role, active)
+            VALUES (
+            'admin@ssv-dms.local',
+            '$2a$12$K9ePcI5pFmZyKYG3qdBuweRpNB7VpZ5bEuKcInX7qvDWyLQqBe5yO',
+            'System Administrator',
+            'Telecom',
+            'ADMIN',
+            true
+            );
+        </sql>
+        <rollback>
+            <sql>DELETE FROM users WHERE email = 'admin@ssv-dms.local';</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

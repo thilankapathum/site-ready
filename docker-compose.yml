@@ -1,0 +1,134 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: ssv-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+#    depends_on:
+#      - api
+#      - frontend
+    networks:
+      - ssv-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend/site-ready
+      dockerfile: Dockerfile
+    container_name: ssv-frontend
+    networks:
+      - ssv-net
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ssv-api
+    environment:
+      - SPRING_DATASOURCE_URL=${DB_URL}
+#      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ssvdms
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+#      - SPRING_DATASOURCE_USERNAME=ssvuser
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRY_MS=${JWT_EXPIRY_MS}
+      - SIGNING_KEYSTORE_PATH=/app/keystore/ssv-signing.p12
+      - SIGNING_KEYSTORE_PASSWORD=${SIGNING_KEYSTORE_PASSWORD}
+      - APP_BASE_URL=${APP_BASE_URL:-http://localhost}
+    volumes:
+      - ./keystore:/app/keystore:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - ssv-net
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: ssv-postgres
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ssv-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ssvuser -d ssvdms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:9.15.0
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'True'
+
+    #      PGADMIN_CONFIG_FORCE_SCRIPT_NAME: "'/pgadmin'"
+    #      PGADMIN_CONFIG_PROXY_X_HOST: "'${DOMAIN_IP}'"
+    #      PGADMIN_CONFIG_PROXY_X_PORT: "'${FRONTEND_PORT}'"
+    ports:
+      - "5433:80"
+    #    expose:
+    #      - "80"
+    networks:
+      - ssv-net
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    healthcheck:
+      test: [ "CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost/misc/ping').read()" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  minio:
+    image: minio/minio:latest
+    container_name: ssv-minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9001:9001"   # MinIO console (internal network access)
+      - "9000:9000"
+    networks:
+      - ssv-net
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  minio_data:
+  pgadmin:
+
+networks:
+  ssv-net:
+    driver: bridge

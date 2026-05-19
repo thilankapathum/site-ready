@@ -1,0 +1,150 @@
+<div class="space-y-5">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold">Search & Export</h1>
+      <p class="text-base-content/60 text-sm mt-1">Find, browse, and export SSV reports</p>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-outline btn-sm gap-1" (click)="exportCsv()">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+        </svg>
+        CSV
+      </button>
+      <button class="btn btn-success btn-sm gap-1 text-white" (click)="exportExcel()">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+        </svg>
+        Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card bg-base-100 border border-base-300 shadow-sm">
+    <div class="card-body p-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="form-control">
+          <label class="label py-1"><span class="label-text text-xs font-medium">Site ID</span></label>
+          <input type="text" class="input input-bordered input-sm font-mono"
+                 placeholder="e.g. KY0001" [(ngModel)]="filters.siteId" (keydown.enter)="search()" />
+        </div>
+        <div class="form-control">
+          <label class="label py-1"><span class="label-text text-xs font-medium">Project</span></label>
+          <input type="text" class="input input-bordered input-sm"
+                 placeholder="e.g. 4G-upgrade-26" [(ngModel)]="filters.project" (keydown.enter)="search()" />
+        </div>
+        <div class="form-control">
+          <label class="label py-1"><span class="label-text text-xs font-medium">Status</span></label>
+          <select class="select select-bordered select-sm" [(ngModel)]="filters.status">
+            <option value="">All statuses</option>
+            <option value="PENDING_REVIEW">Pending Review</option>
+            <option value="APPROVED">Approved</option>
+            <option value="CONDITIONALLY_APPROVED">Conditionally Approved</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="RESUBMISSION_REQUIRED">Resubmission Required</option>
+          </select>
+        </div>
+        <div class="form-control">
+          <label class="label py-1"><span class="label-text text-xs font-medium">Engineer</span></label>
+          <select class="select select-bordered select-sm" [(ngModel)]="filters.engineerId">
+            <option value="">All engineers</option>
+            @for (e of engineers(); track e.userId) {
+              <option [value]="e.userId">{{ e.fullName }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button class="btn btn-primary btn-sm gap-1" (click)="search()" [disabled]="loading()">
+          @if (loading()) { <span class="loading loading-spinner loading-xs"></span> }
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          Search
+        </button>
+        <button class="btn btn-ghost btn-sm" (click)="reset()">Reset</button>
+        <span class="ml-auto text-xs text-base-content/50 self-center">
+              {{ total() }} result{{ total() !== 1 ? 's' : '' }}
+            </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  @if (loading()) {
+    <div class="flex justify-center py-16">
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+  } @else if (reports().length === 0) {
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body items-center text-center py-14">
+        <svg class="w-12 h-12 text-base-content/20 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <p class="text-sm text-base-content/50">No reports match your search criteria.</p>
+      </div>
+    </div>
+  } @else {
+    <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="table table-sm">
+          <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/60">
+          <tr>
+            <th>Site / Project</th>
+            <th>Version</th>
+            <th>Status</th>
+            <th>Engineer</th>
+            <th>Vendor</th>
+            <th>Updated</th>
+            <th>Hash</th>
+            <th></th>
+          </tr>
+          </thead>
+          <tbody>
+            @for (r of reports(); track r.id) {
+              <tr class="hover:bg-base-50">
+                <td>
+                  <p class="font-mono font-medium text-sm">{{ r.siteId }}</p>
+                  <p class="text-xs text-base-content/60">{{ r.project }}</p>
+                </td>
+                <td><span class="badge badge-ghost badge-sm font-mono">V{{ r.currentVersion }}</span></td>
+                <td><span [class]="badge(r.currentStatus) + ' badge-sm whitespace-nowrap'">{{ label(r.currentStatus) }}</span></td>
+                <td class="text-xs">{{ r.assignedEngineerName ?? '—' }}</td>
+                <td class="text-xs">{{ r.vendorName }}</td>
+                <td class="text-xs text-base-content/60 whitespace-nowrap">{{ formatDate(r.updatedAt) }}</td>
+                <td>
+                  @if (r.sha256Hash) {
+                    <span class="hash-display text-base-content/50" [title]="r.sha256Hash">
+                          {{ r.sha256Hash.substring(0, 12) }}…
+                        </span>
+                  }
+                </td>
+                <td>
+                  <button class="btn btn-ghost btn-xs gap-1" (click)="download(r)">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    PDF
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages() > 1) {
+        <div class="flex items-center justify-between px-4 py-3 border-t border-base-200">
+          <button class="btn btn-ghost btn-sm" [disabled]="page() === 0" (click)="prevPage()">← Prev</button>
+          <span class="text-sm text-base-content/60">Page {{ page() + 1 }} of {{ totalPages() }}</span>
+          <button class="btn btn-ghost btn-sm" [disabled]="page() >= totalPages() - 1" (click)="nextPage()">Next →</button>
+        </div>
+      }
+    </div>
+  }
+</div>

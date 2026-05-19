@@ -1,0 +1,96 @@
+<div class="space-y-5">
+  <div>
+    <h1 class="text-2xl font-bold">User Management</h1>
+    <p class="text-base-content/60 text-sm mt-1">
+      Activate accounts and assign roles. New accounts are inactive by default.
+    </p>
+  </div>
+
+  <!-- Legend -->
+  <div class="flex flex-wrap gap-3 text-xs text-base-content/60">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-warning inline-block"></span> Pending activation
+        </span>
+    <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-success inline-block"></span> Active
+        </span>
+    <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-error inline-block"></span> Deactivated
+        </span>
+  </div>
+
+  @if (loading()) {
+    <div class="flex justify-center py-16">
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+  } @else {
+    <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/60">
+          <tr>
+            <th>User</th>
+            <th>Company</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+          </thead>
+          <tbody>
+            @for (u of users(); track u.userId) {
+              <tr class="hover:bg-base-50">
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="avatar placeholder">
+                      <div class="rounded-full w-8 h-8 text-xs font-bold"
+                           [class]="u.active ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/50'">
+                        <span>{{ initials(u.fullName) }}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p class="font-medium text-sm">{{ u.fullName }}</p>
+                      <p class="text-xs text-base-content/60">{{ u.email }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-sm">{{ u.message }}</td>
+                <td>
+                  <select class="select select-bordered select-xs font-medium"
+                          [ngModel]="u.role"
+                          (ngModelChange)="changeRole(u, $event)">
+                    <option value="VENDOR">Vendor</option>
+                    <option value="ENGINEER">Engineer</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </td>
+                <td>
+                  @if (u.active) {
+                    <span class="badge badge-success badge-sm badge-outline">Active</span>
+                  } @else {
+                    <span class="badge badge-warning badge-sm badge-outline">Inactive</span>
+                  }
+                </td>
+                <td>
+                  <div class="flex gap-1">
+                    @if (!u.active) {
+                      <button class="btn btn-success btn-xs text-white"
+                              (click)="toggleActive(u, true)">Activate</button>
+                    } @else {
+                      <button class="btn btn-error btn-xs btn-outline"
+                              (click)="toggleActive(u, false)">Deactivate</button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="text-xs text-base-content/40 text-center">
+      {{ totalUsers() }} user{{ totalUsers() !== 1 ? 's' : '' }} total ·
+      {{ pendingUsers() }} pending activation
+    </div>
+  }
+</div>

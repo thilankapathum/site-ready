@@ -1,0 +1,68 @@
+/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base ── */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  @apply bg-base-100 text-base-content;
+}
+
+/* ── Status badge colours ── */
+.badge-pending    { @apply badge badge-info badge-outline; }
+.badge-approved   { @apply badge badge-success; }
+.badge-cond       { @apply badge badge-success badge-outline; }
+.badge-rejected   { @apply badge badge-error; }
+.badge-resub      { @apply badge badge-warning badge-outline; }
+
+/* ── Upload drop zone ── */
+.drop-zone {
+  @apply border-2 border-dashed border-base-300 rounded-xl p-10
+  flex flex-col items-center justify-center gap-3
+  transition-colors cursor-pointer;
+}
+.drop-zone.drag-over {
+  @apply border-primary bg-primary/5;
+}
+
+/* ── Card hover lift ── */
+.card-lift {
+  @apply transition-all duration-200;
+}
+.card-lift:hover {
+  @apply shadow-lg -translate-y-0.5;
+}
+
+/* ── Hash mono display ── */
+.hash-display {
+  font-family: 'JetBrains Mono', monospace;
+  @apply text-xs break-all;
+}
+
+/* ── Sidebar nav link ── */
+.nav-link {
+  @apply flex items-center gap-3 px-4 py-2.5 rounded-lg
+  text-sm font-medium transition-colors;
+}
+.nav-link:hover {
+  @apply bg-base-200;
+}
+.nav-link.active {
+  @apply bg-primary text-primary-content;
+}
+
+/* ── Page fade-in ── */
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: pageFadeIn 0.18s ease-out;
+}

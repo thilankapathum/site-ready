@@ -1,0 +1,62 @@
+<div class="max-w-2xl">
+  <h1 class="text-2xl font-bold mb-6">My Profile</h1>
+
+  <!-- Profile info card -->
+  <div class="card bg-base-100 border border-base-300 shadow-sm mb-6">
+    <div class="card-body">
+      <h2 class="card-title text-base">Account Information</h2>
+      <div class="grid grid-cols-2 gap-4 mt-2 text-sm">
+        <div>
+          <p class="text-base-content/60">Name</p>
+          <p class="font-medium">{{ user()?.fullName }}</p>
+        </div>
+        <div>
+          <p class="text-base-content/60">Email</p>
+          <p class="font-medium">{{ user()?.email }}</p>
+        </div>
+        <div>
+          <p class="text-base-content/60">Role</p>
+          <span class="badge badge-primary badge-outline">{{ user()?.role }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change password card -->
+  <div class="card bg-base-100 border border-base-300 shadow-sm">
+    <div class="card-body">
+      <h2 class="card-title text-base">Change Password</h2>
+
+      @if (pwSuccess()) {
+        <div class="alert alert-success text-sm py-2">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          Password updated successfully.
+        </div>
+      }
+      @if (pwError()) {
+        <div class="alert alert-error text-sm py-2">{{ pwError() }}</div>
+      }
+
+      <div class="space-y-3 mt-2">
+        <div class="form-control">
+          <label class="label"><span class="label-text">Current Password</span></label>
+          <input type="password" class="input input-bordered" [(ngModel)]="pw.current" />
+        </div>
+        <div class="form-control">
+          <label class="label"><span class="label-text">New Password</span></label>
+          <input type="password" class="input input-bordered" [(ngModel)]="pw.next" />
+        </div>
+        <div class="form-control">
+          <label class="label"><span class="label-text">Confirm New Password</span></label>
+          <input type="password" class="input input-bordered" [(ngModel)]="pw.confirm" />
+        </div>
+        <button class="btn btn-primary" (click)="changePassword()" [disabled]="pwLoading()">
+          @if (pwLoading()) { <span class="loading loading-spinner loading-sm"></span> }
+          Update Password
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

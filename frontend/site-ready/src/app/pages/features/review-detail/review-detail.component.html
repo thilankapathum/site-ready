@@ -1,0 +1,204 @@
+<div class="max-w-3xl space-y-6">
+  <div class="flex items-center gap-3">
+    <button class="btn btn-ghost btn-sm btn-square" (click)="router.navigate(['/review'])">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <div>
+      <h1 class="text-xl font-bold">Review Report</h1>
+      @if (report()) {
+        <p class="text-sm text-base-content/60 font-mono">
+          {{ report()!.siteId }} · {{ report()!.project }} · V{{ report()!.currentVersion }}
+        </p>
+      }
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="flex justify-center py-20">
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+  } @else if (!report()) {
+    <div class="alert alert-error">Report not found.</div>
+  } @else {
+    <!-- Report metadata -->
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body p-5">
+        <div class="flex items-center justify-between">
+          <h2 class="font-bold">Report Details</h2>
+          <span [class]="badge(report()!.currentStatus) + ' badge-sm'">
+                {{ label(report()!.currentStatus) }}
+              </span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-3 text-sm">
+          <div><p class="text-xs text-base-content/60">Site ID</p><p class="font-mono font-medium">{{ report()!.siteId }}</p></div>
+          <div><p class="text-xs text-base-content/60">Project</p><p class="font-medium">{{ report()!.project }}</p></div>
+          <div><p class="text-xs text-base-content/60">Version</p><p class="font-mono font-bold">V{{ report()!.currentVersion }}</p></div>
+          <div><p class="text-xs text-base-content/60">Vendor</p><p class="font-medium">{{ report()!.vendorName }}</p></div>
+          <div><p class="text-xs text-base-content/60">Company</p><p class="font-medium">{{ report()!.vendorCompany }}</p></div>
+          <div><p class="text-xs text-base-content/60">Uploaded</p><p class="font-medium">{{ report()!.uploadedAt ? formatDate(report()!.uploadedAt!) : '—' }}</p></div>
+        </div>
+        @if (report()!.sha256Hash) {
+          <div class="mt-3 pt-3 border-t border-base-200">
+            <p class="text-xs text-base-content/60 mb-1">SHA-256 Hash (original)</p>
+            <p class="hash-display text-base-content/80">{{ report()!.sha256Hash }}</p>
+          </div>
+        }
+        @if (report()!.padesSignatureId) {
+          <div class="flex items-center gap-2 mt-2">
+            <svg class="w-4 h-4 text-success shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            <span class="text-xs text-success font-medium">PAdES digital signature applied</span>
+            <span class="text-xs text-base-content/50 font-mono">{{ report()!.padesSignatureId }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Step 1: Download -->
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body p-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="badge badge-primary badge-outline font-bold">1</div>
+          <h2 class="font-bold">Download & Review</h2>
+        </div>
+        <p class="text-sm text-base-content/70 mb-4">
+          Download the stamped PDF, mark any issues directly in the document using your PDF editor, then upload it below with your decision.
+        </p>
+        <button class="btn btn-outline btn-primary gap-2" (click)="download()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Download Stamped PDF (V{{ report()!.currentVersion }})
+        </button>
+      </div>
+    </div>
+
+    @if (report()!.currentStatus === 'PENDING_REVIEW') {
+      <!-- Step 2: Upload reviewed -->
+      <div class="card bg-base-100 border border-base-300 shadow-sm">
+        <div class="card-body p-5 gap-5">
+          <div class="flex items-center gap-3">
+            <div class="badge badge-primary badge-outline font-bold">2</div>
+            <h2 class="font-bold">Upload Reviewed PDF</h2>
+          </div>
+
+          <div
+            class="drop-zone"
+            [class.drag-over]="dragging()"
+            (dragover)="$event.preventDefault(); dragging.set(true)"
+            (dragleave)="dragging.set(false)"
+            (drop)="onDrop($event)"
+            (click)="fileInput.click()"
+          >
+            <input #fileInput type="file" accept=".pdf" class="hidden" (change)="onFileSelect($event)" />
+            @if (reviewedFile()) {
+              <div class="flex items-center gap-3 w-full max-w-xs">
+                <svg class="w-8 h-8 text-error/70 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+                <div class="min-w-0">
+                  <p class="text-sm font-medium truncate">{{ reviewedFile()!.name }}</p>
+                  <p class="text-xs text-base-content/60">{{ formatSize(reviewedFile()!.size) }}</p>
+                </div>
+                <button class="btn btn-ghost btn-xs text-error ml-auto"
+                        (click)="$event.stopPropagation(); reviewedFile.set(null)">✕</button>
+              </div>
+            } @else {
+              <svg class="w-8 h-8 text-base-content/25" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+              <p class="text-sm text-base-content/60">Drop your reviewed PDF here or click to browse</p>
+            }
+          </div>
+
+          <!-- Decision -->
+          <div class="form-control">
+            <label class="label"><span class="label-text font-bold">Decision <span class="text-error">*</span></span></label>
+            <div class="grid grid-cols-2 gap-2">
+              @for (opt of decisionOptions; track opt.value) {
+                <label class="flex items-center gap-3 cursor-pointer p-3 rounded-lg border-2 transition-colors"
+                       [class]="decision() === opt.value ? 'border-primary bg-primary/5' : 'border-base-300 hover:border-base-400'">
+                  <input type="radio" class="radio radio-primary radio-sm"
+                         [value]="opt.value" [(ngModel)]="decisionValue" (ngModelChange)="decision.set($event)" />
+                  <div>
+                    <p class="font-medium text-sm">{{ opt.label }}</p>
+                    <p class="text-xs text-base-content/50">{{ opt.desc }}</p>
+                  </div>
+                </label>
+              }
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Reviewer Notes</span>
+              <span class="label-text-alt">Visible to vendor</span>
+            </label>
+            <textarea class="textarea textarea-bordered h-24 text-sm"
+                      placeholder="Describe issues found, or confirmation of approval…"
+                      [(ngModel)]="notes"></textarea>
+          </div>
+
+          @if (decision() === 'CONDITIONALLY_APPROVED') {
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text font-medium text-warning">Conditions <span class="text-error">*</span></span>
+              </label>
+              <textarea class="textarea textarea-bordered textarea-warning h-24 text-sm"
+                        placeholder="List all conditions that must be satisfied…"
+                        [(ngModel)]="conditions"></textarea>
+            </div>
+          }
+
+          @if (reviewError()) {
+            <div class="alert alert-error text-sm py-2">{{ reviewError() }}</div>
+          }
+          @if (reviewSuccess()) {
+            <div class="alert alert-success text-sm py-2">{{ reviewSuccess() }}</div>
+          }
+
+          <button
+            class="btn btn-primary w-full"
+            (click)="submitReview()"
+            [disabled]="submitting() || !reviewedFile() || !decision()"
+          >
+            @if (submitting()) {
+              <span class="loading loading-spinner loading-sm"></span>
+              Submitting review…
+            } @else {
+              Submit Review Decision
+            }
+          </button>
+        </div>
+      </div>
+    } @else {
+      <!-- Already reviewed -->
+      <div class="card bg-base-200 border border-base-300">
+        <div class="card-body p-5">
+          <h2 class="font-bold">Review Completed</h2>
+          <div class="grid grid-cols-2 gap-4 mt-2 text-sm">
+            <div><p class="text-xs text-base-content/60">Final Status</p>
+              <span [class]="badge(report()!.currentStatus)">{{ label(report()!.currentStatus) }}</span>
+            </div>
+            @if (report()!.reviewerName) {
+              <div><p class="text-xs text-base-content/60">Reviewed By</p><p class="font-medium">{{ report()!.reviewerName }}</p></div>
+            }
+            @if (report()!.reviewerNotes) {
+              <div class="col-span-2"><p class="text-xs text-base-content/60">Notes</p><p class="mt-1">{{ report()!.reviewerNotes }}</p></div>
+            }
+            @if (report()!.conditions) {
+              <div class="col-span-2"><p class="text-xs text-warning">Conditions</p><p class="mt-1">{{ report()!.conditions }}</p></div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>
