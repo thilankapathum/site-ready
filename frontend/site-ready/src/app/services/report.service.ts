@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {Observable} from 'rxjs';
-import {AuthResponse, PageResponse, ReportResponse, ReportStatus} from '../models/api.models';
+import {AuthResponse, PageResponse, ReportResponse, ReportStatus, VersionResponse} from '../models/api.models';
 
 @Injectable({
   providedIn: 'root'
@@ -64,5 +64,31 @@ export class ReportService {
 
   getActiveEngineers(): Observable<AuthResponse[]> {
     return this.http.get<AuthResponse[]>(`${this.USERS}/engineers`);
+  }
+
+  getReport(reportId: string): Observable<ReportResponse> {
+    return this.http.get<ReportResponse>(`${this.BASE}/${reportId}`);
+  }
+
+  getVersions(reportId: string): Observable<VersionResponse[]> {
+    return this.http.get<VersionResponse[]>(`${this.BASE}/${reportId}/versions`);
+  }
+
+  assignEngineer(reportId: string, engineerId: string | null): Observable<ReportResponse> {
+    let params = new HttpParams();
+    if (engineerId) params = params.set('engineerId', engineerId);
+    return this.http.patch<ReportResponse>(`${this.BASE}/${reportId}/assign-engineer`, null, { params });
+  }
+
+  downloadVersionPdf(reportId: string, versionId: string): Observable<Blob> {
+    return this.http.get(`${this.BASE}/${reportId}/download-version/${versionId}`, {
+      responseType: 'blob',
+    });
+  }
+
+  downloadReviewedPdf(reportId: string, versionId: string): Observable<Blob> {
+    return this.http.get(`${this.BASE}/${reportId}/download-version/${versionId}/reviewed`, {
+      responseType: 'blob',
+    });
   }
 }

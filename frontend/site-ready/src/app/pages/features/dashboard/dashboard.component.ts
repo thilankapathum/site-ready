@@ -2,7 +2,7 @@ import {Component, computed, OnInit, signal} from '@angular/core';
 import {ReportResponse, STATUS_BADGE_CLASS, STATUS_LABELS} from '../../../models/api.models';
 import {AuthService} from '../../../services/auth/auth.service';
 import {ReportService} from '../../../services/report.service';
-import {RouterLink} from '@angular/router';
+import {Router, RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
@@ -32,7 +32,7 @@ export class DashboardComponent implements OnInit {
     ];
   });
 
-  constructor(private auth: AuthService, private reportService: ReportService) {}
+  constructor(private auth: AuthService, private reportService: ReportService, private router: Router) {}
 
   ngOnInit(): void {
     this.reportService.getMyReports(0, 50).subscribe({
@@ -44,4 +44,8 @@ export class DashboardComponent implements OnInit {
   statusBadge(s: string): string { return STATUS_BADGE_CLASS[s as keyof typeof STATUS_BADGE_CLASS] ?? 'badge'; }
   statusLabel(s: string): string { return STATUS_LABELS[s as keyof typeof STATUS_LABELS] ?? s; }
   formatDate(d: string): string { return new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
+
+  openReport(r: ReportResponse): void {
+    this.router.navigate(['/reports', r.id]);
+  }
 }

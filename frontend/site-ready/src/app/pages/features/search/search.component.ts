@@ -8,6 +8,7 @@ import {
 } from '../../../models/api.models';
 import {ReportService} from '../../../services/report.service';
 import {FormsModule} from '@angular/forms';
+import {Router} from '@angular/router';
 
 @Component({
   selector: 'app-search',
@@ -29,7 +30,7 @@ export class SearchComponent implements OnInit {
     siteId: '', project: '', status: '', engineerId: ''
   };
 
-  constructor(private reportService: ReportService) {}
+  constructor(private reportService: ReportService, private router:Router) {}
 
   ngOnInit(): void {
     this.reportService.getActiveEngineers().subscribe(e => this.engineers.set(e));
@@ -100,4 +101,8 @@ export class SearchComponent implements OnInit {
   badge(s: string): string { return STATUS_BADGE_CLASS[s as keyof typeof STATUS_BADGE_CLASS] ?? 'badge'; }
   label(s: string): string { return STATUS_LABELS[s as keyof typeof STATUS_LABELS] ?? s; }
   formatDate(d: string): string { return new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
+
+  openDetail(r: ReportResponse): void {
+    this.router.navigate(['/reports', r.id]);
+  }
 }

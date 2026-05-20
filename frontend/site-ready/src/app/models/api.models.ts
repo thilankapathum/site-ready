@@ -76,3 +76,23 @@ export const STATUS_BADGE_CLASS: Record<ReportStatus, string> = {
   REJECTED:                'badge badge-error',
   RESUBMISSION_REQUIRED:   'badge badge-warning badge-outline',
 };
+
+export interface VersionResponse {
+  id: string;
+  versionNumber: number;
+  originalFilename: string;
+  sha256Hash: string;
+  padesSignatureId: string | null;
+  uploaderName: string;
+  uploaderCompany: string;
+  uploaderRole: string;
+  uploadedAt: string;
+  statusAtUpload: string;
+  reviewStatus: string | null;
+  reviewerNotes: string | null;
+  conditions: string | null;
+  reviewerName: string | null;
+  reviewedAt: string | null;
+  hasStampedPdf: boolean;
+  hasReviewedPdf: boolean;
+}

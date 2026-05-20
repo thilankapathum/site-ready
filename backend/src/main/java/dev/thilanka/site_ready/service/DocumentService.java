@@ -48,26 +48,64 @@ public class DocumentService {
             User uploader,
             String ipAddress
     ) throws Exception {
+
+        // ── Filename validation ──
+        String filename = file.getOriginalFilename();
+        if (filename == null || !filename.toLowerCase().endsWith(".pdf")) {
+            throw new IllegalArgumentException("File must be a PDF.");
+        }
+
+        // Pattern: SITEID_PROJECT_Vn.pdf (case-insensitive version suffix)
+        String nameWithoutExt = filename.replaceAll("(?i)\\.pdf$", "");
+        String[] parts = nameWithoutExt.split("_");
+        if (parts.length < 3) {
+            throw new IllegalArgumentException(
+                    "Filename must follow the convention: SITEID_PROJECT_Vn.pdf  (e.g. KY0001_4G-upgrade-26_V1.pdf)");
+        }
+
+        String versionPart = parts[parts.length - 1]; // last segment is Vn
+        if (!versionPart.matches("(?i)V\\d+")) {
+            throw new IllegalArgumentException(
+                    "Filename version suffix is invalid. Expected format: V1, V2, … Got: " + versionPart);
+        }
+
+        int fileVersion = Integer.parseInt(versionPart.substring(1));
+        String namingKey = Report.buildNamingKey(request.siteId(), request.project());
+
+        if (reportRepository.existsByNamingKey(namingKey)) {
+            Report existing = reportRepository.findByNamingKey(namingKey).orElseThrow();
+            int expectedVersion = existing.getCurrentVersion() + 1;
+            if (fileVersion != expectedVersion) {
+                throw new IllegalArgumentException(String.format(
+                        "Version mismatch: this report is at V%d, so next upload must be V%d. Filename shows V%d.",
+                        existing.getCurrentVersion(), expectedVersion, fileVersion));
+            }
+            if (existing.getCurrentStatus() != ReportStatus.RESUBMISSION_REQUIRED) {
+                throw new IllegalStateException(
+                        "Report is not in RESUBMISSION_REQUIRED state. Current status: " + existing.getCurrentStatus());
+            }
+        } else {
+            if (fileVersion != 1) {
+                throw new IllegalArgumentException(
+                        "First upload for a new Site ID + Project must be V1. Filename shows V" + fileVersion + ".");
+            }
+        }
+
         byte[] originalBytes = file.getBytes();
         String sha256 = sha256Hex(originalBytes);
 
         // Determine or create report record
-        String namingKey = Report.buildNamingKey(request.siteId(), request.project());
+//        String namingKey = Report.buildNamingKey(request.siteId(), request.project());
         Report report;
         int versionNumber;
 
         if (reportRepository.existsByNamingKey(namingKey)) {
             report = reportRepository.findByNamingKey(namingKey).orElseThrow();
-            // Only allow re-upload if status is RESUBMISSION_REQUIRED
-            if (report.getCurrentStatus() != ReportStatus.RESUBMISSION_REQUIRED) {
-                throw new IllegalStateException("Report is not in RESUBMISSION_REQUIRED state. Current: " + report.getCurrentStatus());
-            }
             versionNumber = report.getCurrentVersion() + 1;
         } else {
             User assignedEngineer = request.assignedEngineerId() != null
                     ? userRepository.findById(request.assignedEngineerId()).orElse(null)
                     : null;
-
             report = Report.builder()
                     .siteId(request.siteId())
                     .project(request.project())
@@ -105,7 +143,9 @@ public class DocumentService {
 
         // Stamp and sign the PDF
         try {
-            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(originalBytes, uploader, version, sha256);
+//            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(originalBytes, uploader, version, sha256);
+            List<ReportVersion> allVersions = versionRepository.findByReportIdOrderByVersionNumberDesc(report.getId());
+            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(originalBytes, uploader, version, sha256, allVersions);
             String stampedKey = storageService.buildKey(namingKey, versionNumber, "stamped");
             storageService.upload(stampedKey, stamp.signedBytes(), "application/pdf");
             version.setStampedStorageKey(stampedKey);
@@ -148,10 +188,14 @@ public class DocumentService {
         String reviewKey = storageService.buildKey(report.getNamingKey(), currentVer, "reviewed-by-engineer");
         storageService.upload(reviewKey, reviewBytes, "application/pdf");
 
+
         // Get the current version to update
         ReportVersion version = versionRepository
                 .findByReportIdAndVersionNumber(reportId, currentVer)
                 .orElseThrow();
+
+        // Store on the version entity so it's retrievable
+        version.setReviewedStorageKey(reviewKey);
 
         version.setReviewStatus(newStatus);
         version.setReviewerNotes(request.notes());
@@ -161,11 +205,16 @@ public class DocumentService {
 
         // Stamp engineer's reviewed PDF as well
         try {
-            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(reviewBytes, engineer, version, sha256);
+            List<ReportVersion> allVersions = versionRepository.findByReportIdOrderByVersionNumberDesc(report.getId());
+            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(reviewBytes, engineer, version, sha256, allVersions);
             String stampedReviewKey = storageService.buildKey(report.getNamingKey(), currentVer, "reviewed-stamped");
             storageService.upload(stampedReviewKey, stamp.signedBytes(), "application/pdf");
+            version.setReviewedStorageKey(stampedReviewKey);   // serve the stamped version
+
         } catch (Exception e) {
-            log.warn("Stamping of reviewed PDF failed: {}", e.getMessage());
+            log.warn("Stamping reviewed PDF failed: {}", e.getMessage());
+            // fall back to un-stamped but still store it
+            version.setReviewedStorageKey(reviewKey);
         }
 
         // Update workflow state

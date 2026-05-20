@@ -59,7 +59,7 @@
             </thead>
             <tbody>
               @for (r of reports(); track r.id) {
-                <tr class="hover:bg-base-200/50">
+                <tr class="hover:bg-base-200/50 cursor-pointer" (click)="openReport(r)">
                   <td>
                     <p class="font-medium text-sm">{{ r.siteId }}</p>
                     <p class="text-xs text-base-content/60">{{ r.project }}</p>
@@ -75,7 +75,9 @@
                   @if (isEngineer() || isAdmin()) {
                     <td>
                       @if (r.currentStatus === 'PENDING_REVIEW') {
-                        <a [routerLink]="['/review', r.id]" class="btn btn-primary btn-xs">Review</a>
+                        <a [routerLink]="['/reports', r.id]" class="btn btn-primary btn-xs">
+                          {{ r.currentStatus === 'PENDING_REVIEW' ? 'Review' : 'View' }}
+                        </a>
                       }
                     </td>
                   }

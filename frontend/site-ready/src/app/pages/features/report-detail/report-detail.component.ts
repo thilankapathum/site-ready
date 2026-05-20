@@ -1,0 +1,322 @@
+import {Component, computed, input, OnInit, signal} from '@angular/core';
+import {
+  AuthResponse,
+  ReportResponse,
+  STATUS_BADGE_CLASS,
+  STATUS_LABELS,
+  VersionResponse
+} from '../../../models/api.models';
+import {Router} from '@angular/router';
+import {ReportService} from '../../../services/report.service';
+import {AuthService} from '../../../services/auth/auth.service';
+import {FormsModule} from '@angular/forms';
+
+type Decision = 'APPROVED' | 'CONDITIONALLY_APPROVED' | 'REJECTED' | 'RESUBMISSION_REQUIRED';
+
+interface HistoryRow {
+  rowKey: string;
+  versionNumber: number;
+  actionLabel: string;
+  actionBadgeClass: string;
+  actorName: string;
+  actorRole: string;
+  dateTime: string;
+  filename: string;
+  notes: string | null;
+  conditions: string | null;
+  hasFile: boolean;
+  isApproved: boolean;
+  isRejected: boolean;
+  isResubmission: boolean;
+  // download context
+  versionId: string;
+  downloadType: 'vendor' | 'reviewed';
+}
+
+
+@Component({
+  selector: 'app-report-detail',
+  imports: [
+    FormsModule
+  ],
+  templateUrl: './report-detail.component.html',
+  styleUrl: './report-detail.component.css'
+})
+export class ReportDetailComponent implements OnInit {
+  readonly id = input.required<string>();
+
+  report          = signal<ReportResponse | null>(null);
+  versions        = signal<VersionResponse[]>([]);
+
+  historyRows = computed<HistoryRow[]>(() => {
+    const rows: HistoryRow[] = [];
+    const sorted = [...this.versions()].sort((a, b) => a.versionNumber - b.versionNumber);
+
+    for (const v of sorted) {
+      // Row 1 — vendor upload
+      rows.push({
+        rowKey:           `${v.id}-upload`,
+        versionNumber:    v.versionNumber,
+        actionLabel:      'Uploaded',
+        actionBadgeClass: 'badge badge-info badge-outline',
+        actorName:        v.uploaderName,
+        actorRole:        v.uploaderRole,
+        dateTime:         v.uploadedAt ? this.formatDate(v.uploadedAt) : '—',
+        filename:         v.originalFilename,
+        notes:            null,
+        conditions:       null,
+        hasFile:          v.hasStampedPdf,
+        isApproved:       false,
+        isRejected:       false,
+        isResubmission:   false,
+        versionId:        v.id,
+        downloadType:     'vendor',
+      });
+
+      // Row 2 — engineer review (only if reviewed)
+      if (v.reviewStatus && v.reviewerName) {
+        const isApproved    = v.reviewStatus === 'APPROVED' || v.reviewStatus === 'CONDITIONALLY_APPROVED';
+        const isRejected    = v.reviewStatus === 'REJECTED';
+        const isResubmission = v.reviewStatus === 'RESUBMISSION_REQUIRED';
+
+        const actionBadgeClass =
+          isApproved    ? 'badge badge-success' :
+            isRejected    ? 'badge badge-error' :
+              isResubmission ? 'badge badge-warning badge-outline' :
+                'badge badge-ghost';
+
+        const actionLabel = STATUS_LABELS[v.reviewStatus as keyof typeof STATUS_LABELS] ?? v.reviewStatus;
+
+        rows.push({
+          rowKey:           `${v.id}-review`,
+          versionNumber:    v.versionNumber,
+          actionLabel,
+          actionBadgeClass,
+          actorName:        v.reviewerName,
+          actorRole:        'ENGINEER',
+          dateTime:         v.reviewedAt ? this.formatDate(v.reviewedAt) : '—',
+          filename:         `Reviewed V${v.versionNumber}`,
+          notes:            v.reviewerNotes,
+          conditions:       v.conditions,
+          hasFile:          v.hasReviewedPdf,
+          isApproved,
+          isRejected,
+          isResubmission,
+          versionId:        v.id,
+          downloadType:     'reviewed',
+        });
+      }
+    }
+    return rows;
+  });
+
+  loading         = signal(true);
+  versionsLoading = signal(true);
+  engineers       = signal<AuthResponse[]>([]);
+  showAssign      = signal(false);
+  selectedEngineerId = '';
+  assigningEngineer = signal(false);
+
+  // Action state
+  actionFile   = signal<File | null>(null);
+  dragging     = signal(false);
+  decision     = signal<Decision | ''>('');
+  decisionValue: Decision | '' = '';
+  notes        = '';
+  conditions   = '';
+  submitting   = signal(false);
+  actionError  = signal('');
+  actionSuccess = signal('');
+
+  decisionOptions: { value: Decision; label: string; desc: string }[] = [
+    { value: 'APPROVED',               label: 'Approved',               desc: 'Report meets all requirements' },
+    { value: 'CONDITIONALLY_APPROVED', label: 'Conditionally Approved', desc: 'Approved with stated conditions' },
+    { value: 'RESUBMISSION_REQUIRED',  label: 'Resubmission Required',  desc: 'Corrections needed, resubmit' },
+    { value: 'REJECTED',               label: 'Rejected',               desc: 'Cannot be approved' },
+  ];
+
+  user       = this.auth.currentUser;
+  role       = this.auth.role;
+  isAdmin    = computed(() => this.role() === 'ADMIN');
+  isVendor   = computed(() => this.role() === 'VENDOR');
+  isEngineer = computed(() => this.role() === 'ENGINEER');
+
+  isOwnerVendor = computed(() => {
+    const r = this.report(); const u = this.user();
+    return u !== null && r !== null && this.isVendor() &&
+      r.vendorName === u.fullName; // compare by id in production if available
+  });
+
+  isAssignedEngineer = computed(() => {
+    const r = this.report(); const u = this.user();
+    return u !== null && r !== null && this.isEngineer() &&
+      r.assignedEngineerId === u.userId;
+  });
+
+  canTakeAction = computed(() => {
+    const r = this.report();
+    if (!r || this.actionSuccess()) return false;
+    if (this.isOwnerVendor() && r.currentStatus === 'RESUBMISSION_REQUIRED') return true;
+    if ((this.isAssignedEngineer() || this.isAdmin()) && r.currentStatus === 'PENDING_REVIEW') return true;
+    return false;
+  });
+
+  constructor(
+    public router: Router,
+    private reportService: ReportService,
+    private auth: AuthService
+  ) {}
+
+  ngOnInit(): void {
+    this.load();
+    this.reportService.getActiveEngineers().subscribe(e => this.engineers.set(e));
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.versionsLoading.set(true);
+    this.reportService.getReport(this.id()).subscribe({
+      next: r => { this.report.set(r); this.loading.set(false); },
+      error: () => this.loading.set(false),
+    });
+    this.reportService.getVersions(this.id()).subscribe({
+      next: v => { this.versions.set(v); this.versionsLoading.set(false); },
+      error: () => this.versionsLoading.set(false),
+    });
+  }
+
+  assignEngineer(): void {
+    this.assigningEngineer.set(true);
+    const engId = this.selectedEngineerId || null;
+    this.reportService.assignEngineer(this.id(), engId).subscribe({
+      next: r => {
+        this.report.set(r);
+        this.showAssign.set(false);
+        this.assigningEngineer.set(false);
+      },
+      error: () => this.assigningEngineer.set(false),
+    });
+  }
+
+  downloadLatest(): void {
+    const r = this.report();
+    if (!r) return;
+    this.reportService.downloadPdf(r.id, r.currentVersion).subscribe(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${r.namingKey}_V${r.currentVersion}_stamped.pdf`;
+      a.click(); URL.revokeObjectURL(url);
+    });
+  }
+
+  downloadVersion(v: VersionResponse): void {
+    const r = this.report();
+    if (!r) return;
+    this.reportService.downloadVersionPdf(r.id, v.id).subscribe(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${r.namingKey}_V${v.versionNumber}_stamped.pdf`;
+      a.click(); URL.revokeObjectURL(url);
+    });
+  }
+
+  onFileSelect(event: Event): void {
+    const f = (event.target as HTMLInputElement).files?.[0];
+    if (f) this.actionFile.set(f);
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault(); this.dragging.set(false);
+    const f = event.dataTransfer?.files[0];
+    if (f?.type === 'application/pdf') this.actionFile.set(f);
+  }
+
+  submitAction(): void {
+    const r = this.report();
+    const file = this.actionFile();
+    if (!r || !file) return;
+
+    if (this.isAssignedEngineer() || this.isAdmin()) {
+      // Engineer review
+      const d = this.decision();
+      if (!d) return;
+      if (d === 'CONDITIONALLY_APPROVED' && !this.conditions.trim()) {
+        this.actionError.set('Conditions are required for conditional approval.'); return;
+      }
+      this.submitting.set(true); this.actionError.set('');
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('decision', d);
+      if (this.notes) fd.append('notes', this.notes);
+      if (this.conditions) fd.append('conditions', this.conditions);
+      this.reportService.reviewReport(r.id, fd).subscribe({
+        next: res => {
+          this.report.set(res);
+          this.actionSuccess.set('Review submitted successfully.');
+          this.actionFile.set(null);
+          this.submitting.set(false);
+          this.load(); // refresh versions
+        },
+        error: err => {
+          this.actionError.set(err.error?.detail ?? 'Failed to submit review.');
+          this.submitting.set(false);
+        },
+      });
+    } else if (this.isOwnerVendor()) {
+      // Vendor resubmission
+      this.submitting.set(true); this.actionError.set('');
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('siteId', r.siteId);
+      fd.append('project', r.project);
+      if (r.assignedEngineerId) fd.append('assignedEngineerId', r.assignedEngineerId);
+      this.reportService.uploadReport(fd).subscribe({
+        next: res => {
+          this.report.set(res);
+          this.actionSuccess.set(`V${res.currentVersion} submitted successfully.`);
+          this.actionFile.set(null);
+          this.submitting.set(false);
+          this.load();
+        },
+        error: err => {
+          this.actionError.set(err.error?.detail ?? 'Upload failed.');
+          this.submitting.set(false);
+        },
+      });
+    }
+  }
+
+  statusBadge(s: string): string { return STATUS_BADGE_CLASS[s as keyof typeof STATUS_BADGE_CLASS] ?? 'badge'; }
+  statusLabel(s: string): string { return STATUS_LABELS[s as keyof typeof STATUS_LABELS] ?? s; }
+  formatDate(d: string): string {
+    return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+  formatSize(bytes: number): string {
+    return bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+  }
+
+  toggleAssign(): void {
+    this.showAssign.set(!this.showAssign());
+  }
+
+  downloadRow(row: HistoryRow): void {
+    const r = this.report();
+    if (!r) return;
+
+    const obs = row.downloadType === 'reviewed'
+      ? this.reportService.downloadReviewedPdf(r.id, row.versionId)
+      : this.reportService.downloadVersionPdf(r.id, row.versionId);
+
+    obs.subscribe(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${r.namingKey}_V${row.versionNumber}_${row.downloadType}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+}

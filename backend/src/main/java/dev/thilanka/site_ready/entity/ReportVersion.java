@@ -73,6 +73,9 @@ public class ReportVersion {
     @Column(name = "reviewed_at")
     private OffsetDateTime reviewedAt;
 
+    @Column(name = "reviewed_storage_key")
+    private String reviewedStorageKey;
+
     @PrePersist
     protected void onCreate() {
         uploadedAt = OffsetDateTime.now();

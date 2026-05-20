@@ -51,6 +51,12 @@ export const routes: Routes =  [
         data: { roles: ['ROLE_ENGINEER', 'ROLE_ADMIN'] },
       },
       {
+        path: 'reports/:id',
+        loadComponent: () =>
+          import('./pages/features/report-detail/report-detail.component')
+            .then(m => m.ReportDetailComponent),
+      },
+      {
         path: 'search',
         loadComponent: () =>
           import('./pages/features/search/search.component').then(m => m.SearchComponent),

@@ -6,5 +6,6 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <include file="classpath:db/changelog/changes/001-initial-schema.xml"/>
+    <include file="classpath:db/changelog/changes/002-reviewed-storage-key.xml"/>
 
 </databaseChangeLog>

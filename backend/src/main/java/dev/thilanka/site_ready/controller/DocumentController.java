@@ -4,11 +4,19 @@ import dev.thilanka.site_ready.dto.ReportResponse;
 import dev.thilanka.site_ready.dto.ReviewRequest;
 
 import dev.thilanka.site_ready.dto.UploadRequest;
+import dev.thilanka.site_ready.dto.VersionResponse;
 import dev.thilanka.site_ready.entity.Report;
+import dev.thilanka.site_ready.entity.ReportVersion;
 import dev.thilanka.site_ready.entity.User;
+import dev.thilanka.site_ready.entity.enums.AuditAction;
 import dev.thilanka.site_ready.entity.enums.ReportStatus;
+import dev.thilanka.site_ready.repository.ReportRepository;
+import dev.thilanka.site_ready.repository.ReportVersionRepository;
+import dev.thilanka.site_ready.repository.UserRepository;
+import dev.thilanka.site_ready.service.AuditService;
 import dev.thilanka.site_ready.service.DocumentService;
 import dev.thilanka.site_ready.service.ExportService;
+import dev.thilanka.site_ready.service.StorageService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,6 +40,11 @@ public class DocumentController {
 
     private final DocumentService documentService;
     private final ExportService exportService;
+    private final ReportRepository reportRepository;
+    private final UserRepository userRepository;
+    private final ReportVersionRepository versionRepository;
+    private final StorageService storageService;
+    private final AuditService auditService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('VENDOR')")
@@ -144,6 +157,85 @@ public class DocumentController {
     public ResponseEntity<String> verify(@PathVariable UUID versionId) {
         // Returns basic tamper-check info — extend as needed
         return ResponseEntity.ok("Verification endpoint for version: " + versionId);
+    }
+
+    @GetMapping("/{reportId}")
+    public ResponseEntity<ReportResponse> getReport(@PathVariable UUID reportId) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new IllegalArgumentException("Report not found"));
+        ReportVersion latest = versionRepository
+                .findByReportIdOrderByVersionNumberDesc(reportId)
+                .stream().findFirst().orElse(null);
+        return ResponseEntity.ok(ReportResponse.from(report, latest));
+    }
+
+    @GetMapping("/{reportId}/versions")
+    public ResponseEntity<List<VersionResponse>> getVersions(@PathVariable UUID reportId) {
+        List<ReportVersion> versions = versionRepository
+                .findByReportIdOrderByVersionNumberDesc(reportId);
+        return ResponseEntity.ok(versions.stream().map(VersionResponse::from).toList());
+    }
+
+    @GetMapping("/{reportId}/download-version/{versionId}")
+    public ResponseEntity<byte[]> downloadVersion(
+            @PathVariable UUID reportId,
+            @PathVariable UUID versionId,
+            @AuthenticationPrincipal User user,
+            HttpServletRequest request
+    ) {
+        ReportVersion rv = versionRepository.findById(versionId)
+                .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        String key = rv.getStampedStorageKey() != null
+                ? rv.getStampedStorageKey() : rv.getOriginalStorageKey();
+        auditService.log(rv, user, AuditAction.DOWNLOADED, getIp(request));
+        byte[] data = storageService.download(key);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + rv.getReport().getNamingKey() + "_V" + rv.getVersionNumber() + "_stamped.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(data);
+    }
+
+    @PatchMapping("/{reportId}/assign-engineer")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('ENGINEER')")
+    public ResponseEntity<ReportResponse> assignEngineer(
+            @PathVariable UUID reportId,
+            @RequestParam(required = false) UUID engineerId,
+            @AuthenticationPrincipal User user
+    ) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new IllegalArgumentException("Report not found"));
+        User engineer = engineerId != null
+                ? userRepository.findById(engineerId).orElseThrow(() -> new IllegalArgumentException("Engineer not found"))
+                : null;
+        report.setAssignedEngineer(engineer);
+        reportRepository.save(report);
+        ReportVersion latest = versionRepository
+                .findByReportIdOrderByVersionNumberDesc(reportId)
+                .stream().findFirst().orElse(null);
+        return ResponseEntity.ok(ReportResponse.from(report, latest));
+    }
+
+    @GetMapping("/{reportId}/download-version/{versionId}/reviewed")
+    public ResponseEntity<byte[]> downloadReviewedVersion(
+            @PathVariable UUID reportId,
+            @PathVariable UUID versionId,
+            @AuthenticationPrincipal User user,
+            HttpServletRequest request
+    ) {
+        ReportVersion rv = versionRepository.findById(versionId)
+                .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        if (rv.getReviewedStorageKey() == null) {
+            return ResponseEntity.notFound().build();
+        }
+        auditService.log(rv, user, AuditAction.DOWNLOADED, getIp(request));
+        byte[] data = storageService.download(rv.getReviewedStorageKey());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + rv.getReport().getNamingKey()
+                                + "_V" + rv.getVersionNumber() + "_reviewed.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(data);
     }
 
     private String getIp(HttpServletRequest request) {

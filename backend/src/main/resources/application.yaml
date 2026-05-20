@@ -57,7 +57,8 @@ app:
 
   signing:
     keystore-path: ${SIGNING_KEYSTORE_PATH:./keystore/ssv-signing.p12}
-    keystore-password: ${SIGNING_KEYSTORE_PASSWORD:password}
+    keystore-password: password
+#    keystore-password: ${SIGNING_KEYSTORE_PASSWORD:password}
     alias: ssv-pdf-signer
 
   base-url: ${APP_BASE_URL:http://localhost:4200}
