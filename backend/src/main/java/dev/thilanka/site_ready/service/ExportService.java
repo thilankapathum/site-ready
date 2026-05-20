@@ -48,7 +48,7 @@ public class ExportService {
 
             // Column headers
             String[] headers = {
-                    "Site ID", "Project", "Version", "Status", "Responsibility",
+                    "Site ID", "Project", "RAT", "Version", "Status", "Responsibility",
                     "Assigned Engineer", "Vendor", "Created At", "Last Updated", "Naming Key"
             };
             Row headerRow = sheet.createRow(2);
@@ -71,14 +71,15 @@ public class ExportService {
                 }
                 setCellValue(row, 0, r.getSiteId());
                 setCellValue(row, 1, r.getProject());
-                setCellValue(row, 2, "V" + r.getCurrentVersion());
-                setCellValue(row, 3, r.getCurrentStatus().name());
-                setCellValue(row, 4, r.getCurrentResponsibility().name());
-                setCellValue(row, 5, r.getAssignedEngineer() != null ? r.getAssignedEngineer().getFullName() : "Unassigned");
-                setCellValue(row, 6, r.getCreatedByVendor().getFullName() + " (" + r.getCreatedByVendor().getCompany() + ")");
-                setCellValue(row, 7, r.getCreatedAt() != null ? r.getCreatedAt().format(FMT) : "");
-                setCellValue(row, 8, r.getUpdatedAt() != null ? r.getUpdatedAt().format(FMT) : "");
-                setCellValue(row, 9, r.getNamingKey());
+                setCellValue(row, 2, r.getRat());
+                setCellValue(row, 3, "V" + r.getCurrentVersion());
+                setCellValue(row, 4, r.getCurrentStatus().name());
+                setCellValue(row, 5, r.getCurrentResponsibility().name());
+                setCellValue(row, 6, r.getAssignedEngineer() != null ? r.getAssignedEngineer().getFullName() : "Unassigned");
+                setCellValue(row, 7, r.getCreatedByVendor().getFullName() + " (" + r.getCreatedByVendor().getCompany() + ")");
+                setCellValue(row, 8, r.getCreatedAt() != null ? r.getCreatedAt().format(FMT) : "");
+                setCellValue(row, 9, r.getUpdatedAt() != null ? r.getUpdatedAt().format(FMT) : "");
+                setCellValue(row, 10, r.getNamingKey());
             }
 
             // Auto-size columns
@@ -92,10 +93,11 @@ public class ExportService {
 
     public byte[] exportCsv(List<Report> reports) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Site ID,Project,Version,Status,Responsibility,Assigned Engineer,Vendor,Created At,Last Updated,Naming Key\n");
+        sb.append("Site ID,Project,RAT,Version,Status,Responsibility,Assigned Engineer,Vendor,Created At,Last Updated,Naming Key\n");
         for (Report r : reports) {
             sb.append(csv(r.getSiteId())).append(",")
                     .append(csv(r.getProject())).append(",")
+                    .append(csv(r.getRat())).append(",")
                     .append("V").append(r.getCurrentVersion()).append(",")
                     .append(r.getCurrentStatus()).append(",")
                     .append(r.getCurrentResponsibility()).append(",")

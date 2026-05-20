@@ -25,6 +25,7 @@ export interface ReportResponse {
   id: string;
   siteId: string;
   project: string;
+  rat: string;
   namingKey: string;
   currentVersion: number;
   currentStatus: ReportStatus;

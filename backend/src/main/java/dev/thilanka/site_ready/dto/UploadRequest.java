@@ -7,5 +7,6 @@ import java.util.UUID;
 public record UploadRequest(
         @NotBlank String siteId,
         @NotBlank String project,
-        UUID assignedEngineerId   // nullable — "unassigned" case
+        @NotBlank String rat,
+        UUID assignedEngineerId
 ) {}

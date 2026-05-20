@@ -70,7 +70,7 @@
       </div>
 
       <!-- Parsed filename info -->
-      @if (parsedSiteId() || parsedProject()) {
+      @if (parsedSiteId() || parsedProject() || parsedRat()) {
         <div class="bg-base-200 rounded-lg p-3 flex gap-4 text-sm">
           <div>
             <p class="text-xs text-base-content/60">Parsed Site ID</p>
@@ -80,11 +80,15 @@
             <p class="text-xs text-base-content/60">Parsed Project</p>
             <p class="font-mono font-medium">{{ parsedProject() || '—' }}</p>
           </div>
+          <div>
+            <p class="text-xs text-base-content/60">Parsed RAT</p>
+            <p class="font-mono font-medium">{{ parsedRat() || '—' }}</p>
+          </div>
         </div>
       }
 
-      <!-- Site / Project overrides -->
-      <div class="grid grid-cols-2 gap-4">
+      <!-- Site / Project / RAT fields -->
+      <div class="grid grid-cols-3 gap-4">
         <div class="form-control">
           <label class="label"><span class="label-text font-medium">Site ID <span class="text-error">*</span></span></label>
           <input type="text" class="input input-bordered font-mono"
@@ -93,7 +97,20 @@
         <div class="form-control">
           <label class="label"><span class="label-text font-medium">Project <span class="text-error">*</span></span></label>
           <input type="text" class="input input-bordered font-mono"
-                 placeholder="e.g. 4G-upgrade-26" [(ngModel)]="project" />
+                 placeholder="e.g. Project1" [(ngModel)]="project" />
+        </div>
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium">RAT / Technology <span class="text-error">*</span></span></label>
+          <select class="select select-bordered" [(ngModel)]="rat">
+            <option value="">Select RAT</option>
+            <option value="2G">2G</option>
+            <option value="3G">3G</option>
+            <option value="4G">4G</option>
+            <option value="4.5G">4.5G</option>
+            <option value="5G">5G</option>
+            <option value="5G-SA">5G-SA</option>
+            <option value="5G-NSA">5G-NSA</option>
+          </select>
         </div>
       </div>
 
@@ -114,7 +131,7 @@
       <button
         class="btn btn-primary w-full"
         (click)="upload()"
-        [disabled]="uploading() || !selectedFile() || !siteId || !project"
+        [disabled]="uploading() || !selectedFile() || !siteId || !project || !rat"
       >
         @if (uploading()) {
           <span class="loading loading-spinner loading-sm"></span>

@@ -55,22 +55,46 @@ public class DocumentService {
             throw new IllegalArgumentException("File must be a PDF.");
         }
 
-        // Pattern: SITEID_PROJECT_Vn.pdf (case-insensitive version suffix)
+//        // Pattern: SITEID_PROJECT_Vn.pdf (case-insensitive version suffix)
+//        String nameWithoutExt = filename.replaceAll("(?i)\\.pdf$", "");
+//        String[] parts = nameWithoutExt.split("_");
+//        if (parts.length < 3) {
+//            throw new IllegalArgumentException(
+//                    "Filename must follow the convention: SITEID_PROJECT_Vn.pdf  (e.g. KY0001_4G-upgrade-26_V1.pdf)");
+//        }
+//
+//        String versionPart = parts[parts.length - 1]; // last segment is Vn
+//        if (!versionPart.matches("(?i)V\\d+")) {
+//            throw new IllegalArgumentException(
+//                    "Filename version suffix is invalid. Expected format: V1, V2, … Got: " + versionPart);
+//        }
+
+        // Updated filename validation — now expects SITEID_PROJECT_RAT_Vn.pdf
         String nameWithoutExt = filename.replaceAll("(?i)\\.pdf$", "");
         String[] parts = nameWithoutExt.split("_");
-        if (parts.length < 3) {
+        if (parts.length < 4) {
             throw new IllegalArgumentException(
-                    "Filename must follow the convention: SITEID_PROJECT_Vn.pdf  (e.g. KY0001_4G-upgrade-26_V1.pdf)");
+                    "Filename must follow the convention: SITEID_PROJECT_RAT_Vn.pdf " +
+                            "(e.g. KY0001_Project1_4G_V1.pdf)");
         }
 
-        String versionPart = parts[parts.length - 1]; // last segment is Vn
+        String versionPart = parts[parts.length - 1];
         if (!versionPart.matches("(?i)V\\d+")) {
             throw new IllegalArgumentException(
-                    "Filename version suffix is invalid. Expected format: V1, V2, … Got: " + versionPart);
+                    "Filename version suffix is invalid. Expected V1, V2, … Got: " + versionPart);
+        }
+
+// RAT is the second-to-last segment
+        String ratFromFilename = parts[parts.length - 2].toUpperCase();
+
+        if (!ratFromFilename.equals(request.rat().toUpperCase())) {
+            throw new IllegalArgumentException(String.format(
+                    "RAT mismatch: filename contains '%s' but form field says '%s'. They must match.",
+                    ratFromFilename, request.rat()));
         }
 
         int fileVersion = Integer.parseInt(versionPart.substring(1));
-        String namingKey = Report.buildNamingKey(request.siteId(), request.project());
+        String namingKey = Report.buildNamingKey(request.siteId(), request.project(), request.rat());
 
         if (reportRepository.existsByNamingKey(namingKey)) {
             Report existing = reportRepository.findByNamingKey(namingKey).orElseThrow();
@@ -109,6 +133,7 @@ public class DocumentService {
             report = Report.builder()
                     .siteId(request.siteId())
                     .project(request.project())
+                    .rat(request.rat())
                     .namingKey(namingKey)
                     .createdByVendor(uploader)
                     .assignedEngineer(assignedEngineer)
@@ -288,22 +313,38 @@ public class DocumentService {
 //                blank(siteId), blank(project), status, engineerId, vendorId);
 //    }
 
-
-    public Page<Report> search(String siteId, String project, ReportStatus status,
+    public Page<Report> search(String siteId, String project, String rat, ReportStatus status,
                                UUID engineerId, UUID vendorId, Pageable pageable) {
         return reportRepository.findAll(
-                ReportSpecification.filter(siteId, project, status, engineerId, vendorId),
+                ReportSpecification.filter(siteId, project, rat, status, engineerId, vendorId),
                 pageable
         );
     }
 
-    public List<Report> searchAll(String siteId, String project, ReportStatus status,
+    public List<Report> searchAll(String siteId, String project, String rat, ReportStatus status,
                                   UUID engineerId, UUID vendorId) {
         return reportRepository.findAll(
-                ReportSpecification.filter(siteId, project, status, engineerId, vendorId),
+                ReportSpecification.filter(siteId, project, rat, status, engineerId, vendorId),
                 Sort.by("siteId").ascending().and(Sort.by("project").ascending())
         );
     }
+
+
+//    public Page<Report> search(String siteId, String project, ReportStatus status,
+//                               UUID engineerId, UUID vendorId, Pageable pageable) {
+//        return reportRepository.findAll(
+//                ReportSpecification.filter(siteId, project, status, engineerId, vendorId),
+//                pageable
+//        );
+//    }
+//
+//    public List<Report> searchAll(String siteId, String project, ReportStatus status,
+//                                  UUID engineerId, UUID vendorId) {
+//        return reportRepository.findAll(
+//                ReportSpecification.filter(siteId, project, status, engineerId, vendorId),
+//                Sort.by("siteId").ascending().and(Sort.by("project").ascending())
+//        );
+//    }
 
     // --- Helpers ---
 

@@ -10,6 +10,7 @@ public record ReportResponse(
         UUID id,
         String siteId,
         String project,
+        String rat,
         String namingKey,
         int currentVersion,
         String currentStatus,
@@ -20,7 +21,6 @@ public record ReportResponse(
         String vendorCompany,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
-        // Latest version summary
         UUID latestVersionId,
         String sha256Hash,
         String padesSignatureId,
@@ -35,6 +35,7 @@ public record ReportResponse(
                 r.getId(),
                 r.getSiteId(),
                 r.getProject(),
+                r.getRat(),
                 r.getNamingKey(),
                 r.getCurrentVersion(),
                 r.getCurrentStatus().name(),

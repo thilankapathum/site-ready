@@ -50,8 +50,8 @@ export class SearchComponent implements OnInit {
     return `${start}–${end}`;
   });
 
-  filters: { siteId: string; project: string; status: string; engineerId: string } = {
-    siteId: '', project: '', status: '', engineerId: ''
+  filters: { siteId: string; project: string; rat: string; status: string; engineerId: string } = {
+    siteId: '', project: '', status: '', rat: '', engineerId: ''
   };
 
   constructor(private reportService: ReportService, private router:Router) {}
@@ -71,6 +71,7 @@ export class SearchComponent implements OnInit {
     this.reportService.search({
       siteId:     this.filters.siteId     || undefined,
       project:    this.filters.project    || undefined,
+      rat:        this.filters.rat        || undefined,
       status:     (this.filters.status    || undefined) as ReportStatus | undefined,
       engineerId: this.filters.engineerId || undefined,
       page:       this.page(),
@@ -87,7 +88,7 @@ export class SearchComponent implements OnInit {
   }
 
   reset(): void {
-    this.filters = { siteId: '', project: '', status: '', engineerId: '' };
+    this.filters = { siteId: '', project: '', rat: '', status: '', engineerId: '' };
     this.search();
   }
 

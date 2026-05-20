@@ -271,6 +271,7 @@ export class ReportDetailComponent implements OnInit {
       fd.append('file', file);
       fd.append('siteId', r.siteId);
       fd.append('project', r.project);
+      fd.append('rat',      r.rat);
       if (r.assignedEngineerId) fd.append('assignedEngineerId', r.assignedEngineerId);
       this.reportService.uploadReport(fd).subscribe({
         next: res => {

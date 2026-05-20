@@ -46,19 +46,37 @@ public class DocumentController {
     private final StorageService storageService;
     private final AuditService auditService;
 
+//    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    @PreAuthorize("hasRole('VENDOR')")
+//    public ResponseEntity<ReportResponse> upload(
+//            @RequestPart("file") MultipartFile file,
+//            @RequestPart("siteId") String siteId,
+//            @RequestPart("project") String project,
+//            @RequestPart(value = "assignedEngineerId", required = false) String assignedEngineerId,
+//            @AuthenticationPrincipal User user,
+//            HttpServletRequest request
+//    ) throws Exception {
+//        UUID engId = (assignedEngineerId != null && !assignedEngineerId.isBlank())
+//                ? UUID.fromString(assignedEngineerId) : null;
+//        UploadRequest uploadRequest = new UploadRequest(siteId, project, engId);
+//        ReportResponse response = documentService.uploadReport(file, uploadRequest, user, getIp(request));
+//        return ResponseEntity.ok(response);
+//    }
+
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('VENDOR')")
     public ResponseEntity<ReportResponse> upload(
             @RequestPart("file") MultipartFile file,
             @RequestPart("siteId") String siteId,
             @RequestPart("project") String project,
+            @RequestPart("rat") String rat,
             @RequestPart(value = "assignedEngineerId", required = false) String assignedEngineerId,
             @AuthenticationPrincipal User user,
             HttpServletRequest request
     ) throws Exception {
         UUID engId = (assignedEngineerId != null && !assignedEngineerId.isBlank())
                 ? UUID.fromString(assignedEngineerId) : null;
-        UploadRequest uploadRequest = new UploadRequest(siteId, project, engId);
+        UploadRequest uploadRequest = new UploadRequest(siteId, project, rat.toUpperCase(), engId);
         ReportResponse response = documentService.uploadReport(file, uploadRequest, user, getIp(request));
         return ResponseEntity.ok(response);
     }
@@ -109,26 +127,44 @@ public class DocumentController {
     public ResponseEntity<Page<ReportResponse>> search(
             @RequestParam(required = false) String siteId,
             @RequestParam(required = false) String project,
+            @RequestParam(required = false) String rat,
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) UUID engineerId,
             @RequestParam(required = false) UUID vendorId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        Page<Report> reports = documentService.search(siteId, project, status, engineerId, vendorId,
+        Page<Report> reports = documentService.search(
+                siteId, project, rat, status, engineerId, vendorId,
                 PageRequest.of(page, size, Sort.by("updatedAt").descending()));
         return ResponseEntity.ok(reports.map(r -> ReportResponse.from(r, null)));
     }
+
+//    @GetMapping("/search")
+//    public ResponseEntity<Page<ReportResponse>> search(
+//            @RequestParam(required = false) String siteId,
+//            @RequestParam(required = false) String project,
+//            @RequestParam(required = false) ReportStatus status,
+//            @RequestParam(required = false) UUID engineerId,
+//            @RequestParam(required = false) UUID vendorId,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "20") int size
+//    ) {
+//        Page<Report> reports = documentService.search(siteId, project, status, engineerId, vendorId,
+//                PageRequest.of(page, size, Sort.by("updatedAt").descending()));
+//        return ResponseEntity.ok(reports.map(r -> ReportResponse.from(r, null)));
+//    }
 
     @GetMapping("/export/excel")
     public ResponseEntity<byte[]> exportExcel(
             @RequestParam(required = false) String siteId,
             @RequestParam(required = false) String project,
+            @RequestParam(required = false) String rat,
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) UUID engineerId,
             @RequestParam(required = false) UUID vendorId
     ) throws Exception {
-        List<Report> reports = documentService.searchAll(siteId, project, status, engineerId, vendorId);
+        List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId);
         byte[] data = exportService.exportExcel(reports);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ssv-reports.xlsx\"")
@@ -140,11 +176,12 @@ public class DocumentController {
     public ResponseEntity<byte[]> exportCsv(
             @RequestParam(required = false) String siteId,
             @RequestParam(required = false) String project,
+            @RequestParam(required = false) String rat,
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) UUID engineerId,
             @RequestParam(required = false) UUID vendorId
     ) {
-        List<Report> reports = documentService.searchAll(siteId, project, status, engineerId, vendorId);
+        List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId);
         byte[] data = exportService.exportCsv(reports);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ssv-reports.csv\"")

@@ -31,6 +31,9 @@ public class Report {
     @Column(nullable = false)
     private String project;
 
+    @Column(nullable = false, length = 20)
+    private String rat;
+
     @Column(name = "naming_key", nullable = false, unique = true)
     private String namingKey;
 
@@ -75,7 +78,7 @@ public class Report {
         updatedAt = OffsetDateTime.now();
     }
 
-    public static String buildNamingKey(String siteId, String project) {
-        return siteId + "_" + project;
+    public static String buildNamingKey(String siteId, String project, String rat) {
+        return siteId + "_" + project + "_" + rat;
     }
 }

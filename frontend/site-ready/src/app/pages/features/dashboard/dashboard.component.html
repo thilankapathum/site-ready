@@ -57,6 +57,7 @@
             <thead>
             <tr class="text-base-content/60 text-xs uppercase tracking-wide">
               <th>Site / Project</th>
+              <th>RAT</th>
               <th>Version</th>
               <th>Status</th>
               <th>Responsibility</th>
@@ -73,7 +74,8 @@
                     <p class="font-medium text-sm">{{ r.siteId }}</p>
                     <p class="text-xs text-base-content/60">{{ r.project }}</p>
                   </td>
-                  <td><span class="badge badge-ghost badge-sm font-mono">V{{ r.currentVersion }}</span></td>
+                  <td><span class="badge badge-soft badge-sm">{{ r.rat }}</span></td>
+                  <td><span class="badge badge-ghost badge-sm ">V{{ r.currentVersion }}</span></td>
                   <td><span
                     [class]="statusBadge(r.currentStatus) + ' badge-sm'">{{ statusLabel(r.currentStatus) }}</span></td>
                   <td>

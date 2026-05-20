@@ -25,16 +25,29 @@
   <!-- Filters -->
   <div class="card bg-base-100 border border-base-300 shadow-sm">
     <div class="card-body p-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Site ID</span></label>
-          <input type="text" class="input input-bordered input-sm font-mono"
+          <input type="text" class="input input-bordered input-sm "
                  placeholder="e.g. KY0001" [(ngModel)]="filters.siteId" (keydown.enter)="search()"/>
         </div>
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Project</span></label>
           <input type="text" class="input input-bordered input-sm"
                  placeholder="e.g. 4G-upgrade-26" [(ngModel)]="filters.project" (keydown.enter)="search()"/>
+        </div>
+        <div class="form-control">
+          <label class="label py-1"><span class="label-text text-xs font-medium">RAT</span></label>
+          <select class="select select-bordered select-sm" [(ngModel)]="filters.rat">
+            <option value="">All RATs</option>
+            <option value="2G">2G</option>
+            <option value="3G">3G</option>
+            <option value="4G">4G</option>
+            <option value="4.5G">4.5G</option>
+            <option value="5G">5G</option>
+            <option value="5G-SA">5G-SA</option>
+            <option value="5G-NSA">5G-NSA</option>
+          </select>
         </div>
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Status</span></label>
@@ -98,6 +111,7 @@
           <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/60">
           <tr>
             <th>Site / Project</th>
+            <th>RAT</th>
             <th>Version</th>
             <th>Status</th>
             <th>Engineer</th>
@@ -111,10 +125,11 @@
             @for (r of reports(); track r.id) {
               <tr class="hover:bg-base-200/50 cursor-pointer" (click)="openDetail(r)">
                 <td>
-                  <p class="font-mono font-medium text-sm">{{ r.siteId }}</p>
+                  <p class=" font-medium text-sm">{{ r.siteId }}</p>
                   <p class="text-xs text-base-content/60">{{ r.project }}</p>
                 </td>
-                <td><span class="badge badge-ghost badge-sm font-mono">V{{ r.currentVersion }}</span></td>
+                <td><span class="badge badge-soft badge-sm ">{{ r.rat }}</span></td>
+                <td><span class="badge badge-ghost badge-sm ">V{{ r.currentVersion }}</span></td>
                 <td><span
                   [class]="badge(r.currentStatus) + ' badge-sm whitespace-nowrap'">{{ label(r.currentStatus) }}</span>
                 </td>

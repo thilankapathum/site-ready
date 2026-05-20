@@ -10,7 +10,7 @@
     <div>
       <h1 class="text-xl font-bold">Report Detail</h1>
       @if (report()) {
-        <p class="text-sm text-base-content/60 font-mono">
+        <p class="text-sm text-base-content/60">
           {{ report()!.siteId }} · {{ report()!.project }}
         </p>
       }
@@ -45,11 +45,15 @@
 
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div><p class="text-xs text-base-content/60">Site ID</p>
-            <p class="font-mono font-bold">{{ report()!.siteId }}</p></div>
+            <p class=" font-bold">{{ report()!.siteId }}</p></div>
           <div><p class="text-xs text-base-content/60">Project</p>
             <p class="font-medium">{{ report()!.project }}</p></div>
+          <div>
+            <p class="text-xs text-base-content/60">RAT / Technology</p>
+            <span class="badge badge-soft badge-sm">{{ report()!.rat }}</span>
+          </div>
           <div><p class="text-xs text-base-content/60">Current Version</p>
-            <span class="badge badge-ghost font-mono">V{{ report()!.currentVersion }}</span></div>
+            <span class="badge badge-ghost ">V{{ report()!.currentVersion }}</span></div>
           <div><p class="text-xs text-base-content/60">Responsibility</p>
             <p
               class="font-medium">{{ report()!.currentResponsibility === 'CLOSED' ? '— Closed —' : report()!.currentResponsibility }}</p>
@@ -93,7 +97,7 @@
                     d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
             </svg>
             <span class="text-xs text-success font-medium">PAdES digital signature applied</span>
-            <span class="text-xs text-base-content/40 font-mono">{{ report()!.padesSignatureId }}</span>
+            <span class="text-xs text-base-content/40 ">{{ report()!.padesSignatureId }}</span>
           </div>
         }
       </div>
@@ -131,7 +135,7 @@
                     [class.bg-error]="row.isRejected"
                     [class.bg-warning]="row.isResubmission">
                   <td>
-                  <span class="badge badge-ghost badge-sm font-mono font-bold">
+                  <span class="badge badge-ghost badge-sm  font-bold">
                     V{{ row.versionNumber }}
                   </span>
                   </td>
@@ -142,7 +146,7 @@
                   </td>
                   <td class="text-sm">{{ row.actorName }}</td>
                   <td>
-                    <span class="badge badge-outline badge-xs">{{ row.actorRole }}</span>
+                    <span class="badge badge-soft badge-sm">{{ row.actorRole }}</span>
                   </td>
                   <td class="text-xs text-base-content/70 whitespace-nowrap">{{ row.dateTime }}</td>
                   <td class="text-xs text-base-content/60 max-w-[140px] truncate"

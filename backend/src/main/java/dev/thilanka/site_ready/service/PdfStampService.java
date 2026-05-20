@@ -129,9 +129,10 @@ public class PdfStampService {
                         .setTextAlignment(TextAlignment.CENTER)
                         .setMarginBottom(2))
                 .add(new Paragraph(String.format(
-                        "Site: %s  |  Project: %s  |  Version: V%d  |  Status: %s",
+                        "Site: %s  |  Project: %s  |  RAT: %s  |  Version: V%d  |  Status: %s",
                         version.getReport().getSiteId(),
                         version.getReport().getProject(),
+                        version.getReport().getRat(),
                         version.getReport().getCurrentVersion(),
                         version.getReport().getCurrentStatus().name()))
                         .setFont(normal).setFontSize(8)

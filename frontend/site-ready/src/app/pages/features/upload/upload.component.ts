@@ -21,6 +21,8 @@ export class UploadComponent implements OnInit {
 
   siteId = '';
   project = '';
+  rat = '';
+  parsedRat = signal('');
   assignedEngineerId = '';
 
   parsedSiteId  = signal('');
@@ -61,13 +63,14 @@ export class UploadComponent implements OnInit {
   }
 
   parseFilename(name: string): void {
-    // Pattern: SITEID_PROJECT_Vn.pdf
-    const match = name.replace(/\.pdf$/i, '').match(/^([^_]+)_(.+?)(?:_V\d+)?$/i);
+    const match = name.replace(/\.pdf$/i, '').match(/^([^_]+)_(.+?)_([^_]+)_V\d+$/i);
     if (match) {
       this.parsedSiteId.set(match[1]);
       this.parsedProject.set(match[2]);
-      if (!this.siteId) this.siteId = match[1];
+      this.parsedRat.set(match[3].toUpperCase());
+      if (!this.siteId)  this.siteId  = match[1];
       if (!this.project) this.project = match[2];
+      if (!this.rat)     this.rat     = match[3].toUpperCase();
     }
   }
 
@@ -82,6 +85,7 @@ export class UploadComponent implements OnInit {
     fd.append('file', file);
     fd.append('siteId', this.siteId.trim());
     fd.append('project', this.project.trim());
+    fd.append('rat',      this.rat.trim().toUpperCase());
     if (this.assignedEngineerId) fd.append('assignedEngineerId', this.assignedEngineerId);
 
     this.reportService.uploadReport(fd).subscribe({

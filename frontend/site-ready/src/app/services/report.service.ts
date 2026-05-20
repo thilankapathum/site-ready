@@ -38,6 +38,7 @@ export class ReportService {
   search(filters: {
     siteId?: string;
     project?: string;
+    rat?: string;
     status?: ReportStatus | '';
     engineerId?: string;
     vendorId?: string;
@@ -45,13 +46,14 @@ export class ReportService {
     size?: number;
   }): Observable<PageResponse<ReportResponse>> {
     let params = new HttpParams();
-    if (filters.siteId) params = params.set('siteId', filters.siteId);
-    if (filters.project) params = params.set('project', filters.project);
-    if (filters.status) params = params.set('status', filters.status);
+    if (filters.siteId)     params = params.set('siteId',     filters.siteId);
+    if (filters.project)    params = params.set('project',    filters.project);
+    if (filters.rat)        params = params.set('rat',        filters.rat);
+    if (filters.status)     params = params.set('status',     filters.status);
     if (filters.engineerId) params = params.set('engineerId', filters.engineerId);
-    if (filters.vendorId) params = params.set('vendorId', filters.vendorId);
+    if (filters.vendorId)   params = params.set('vendorId',   filters.vendorId);
     params = params.set('page', filters.page ?? 0).set('size', filters.size ?? 20);
-    return this.http.get<PageResponse<ReportResponse>>(`${this.BASE}/search`, {params});
+    return this.http.get<PageResponse<ReportResponse>>(`${this.BASE}/search`, { params });
   }
 
   exportExcel(filters: Record<string, string>): void {

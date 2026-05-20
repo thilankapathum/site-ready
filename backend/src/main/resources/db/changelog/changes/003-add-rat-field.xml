@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="003-add-rat-field" author="ssv-dms">
+        <addColumn tableName="reports">
+            <column name="rat" type="VARCHAR(20)" defaultValue="UNKNOWN">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <!-- Rebuild the unique naming key to include RAT -->
+        <!-- Drop old unique constraint first -->
+        <dropUniqueConstraint tableName="reports"
+                              constraintName="reports_naming_key_key"/>
+
+        <!-- naming_key will now be SITEID_PROJECT_RAT -->
+        <addUniqueConstraint tableName="reports"
+                             columnNames="naming_key"
+                             constraintName="uq_reports_naming_key"/>
+    </changeSet>
+
+</databaseChangeLog>
