@@ -194,34 +194,38 @@ public class DocumentService {
                 .findByReportIdAndVersionNumber(reportId, currentVer)
                 .orElseThrow();
 
-        // Store on the version entity so it's retrievable
         version.setReviewedStorageKey(reviewKey);
-
         version.setReviewStatus(newStatus);
         version.setReviewerNotes(request.notes());
         version.setConditions(request.conditions());
         version.setReviewedBy(engineer);
         version.setReviewedAt(OffsetDateTime.now());
 
-        // Stamp engineer's reviewed PDF as well
-        try {
-            List<ReportVersion> allVersions = versionRepository.findByReportIdOrderByVersionNumberDesc(report.getId());
-            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(reviewBytes, engineer, version, sha256, allVersions);
-            String stampedReviewKey = storageService.buildKey(report.getNamingKey(), currentVer, "reviewed-stamped");
-            storageService.upload(stampedReviewKey, stamp.signedBytes(), "application/pdf");
-            version.setReviewedStorageKey(stampedReviewKey);   // serve the stamped version
+// ── Update report status BEFORE stamping so the audit page reflects the new status ──
+        report.setCurrentStatus(newStatus);
+        report.setCurrentResponsibility(resolveResponsibility(newStatus));
+        reportRepository.save(report);    // persist so version.getReport() returns updated state
 
+// Now stamp — report.getCurrentStatus() is correct
+        try {
+            List<ReportVersion> allVersions = versionRepository
+                    .findByReportIdOrderByVersionNumberDesc(report.getId());
+            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
+                    reviewBytes, engineer, version, sha256, allVersions);
+            String stampedReviewKey = storageService.buildKey(
+                    report.getNamingKey(), currentVer, "reviewed-stamped");
+            storageService.upload(stampedReviewKey, stamp.signedBytes(), "application/pdf");
+            version.setReviewedStorageKey(stampedReviewKey);
         } catch (Exception e) {
             log.warn("Stamping reviewed PDF failed: {}", e.getMessage());
-            // fall back to un-stamped but still store it
             version.setReviewedStorageKey(reviewKey);
         }
 
-        // Update workflow state
-        report.setCurrentStatus(newStatus);
-        report.setCurrentResponsibility(resolveResponsibility(newStatus));
+// Save version after stamping
         versionRepository.save(version);
-        reportRepository.save(report);
+
+// Report already saved above — no need to save again unless something else changed
+// Remove the duplicate report save that was here before
 
         AuditAction auditAction = switch (newStatus) {
             case APPROVED -> AuditAction.APPROVED;
@@ -236,13 +240,34 @@ public class DocumentService {
         return ReportResponse.from(report, version);
     }
 
-    public byte[] downloadStampedPdf(UUID reportId, int version, User requestingUser, String ipAddress) {
+    public byte[] downloadStampedPdf(UUID reportId, int versionNumber, User requestingUser, String ipAddress) {
         Report report = reportRepository.findById(reportId).orElseThrow();
-        ReportVersion rv = versionRepository.findByReportIdAndVersionNumber(reportId, version).orElseThrow();
-        String key = rv.getStampedStorageKey() != null ? rv.getStampedStorageKey() : rv.getOriginalStorageKey();
+        ReportVersion rv = versionRepository
+                .findByReportIdAndVersionNumber(reportId, versionNumber)
+                .orElseThrow();
+
+        // Priority: reviewed-stamped > vendor-stamped > original
+        // The reviewed-stamped is the most up-to-date file in the approval chain
+        String key;
+        if (rv.getReviewedStorageKey() != null) {
+            key = rv.getReviewedStorageKey();
+        } else if (rv.getStampedStorageKey() != null) {
+            key = rv.getStampedStorageKey();
+        } else {
+            key = rv.getOriginalStorageKey();
+        }
+
         auditService.log(rv, requestingUser, AuditAction.DOWNLOADED, ipAddress);
         return storageService.download(key);
     }
+
+//    public byte[] downloadStampedPdf(UUID reportId, int version, User requestingUser, String ipAddress) {
+//        Report report = reportRepository.findById(reportId).orElseThrow();
+//        ReportVersion rv = versionRepository.findByReportIdAndVersionNumber(reportId, version).orElseThrow();
+//        String key = rv.getStampedStorageKey() != null ? rv.getStampedStorageKey() : rv.getOriginalStorageKey();
+//        auditService.log(rv, requestingUser, AuditAction.DOWNLOADED, ipAddress);
+//        return storageService.download(key);
+//    }
 
     public Page<Report> getMyReports(User user, Pageable pageable) {
         if (user.getRole() == UserRole.ENGINEER) {
