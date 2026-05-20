@@ -46,12 +46,28 @@ export interface ReportResponse {
   reviewerName: string | null;
 }
 
+// export interface PageResponse<T> {
+//   content: T[];
+//   totalElements: number;
+//   totalPages: number;
+//   number: number;
+//   size: number;
+// }
+
 export interface PageResponse<T> {
   content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  size: number;
+  // Flat format (standard Spring Page)
+  totalElements?: number;
+  totalPages?: number;
+  number?: number;
+  size?: number;
+  // Nested format (VIA_DTO mode)
+  page?: {
+    totalElements: number;
+    totalPages: number;
+    number: number;
+    size: number;
+  };
 }
 
 export interface EngineerOption {

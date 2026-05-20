@@ -3,6 +3,7 @@ import {ReportResponse, STATUS_BADGE_CLASS, STATUS_LABELS} from '../../../models
 import {AuthService} from '../../../services/auth/auth.service';
 import {ReportService} from '../../../services/report.service';
 import {Router, RouterLink} from '@angular/router';
+import {forkJoin} from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -14,6 +15,9 @@ import {Router, RouterLink} from '@angular/router';
 })
 export class DashboardComponent implements OnInit {
   user = this.auth.currentUser;
+
+
+
   role = this.auth.role;
   isVendor   = computed(() => this.role() === 'VENDOR');
   isEngineer = computed(() => this.role() === 'ENGINEER');
@@ -22,23 +26,53 @@ export class DashboardComponent implements OnInit {
   reports = signal<ReportResponse[]>([]);
   loading = signal(true);
 
-  stats = computed(() => {
-    const rs = this.reports();
-    return [
-      { label: 'Total',          value: rs.length,                                      color: 'text-base-content' },
-      { label: 'Pending Review', value: rs.filter(r => r.currentStatus === 'PENDING_REVIEW').length,    color: 'text-info' },
-      { label: 'Approved',       value: rs.filter(r => ['APPROVED','CONDITIONALLY_APPROVED'].includes(r.currentStatus)).length, color: 'text-success' },
-      { label: 'Action Needed',  value: rs.filter(r => r.currentStatus === 'RESUBMISSION_REQUIRED').length, color: 'text-warning' },
-    ];
-  });
+  pendingCount    = signal(0);
+  approvedCount   = signal(0);
+  actionCount     = signal(0);
+  totalCount = signal(0);
+
+  stats = computed(() => [
+    { label: 'Total Reports',  value: this.totalCount(),    color: 'text-base-content' },
+    { label: 'Pending Review', value: this.pendingCount(),  color: 'text-info' },
+    { label: 'Approved',       value: this.approvedCount(), color: 'text-success' },
+    { label: 'Action Needed',  value: this.actionCount(),   color: 'text-warning' },
+  ]);
 
   constructor(private auth: AuthService, private reportService: ReportService, private router: Router) {}
 
   ngOnInit(): void {
-    this.reportService.getMyReports(0, 50).subscribe({
-      next: page => { this.reports.set(page.content); this.loading.set(false); },
-      error: () => this.loading.set(false),
-    });
+    const user = this.user();
+
+    console.log('Dashboard user:', user);
+    console.log('userId:', user?.userId);
+    console.log('role:', user?.role);
+
+    if (!user) return;
+
+    const role   = user.role;
+    const userId = user.userId;
+
+    // Recent reports + total
+    const recent$ = this.reportService.getMyReports(0, 5);
+
+    // Status counts via search endpoint
+    const pending$   = this.reportService.getReportCountByStatus('PENDING_REVIEW',         role, userId);
+    const approved$  = this.reportService.getReportCountByStatus('APPROVED',                role, userId);
+    const condApp$   = this.reportService.getReportCountByStatus('CONDITIONALLY_APPROVED',  role, userId);
+    const actionNeed$ = this.reportService.getReportCountByStatus('RESUBMISSION_REQUIRED',  role, userId);
+
+    forkJoin({ recent: recent$, pending: pending$, approved: approved$, condApp: condApp$, action: actionNeed$ })
+      .subscribe({
+        next: results => {
+          this.reports.set(results.recent.content);
+          this.totalCount.set(results.recent.totalElements ?? results.recent.page?.totalElements ?? 0);
+          this.pendingCount.set(results.pending);
+          this.approvedCount.set(results.approved + results.condApp);
+          this.actionCount.set(results.action);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   statusBadge(s: string): string { return STATUS_BADGE_CLASS[s as keyof typeof STATUS_BADGE_CLASS] ?? 'badge'; }

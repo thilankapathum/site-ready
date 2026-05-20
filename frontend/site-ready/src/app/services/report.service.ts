@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+import {Injectable} from '@angular/core';
 import {HttpClient, HttpParams} from '@angular/common/http';
-import {Observable} from 'rxjs';
+import {map, Observable} from 'rxjs';
 import {AuthResponse, PageResponse, ReportResponse, ReportStatus, VersionResponse} from '../models/api.models';
 
 @Injectable({
@@ -11,7 +11,8 @@ export class ReportService {
   private readonly BASE = '/api/reports';
   private readonly USERS = '/api/users';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+  }
 
   uploadReport(formData: FormData): Observable<ReportResponse> {
     return this.http.post<ReportResponse>(`${this.BASE}/upload`, formData);
@@ -27,7 +28,8 @@ export class ReportService {
     });
   }
 
-  getMyReports(page = 0, size = 20): Observable<PageResponse<ReportResponse>> {
+  // getMyReports(page = 0, size = 20): Observable<PageResponse<ReportResponse>> {
+  getMyReports(page: number, size: number): Observable<PageResponse<ReportResponse>> {
     return this.http.get<PageResponse<ReportResponse>>(`${this.BASE}/my`, {
       params: new HttpParams().set('page', page).set('size', size),
     });
@@ -43,22 +45,22 @@ export class ReportService {
     size?: number;
   }): Observable<PageResponse<ReportResponse>> {
     let params = new HttpParams();
-    if (filters.siteId)    params = params.set('siteId',     filters.siteId);
-    if (filters.project)   params = params.set('project',    filters.project);
-    if (filters.status)    params = params.set('status',     filters.status);
+    if (filters.siteId) params = params.set('siteId', filters.siteId);
+    if (filters.project) params = params.set('project', filters.project);
+    if (filters.status) params = params.set('status', filters.status);
     if (filters.engineerId) params = params.set('engineerId', filters.engineerId);
-    if (filters.vendorId)  params = params.set('vendorId',   filters.vendorId);
+    if (filters.vendorId) params = params.set('vendorId', filters.vendorId);
     params = params.set('page', filters.page ?? 0).set('size', filters.size ?? 20);
-    return this.http.get<PageResponse<ReportResponse>>(`${this.BASE}/search`, { params });
+    return this.http.get<PageResponse<ReportResponse>>(`${this.BASE}/search`, {params});
   }
 
   exportExcel(filters: Record<string, string>): void {
-    const params = new HttpParams({ fromObject: filters });
+    const params = new HttpParams({fromObject: filters});
     window.open(`${this.BASE}/export/excel?${params.toString()}`, '_blank');
   }
 
   exportCsv(filters: Record<string, string>): void {
-    const params = new HttpParams({ fromObject: filters });
+    const params = new HttpParams({fromObject: filters});
     window.open(`${this.BASE}/export/csv?${params.toString()}`, '_blank');
   }
 
@@ -77,7 +79,7 @@ export class ReportService {
   assignEngineer(reportId: string, engineerId: string | null): Observable<ReportResponse> {
     let params = new HttpParams();
     if (engineerId) params = params.set('engineerId', engineerId);
-    return this.http.patch<ReportResponse>(`${this.BASE}/${reportId}/assign-engineer`, null, { params });
+    return this.http.patch<ReportResponse>(`${this.BASE}/${reportId}/assign-engineer`, null, {params});
   }
 
   downloadVersionPdf(reportId: string, versionId: string): Observable<Blob> {
@@ -90,5 +92,25 @@ export class ReportService {
     return this.http.get(`${this.BASE}/${reportId}/download-version/${versionId}/reviewed`, {
       responseType: 'blob',
     });
+  }
+
+  getReportCountByStatus(status: string, role: string, userId: string): Observable<number> {
+    let params = new HttpParams().set('page', 0).set('size', 1).set('status', status);
+    if (role === 'VENDOR') {
+      params = params.set('vendorId', userId);
+    } else {
+      params = params.set('engineerId', userId);
+    }
+    return this.http.get<PageResponse<ReportResponse>>(`${this.BASE}/search`, {params}).pipe(
+      map(page => this.getTotal(page))
+    );
+  }
+
+  private getTotal(page: PageResponse<any>): number {
+    return page.totalElements ?? page.page?.totalElements ?? 0;
+  }
+
+  private getTotalPages(page: PageResponse<any>): number {
+    return page.totalPages ?? page.page?.totalPages ?? 0;
   }
 }

@@ -29,12 +29,12 @@
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Site ID</span></label>
           <input type="text" class="input input-bordered input-sm font-mono"
-                 placeholder="e.g. KY0001" [(ngModel)]="filters.siteId" (keydown.enter)="search()" />
+                 placeholder="e.g. KY0001" [(ngModel)]="filters.siteId" (keydown.enter)="search()"/>
         </div>
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Project</span></label>
           <input type="text" class="input input-bordered input-sm"
-                 placeholder="e.g. 4G-upgrade-26" [(ngModel)]="filters.project" (keydown.enter)="search()" />
+                 placeholder="e.g. 4G-upgrade-26" [(ngModel)]="filters.project" (keydown.enter)="search()"/>
         </div>
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Status</span></label>
@@ -59,9 +59,12 @@
       </div>
       <div class="flex gap-2 mt-3">
         <button class="btn btn-primary btn-sm gap-1" (click)="search()" [disabled]="loading()">
-          @if (loading()) { <span class="loading loading-spinner loading-xs"></span> }
+          @if (loading()) {
+            <span class="loading loading-spinner loading-xs"></span>
+          }
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
           Search
         </button>
@@ -82,7 +85,8 @@
     <div class="card bg-base-100 border border-base-300 shadow-sm">
       <div class="card-body items-center text-center py-14">
         <svg class="w-12 h-12 text-base-content/20 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
         <p class="text-sm text-base-content/50">No reports match your search criteria.</p>
       </div>
@@ -111,7 +115,9 @@
                   <p class="text-xs text-base-content/60">{{ r.project }}</p>
                 </td>
                 <td><span class="badge badge-ghost badge-sm font-mono">V{{ r.currentVersion }}</span></td>
-                <td><span [class]="badge(r.currentStatus) + ' badge-sm whitespace-nowrap'">{{ label(r.currentStatus) }}</span></td>
+                <td><span
+                  [class]="badge(r.currentStatus) + ' badge-sm whitespace-nowrap'">{{ label(r.currentStatus) }}</span>
+                </td>
                 <td class="text-xs">{{ r.assignedEngineerName ?? '—' }}</td>
                 <td class="text-xs">{{ r.vendorName }}</td>
                 <td class="text-xs text-base-content/60 whitespace-nowrap">{{ formatDate(r.updatedAt) }}</td>
@@ -141,9 +147,48 @@
       <!-- Pagination -->
       @if (totalPages() > 1) {
         <div class="flex items-center justify-between px-4 py-3 border-t border-base-200">
-          <button class="btn btn-ghost btn-sm" [disabled]="page() === 0" (click)="prevPage()">← Prev</button>
-          <span class="text-sm text-base-content/60">Page {{ page() + 1 }} of {{ totalPages() }}</span>
-          <button class="btn btn-ghost btn-sm" [disabled]="page() >= totalPages() - 1" (click)="nextPage()">Next →</button>
+          <span class="text-xs text-base-content/50">
+            Showing {{ showingText() }} of {{ total() }}
+          </span>
+          <div class="flex items-center gap-1">
+            <button class="btn btn-ghost btn-xs btn-square"
+                    [disabled]="page() === 0" (click)="goToPage(0)" title="First page">
+              «
+            </button>
+            <button class="btn btn-ghost btn-xs btn-square"
+                    [disabled]="page() === 0" (click)="prevPage()">
+              ‹
+            </button>
+            @for (p of pageNumbers(); track p) {
+              @if (p === -1) {
+                <span class="px-1 text-base-content/40 text-xs">…</span>
+              } @else {
+                <button class="btn btn-xs btn-square"
+                        [class.btn-primary]="p === page()"
+                        [class.btn-ghost]="p !== page()"
+                        (click)="goToPage(p)">
+                  {{ p + 1 }}
+                </button>
+              }
+            }
+            <button class="btn btn-ghost btn-xs btn-square"
+                    [disabled]="page() >= totalPages() - 1" (click)="nextPage()">
+              ›
+            </button>
+            <button class="btn btn-ghost btn-xs btn-square"
+                    [disabled]="page() >= totalPages() - 1" (click)="goToPage(totalPages() - 1)" title="Last page">
+              »
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-base-content/50">Rows</span>
+            <select class="select select-bordered select-xs" [(ngModel)]="pageSize"
+                    (ngModelChange)="onPageSizeChange()">
+              <option [value]="10">10</option>
+              <option [value]="25">25</option>
+              <option [value]="50">50</option>
+            </select>
+          </div>
         </div>
       }
     </div>

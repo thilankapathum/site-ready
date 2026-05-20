@@ -1,4 +1,4 @@
-import {Component, OnInit, signal} from '@angular/core';
+import {Component, computed, OnInit, signal} from '@angular/core';
 import {
   AuthResponse,
   ReportResponse,
@@ -24,7 +24,31 @@ export class SearchComponent implements OnInit {
   total      = signal(0);
   page       = signal(0);
   totalPages = signal(0);
+  pageSize   = 10;
   engineers  = signal<AuthResponse[]>([]);
+
+  pageNumbers = computed<number[]>(() => {
+    const total = this.totalPages();
+    const current = this.page();
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i);
+    const pages: number[] = [];
+    // Always show first
+    pages.push(0);
+    if (current > 2) pages.push(-1); // ellipsis
+    for (let i = Math.max(1, current - 1); i <= Math.min(total - 2, current + 1); i++) {
+      pages.push(i);
+    }
+    if (current < total - 3) pages.push(-1); // ellipsis
+    // Always show last
+    pages.push(total - 1);
+    return pages;
+  });
+
+  showingText = computed(() => {
+    const start = this.page() * this.pageSize + 1;
+    const end = Math.min((this.page() + 1) * this.pageSize, this.total());
+    return `${start}–${end}`;
+  });
 
   filters: { siteId: string; project: string; status: string; engineerId: string } = {
     siteId: '', project: '', status: '', engineerId: ''
@@ -45,17 +69,17 @@ export class SearchComponent implements OnInit {
   doSearch(): void {
     this.loading.set(true);
     this.reportService.search({
-      siteId: this.filters.siteId || undefined,
-      project: this.filters.project || undefined,
-      status: (this.filters.status || undefined) as ReportStatus | undefined,
+      siteId:     this.filters.siteId     || undefined,
+      project:    this.filters.project    || undefined,
+      status:     (this.filters.status    || undefined) as ReportStatus | undefined,
       engineerId: this.filters.engineerId || undefined,
-      page: this.page(),
-      size: 25,
+      page:       this.page(),
+      size:       this.pageSize
     }).subscribe({
-      next: page => {
-        this.reports.set(page.content);
-        this.total.set(page.totalElements);
-        this.totalPages.set(page.totalPages);
+      next: res => {
+        this.reports.set(res.content);
+        this.total.set(res.totalElements ?? res.page?.totalElements ?? 0);
+        this.totalPages.set(res.totalPages ?? res.page?.totalPages ?? 0);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -67,8 +91,23 @@ export class SearchComponent implements OnInit {
     this.search();
   }
 
-  prevPage(): void { if (this.page() > 0) { this.page.update(p => p - 1); this.doSearch(); } }
-  nextPage(): void { if (this.page() < this.totalPages() - 1) { this.page.update(p => p + 1); this.doSearch(); } }
+  goToPage(p: number): void {
+    this.page.set(p);
+    this.doSearch();
+  }
+
+  prevPage(): void {
+    if (this.page() > 0) { this.page.update(p => p - 1); this.doSearch(); }
+  }
+
+  nextPage(): void {
+    if (this.page() < this.totalPages() - 1) { this.page.update(p => p + 1); this.doSearch(); }
+  }
+
+  onPageSizeChange(): void {
+    this.page.set(0);
+    this.doSearch();
+  }
 
   download(r: ReportResponse): void {
     this.reportService.downloadPdf(r.id, r.currentVersion).subscribe(blob => {
