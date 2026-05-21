@@ -5,17 +5,16 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['"Inter"', 'sans-serif'],
-        // sans: ['"DM Sans"', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       fontSize: {
-        xs: ['0.70rem', {lineHeight: '1rem'}],
-        sm: ['0.78rem', {lineHeight: '1.15rem'}],
-        base: ['0.85rem', {lineHeight: '1.35rem'}],
-        lg: ['0.95rem', {lineHeight: '1.4rem'}],
-        xl: ['1.05rem', {lineHeight: '1.5rem'}],
-        '2xl': ['1.2rem', {lineHeight: '1.6rem'}],
-        '3xl': ['1.4rem', {lineHeight: '1.75rem'}],
+        xs:    ['0.70rem', { lineHeight: '1rem' }],
+        sm:    ['0.78rem', { lineHeight: '1.15rem' }],
+        base:  ['0.85rem', { lineHeight: '1.35rem' }],
+        lg:    ['0.95rem', { lineHeight: '1.4rem' }],
+        xl:    ['1.05rem', { lineHeight: '1.5rem' }],
+        '2xl': ['1.2rem',  { lineHeight: '1.6rem' }],
+        '3xl': ['1.4rem',  { lineHeight: '1.75rem' }],
       },
     },
   },
@@ -24,32 +23,48 @@ module.exports = {
     themes: [
       {
         ssvlight: {
-          "primary":          "#0f4c81",
+          // Primary — dark navy (the "+ New" button, active nav)
+          "primary":          "#121932",
           "primary-content":  "#ffffff",
-          "secondary":        "#1a6b4a",
+
+          // Secondary — teal/mint green (charts, highlights, links)
+          "secondary":        "#08EEB1",
           "secondary-content":"#ffffff",
-          "accent":           "#d97706",
+
+          // Accent — soft teal for interactive highlights
+          "accent":           "#0d9488",
           "accent-content":   "#ffffff",
-          "neutral":          "#2a2a35",
+
+          // Neutral — mid grey for tags and subtle elements
+          "neutral":          "#6b7280",
           "neutral-content":  "#ffffff",
-          "base-100":         "#f8f9fb",
-          "base-200":         "#eef0f4",
-          "base-300":         "#dde1e8",
-          "base-content":     "#1a1c22",
-          "info":             "#0284c7",
-          "success":          "#16a34a",
-          "warning":          "#d97706",
-          "error":            "#dc2626",
+
+          // Base — light grey page background matching the app
+          "base-100":         "#F6F6F6",   // page background
+          "base-200":         "#F6F6F6",   // sidebar, card headers
+          "base-300":         "#EEEDEE",   // borders, dividers
+          "base-content":     "#121932",   // primary text
+
+          // Semantic
+          "info":             "#0ea5e9",
+          "info-content":     "#ffffff",
+          "success":          "#00D577",   // same teal as secondary
+          "success-content":  "#ffffff",
+          "warning":          "#f59e0b",
+          "warning-content":  "#ffffff",
+          "error":            "#ef4444",
+          "error-content":    "#ffffff",
+
+          // Shape
           "--rounded-box":    "0.5rem",
           "--rounded-btn":    "0.375rem",
           "--rounded-badge":  "0.25rem",
           "--tab-radius":     "0.375rem",
+          "--border-btn":     "1px",
         },
       },
-      "dark",
     ],
     defaultTheme: "ssvlight",
-    darkTheme: "dark",
     base: true,
     styled: true,
     utils: true,

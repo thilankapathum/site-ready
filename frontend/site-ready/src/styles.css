@@ -20,7 +20,24 @@ body {
   @apply bg-base-100 text-base-content;
 }
 
-/* ── Status badge colours ── */
+/* ── Cards ── */
+.card {
+  @apply bg-white;   /* cards are pure white on the grey page */
+}
+
+/* ── Sidebar nav ── */
+.nav-link {
+  @apply flex items-center gap-3 px-3 py-2 rounded-lg
+  text-sm font-medium transition-colors text-base-content/70;
+}
+.nav-link:hover {
+  @apply bg-base-300 text-base-content;
+}
+.nav-link.active {
+  @apply bg-accent/5 text-accent font-semibold;
+}
+
+/* ── Status badges ── */
 .badge-pending    { @apply badge badge-info badge-outline; }
 .badge-approved   { @apply badge badge-success; }
 .badge-cond       { @apply badge badge-success badge-outline; }
@@ -31,10 +48,10 @@ body {
 .drop-zone {
   @apply border-2 border-dashed border-base-300 rounded-xl p-10
   flex flex-col items-center justify-center gap-3
-  transition-colors cursor-pointer;
+  transition-colors cursor-pointer bg-base-100;
 }
 .drop-zone.drag-over {
-  @apply border-primary bg-primary/5;
+  @apply border-secondary bg-secondary/5;
 }
 
 /* ── Card hover lift ── */
@@ -42,7 +59,7 @@ body {
   @apply transition-all duration-200;
 }
 .card-lift:hover {
-  @apply shadow-lg -translate-y-0.5;
+  @apply shadow-md -translate-y-0.5;
 }
 
 /* ── Hash mono display ── */
@@ -51,23 +68,31 @@ body {
   @apply text-xs break-all;
 }
 
-/* ── Sidebar nav link ── */
-.nav-link {
-  @apply flex items-center gap-3 px-4 py-2.5 rounded-lg
-  text-sm font-medium transition-colors;
-}
-.nav-link:hover {
-  @apply bg-base-200;
-}
-.nav-link.active {
-  @apply bg-primary text-primary-content;
-}
-
 /* ── Page fade-in ── */
 @keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .page-enter {
-  animation: pageFadeIn 0.18s ease-out;
+  animation: pageFadeIn 0.15s ease-out;
+}
+
+/* ── Primary button — dark navy ── */
+.btn-primary {
+  @apply font-medium tracking-wide;
+}
+
+/* ── Table header ── */
+thead tr {
+  @apply text-base-content/50;
+}
+
+/* ── Teal links ── */
+a.text-primary {
+  @apply text-secondary hover:text-secondary/80;
+}
+
+/* ── Input focus ring ── */
+.input:focus, .select:focus, .textarea:focus {
+  @apply outline-none ring-2 ring-secondary/30 border-secondary/60;
 }

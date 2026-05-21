@@ -35,7 +35,7 @@ export class DashboardComponent implements OnInit {
     { label: 'Total Reports',  value: this.totalCount(),    color: 'text-base-content' },
     { label: 'Pending Review', value: this.pendingCount(),  color: 'text-info' },
     { label: 'Approved',       value: this.approvedCount(), color: 'text-success' },
-    { label: 'Action Needed',  value: this.actionCount(),   color: 'text-warning' },
+    { label: 'Pending Resubmission',  value: this.actionCount(),   color: 'text-warning' },
   ]);
 
   constructor(private auth: AuthService, private reportService: ReportService, private router: Router) {}
