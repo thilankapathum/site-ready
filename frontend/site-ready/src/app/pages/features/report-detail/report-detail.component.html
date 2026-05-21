@@ -34,7 +34,7 @@
     <div class="card bg-base-100 border border-base-300 shadow-sm">
       <div class="card-body p-5">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="font-bold">Report Information</h2>
+          <h2 class="font-bold">REPORT INFORMATION</h2>
           <!-- Engineer assignment (admin only) -->
           @if (isAdmin()) {
             <button class="btn btn-ghost btn-xs" (click)="toggleAssign()">
@@ -106,7 +106,7 @@
     <!-- ── Version history ── -->
     <div class="card bg-base-100 border border-base-300 shadow-sm">
       <div class="card-body p-5">
-        <h2 class="font-bold mb-4">Version History</h2>
+        <h2 class="font-bold mb-4">VERSION HISTORY</h2>
         @if (versionsLoading()) {
           <div class="flex justify-center py-8">
             <span class="loading loading-spinner loading-md text-primary"></span>
@@ -169,7 +169,7 @@
                     <button class="btn btn-ghost btn-xs gap-1 whitespace-nowrap"
                             (click)="downloadRow(row)"
                             [disabled]="!row.hasFile">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="w-3.5 h-3.5 text-base-content/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                       </svg>
@@ -193,7 +193,7 @@
             @if (isOwnerVendor() && report()!.currentStatus === 'RESUBMISSION_REQUIRED') {
               Submit Next Version (V{{ report()!.currentVersion + 1 }})
             } @else if (isAssignedEngineer() && report()!.currentStatus === 'PENDING_REVIEW') {
-              Review Report (V{{ report()!.currentVersion }})
+              REVIEW REPORT <span class="text-neutral font-semibold">(V{{ report()!.currentVersion }})</span>
             }
           </h2>
 

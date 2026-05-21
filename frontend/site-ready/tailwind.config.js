@@ -24,35 +24,35 @@ module.exports = {
       {
         ssvlight: {
           // Primary — dark navy (the "+ New" button, active nav)
-          "primary":          "#121932",
-          "primary-content":  "#ffffff",
+          "primary":          "#1a273a",
+          "primary-content":  "#eef2f6",
 
           // Secondary — teal/mint green (charts, highlights, links)
-          "secondary":        "#08EEB1",
-          "secondary-content":"#ffffff",
+          "secondary":        "#135bf9",
+          "secondary-content":"#eff6ff",
 
           // Accent — soft teal for interactive highlights
-          "accent":           "#0d9488",
-          "accent-content":   "#ffffff",
+          "accent":           "#1a368b",
+          "accent-content":   "#eff6ff",
 
           // Neutral — mid grey for tags and subtle elements
-          "neutral":          "#6b7280",
+          "neutral":          "#61738d",
           "neutral-content":  "#ffffff",
 
           // Base — light grey page background matching the app
-          "base-100":         "#F6F6F6",   // page background
-          "base-200":         "#F6F6F6",   // sidebar, card headers
-          "base-300":         "#EEEDEE",   // borders, dividers
-          "base-content":     "#121932",   // primary text
+          "base-100":         "#f8f8f8",   // page background
+          "base-200":         "#f5f5f4",   // sidebar, card headers
+          "base-300":         "#e6e4e3",   // borders, dividers
+          "base-content":     "#1a273a",   // primary text
 
           // Semantic
-          "info":             "#0ea5e9",
+          "info":             "#2a7eff",
           "info-content":     "#ffffff",
-          "success":          "#00D577",   // same teal as secondary
+          "success":          "#00c850",   // same teal as secondary
           "success-content":  "#ffffff",
-          "warning":          "#f59e0b",
+          "warning":          "#fa9700",
           "warning-content":  "#ffffff",
-          "error":            "#ef4444",
+          "error":            "#f82834",
           "error-content":    "#ffffff",
 
           // Shape

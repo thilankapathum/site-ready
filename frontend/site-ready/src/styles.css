@@ -31,10 +31,10 @@ body {
   text-sm font-medium transition-colors text-base-content/70;
 }
 .nav-link:hover {
-  @apply bg-base-300 text-base-content;
+  @apply bg-primary/5 text-base-content;
 }
 .nav-link.active {
-  @apply bg-accent/5 text-accent font-semibold;
+  @apply bg-primary/5 text-base-content font-semibold;
 }
 
 /* ── Status badges ── */
@@ -59,7 +59,7 @@ body {
   @apply transition-all duration-200;
 }
 .card-lift:hover {
-  @apply shadow-md -translate-y-0.5;
+  @apply shadow-md shadow-gray-100 -translate-y-0.5;
 }
 
 /* ── Hash mono display ── */

@@ -1,11 +1,11 @@
 <div class="space-y-5">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold">Search & Export</h1>
+      <h1 class="text-2xl font-bold">Search Reports</h1>
       <p class="text-base-content/60 text-sm mt-1">Find, browse, and export SSV reports</p>
     </div>
     <div class="flex gap-2">
-      <button class="btn btn-outline btn-sm gap-1" (click)="exportCsv()">
+      <button class="btn border-primary/25 btn-sm gap-1" (click)="exportCsv()">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
@@ -28,17 +28,17 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Site ID</span></label>
-          <input type="text" class="input input-bordered input-sm "
+          <input type="text" class="input input-bordered input-xs "
                  placeholder="e.g. KY0001" [(ngModel)]="filters.siteId" (keydown.enter)="search()"/>
         </div>
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Project</span></label>
-          <input type="text" class="input input-bordered input-sm"
+          <input type="text" class="input input-bordered input-xs"
                  placeholder="e.g. 4G-upgrade-26" [(ngModel)]="filters.project" (keydown.enter)="search()"/>
         </div>
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">RAT</span></label>
-          <select class="select select-bordered select-sm" [(ngModel)]="filters.rat">
+          <select class="select select-bordered select-xs" [(ngModel)]="filters.rat">
             <option value="">All RATs</option>
             <option value="2G">2G</option>
             <option value="3G">3G</option>
@@ -51,7 +51,7 @@
         </div>
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Status</span></label>
-          <select class="select select-bordered select-sm" [(ngModel)]="filters.status">
+          <select class="select select-bordered select-xs" [(ngModel)]="filters.status">
             <option value="">All statuses</option>
             <option value="PENDING_REVIEW">Pending Review</option>
             <option value="APPROVED">Approved</option>
@@ -62,7 +62,7 @@
         </div>
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Engineer</span></label>
-          <select class="select select-bordered select-sm" [(ngModel)]="filters.engineerId">
+          <select class="select select-bordered select-xs" [(ngModel)]="filters.engineerId">
             <option value="">All engineers</option>
             @for (e of engineers(); track e.userId) {
               <option [value]="e.userId">{{ e.fullName }}</option>
@@ -71,7 +71,7 @@
         </div>
       </div>
       <div class="flex gap-2 mt-3">
-        <button class="btn btn-primary btn-sm gap-1" (click)="search()" [disabled]="loading()">
+        <button class="btn btn-primary btn-xs gap-1" (click)="search()" [disabled]="loading()">
           @if (loading()) {
             <span class="loading loading-spinner loading-xs"></span>
           }
@@ -81,7 +81,7 @@
           </svg>
           Search
         </button>
-        <button class="btn btn-ghost btn-sm" (click)="reset()">Reset</button>
+        <button class="btn btn-ghost btn-xs" (click)="reset()">Reset</button>
         <span class="ml-auto text-xs text-base-content/50 self-center">
               {{ total() }} result{{ total() !== 1 ? 's' : '' }}
             </span>
@@ -123,7 +123,7 @@
           </thead>
           <tbody>
             @for (r of reports(); track r.id) {
-              <tr class="hover:bg-base-200/50 cursor-pointer" (click)="openDetail(r)">
+              <tr class="hover:bg-base-200/80 cursor-pointer" (click)="openDetail(r)">
                 <td>
                   <p class=" font-medium text-sm">{{ r.siteId }}</p>
                   <p class="text-xs text-base-content/60">{{ r.project }}</p>
@@ -146,7 +146,7 @@
                 <td>
                   <button class="btn btn-ghost btn-xs gap-1"
                           (click)="$event.stopPropagation(); download(r)">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-base-content/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                     </svg>

@@ -41,18 +41,18 @@
 
       <div class="space-y-3 mt-2">
         <div class="form-control">
-          <label class="label"><span class="label-text">Current Password</span></label>
-          <input type="password" class="input input-bordered" [(ngModel)]="pw.current" />
+          <label class="label"><span class="label-text text-sm">Current Password</span></label>
+          <input type="password" class="input input-sm input-bordered" [(ngModel)]="pw.current" />
         </div>
         <div class="form-control">
-          <label class="label"><span class="label-text">New Password</span></label>
-          <input type="password" class="input input-bordered" [(ngModel)]="pw.next" />
+          <label class="label"><span class="label-text text-sm">New Password</span></label>
+          <input type="password" class="input input-sm input-bordered" [(ngModel)]="pw.next" />
         </div>
         <div class="form-control">
-          <label class="label"><span class="label-text">Confirm New Password</span></label>
-          <input type="password" class="input input-bordered" [(ngModel)]="pw.confirm" />
+          <label class="label"><span class="label-text text-sm">Confirm New Password</span></label>
+          <input type="password" class="input input-sm input-bordered" [(ngModel)]="pw.confirm" />
         </div>
-        <button class="btn btn-primary" (click)="changePassword()" [disabled]="pwLoading()">
+        <button class="btn btn-primary btn-sm" (click)="changePassword()" [disabled]="pwLoading()">
           @if (pwLoading()) { <span class="loading loading-spinner loading-sm"></span> }
           Update Password
         </button>
