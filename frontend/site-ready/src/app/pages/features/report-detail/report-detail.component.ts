@@ -45,8 +45,8 @@ interface HistoryRow {
 export class ReportDetailComponent implements OnInit {
   readonly id = input.required<string>();
 
-  report          = signal<ReportResponse | null>(null);
-  versions        = signal<VersionResponse[]>([]);
+  report = signal<ReportResponse | null>(null);
+  versions = signal<VersionResponse[]>([]);
 
   historyRows = computed<HistoryRow[]>(() => {
     const rows: HistoryRow[] = [];
@@ -55,100 +55,105 @@ export class ReportDetailComponent implements OnInit {
     for (const v of sorted) {
       // Row 1 — vendor upload
       rows.push({
-        rowKey:           `${v.id}-upload`,
-        versionNumber:    v.versionNumber,
-        actionLabel:      'Uploaded',
+        rowKey: `${v.id}-upload`,
+        versionNumber: v.versionNumber,
+        actionLabel: 'Uploaded',
         actionBadgeClass: 'badge badge-info badge-outline',
-        actorName:        v.uploaderName,
-        actorRole:        v.uploaderRole,
-        dateTime:         v.uploadedAt ? this.formatDate(v.uploadedAt) : '—',
-        filename:         v.originalFilename,
-        notes:            null,
-        conditions:       null,
-        hasFile:          v.hasStampedPdf,
-        isApproved:       false,
-        isRejected:       false,
-        isResubmission:   false,
-        versionId:        v.id,
-        downloadType:     'vendor',
+        actorName: v.uploaderName,
+        actorRole: v.uploaderRole,
+        dateTime: v.uploadedAt ? this.formatDate(v.uploadedAt) : '—',
+        filename: v.originalFilename,
+        notes: null,
+        conditions: null,
+        hasFile: v.hasStampedPdf,
+        isApproved: false,
+        isRejected: false,
+        isResubmission: false,
+        versionId: v.id,
+        downloadType: 'vendor',
       });
 
       // Row 2 — engineer review (only if reviewed)
       if (v.reviewStatus && v.reviewerName) {
-        const isApproved    = v.reviewStatus === 'APPROVED' || v.reviewStatus === 'CONDITIONALLY_APPROVED';
-        const isRejected    = v.reviewStatus === 'REJECTED';
+        const isApproved = v.reviewStatus === 'APPROVED' || v.reviewStatus === 'CONDITIONALLY_APPROVED';
+        const isRejected = v.reviewStatus === 'REJECTED';
         const isResubmission = v.reviewStatus === 'RESUBMISSION_REQUIRED';
 
         const actionBadgeClass =
-          isApproved    ? 'badge badge-success' :
-            isRejected    ? 'badge badge-error' :
+          isApproved ? 'badge badge-success' :
+            isRejected ? 'badge badge-error' :
               isResubmission ? 'badge badge-warning badge-outline' :
                 'badge badge-ghost';
 
         const actionLabel = STATUS_LABELS[v.reviewStatus as keyof typeof STATUS_LABELS] ?? v.reviewStatus;
 
         rows.push({
-          rowKey:           `${v.id}-review`,
-          versionNumber:    v.versionNumber,
+          rowKey: `${v.id}-review`,
+          versionNumber: v.versionNumber,
           actionLabel,
           actionBadgeClass,
-          actorName:        v.reviewerName,
-          actorRole:        'ENGINEER',
-          dateTime:         v.reviewedAt ? this.formatDate(v.reviewedAt) : '—',
-          filename:         `Reviewed V${v.versionNumber}`,
-          notes:            v.reviewerNotes,
-          conditions:       v.conditions,
-          hasFile:          v.hasReviewedPdf,
+          actorName: v.reviewerName,
+          actorRole: 'ENGINEER',
+          dateTime: v.reviewedAt ? this.formatDate(v.reviewedAt) : '—',
+          filename: `Reviewed V${v.versionNumber}`,
+          notes: v.reviewerNotes,
+          conditions: v.conditions,
+          hasFile: v.hasReviewedPdf,
           isApproved,
           isRejected,
           isResubmission,
-          versionId:        v.id,
-          downloadType:     'reviewed',
+          versionId: v.id,
+          downloadType: 'reviewed',
         });
       }
     }
     return rows;
   });
 
-  loading         = signal(true);
+  loading = signal(true);
   versionsLoading = signal(true);
-  engineers       = signal<AuthResponse[]>([]);
-  showAssign      = signal(false);
+  engineers = signal<AuthResponse[]>([]);
+  showAssign = signal(false);
   selectedEngineerId = '';
   assigningEngineer = signal(false);
 
+  accessDenied = signal(false);
+  notFound     = signal(false);
+
   // Action state
-  actionFile   = signal<File | null>(null);
-  dragging     = signal(false);
-  decision     = signal<Decision | ''>('');
+  actionFile = signal<File | null>(null);
+  dragging = signal(false);
+  decision = signal<Decision | ''>('');
   decisionValue: Decision | '' = '';
-  notes        = '';
-  conditions   = '';
-  submitting   = signal(false);
-  actionError  = signal('');
+  notes = '';
+  conditions = '';
+  submitting = signal(false);
+  actionError = signal('');
   actionSuccess = signal('');
 
   decisionOptions: { value: Decision; label: string; desc: string }[] = [
-    { value: 'APPROVED',               label: 'Approved',               desc: 'Report meets all requirements' },
-    { value: 'CONDITIONALLY_APPROVED', label: 'Conditionally Approved', desc: 'Approved with stated conditions' },
-    { value: 'RESUBMISSION_REQUIRED',  label: 'Resubmission Required',  desc: 'Corrections needed, resubmit' },
-    { value: 'REJECTED',               label: 'Rejected',               desc: 'Cannot be approved' },
+    {value: 'APPROVED', label: 'Approved', desc: 'Report meets all requirements'},
+    {value: 'CONDITIONALLY_APPROVED', label: 'Conditionally Approved', desc: 'Approved with stated conditions'},
+    {value: 'RESUBMISSION_REQUIRED', label: 'Resubmission Required', desc: 'Corrections needed, resubmit'},
+    {value: 'REJECTED', label: 'Rejected', desc: 'Cannot be approved'},
   ];
 
-  user       = this.auth.currentUser;
-  role       = this.auth.role;
-  isAdmin    = computed(() => this.role() === 'ADMIN');
-  isVendor   = computed(() => this.role() === 'VENDOR');
+  user = this.auth.currentUser;
+  role = this.auth.role;
+  isAdmin = computed(() => this.role() === 'ADMIN');
+  isVendor = computed(() => this.role() === 'VENDOR');
   isEngineer = computed(() => this.role() === 'ENGINEER');
 
   isOwnerVendor = computed(() => {
-    const r = this.report(); const u = this.user();
+    const r = this.report();
+    const u = this.user();
     return u !== null && r !== null && this.isVendor() &&
       r.vendorName === u.fullName; // compare by id in production if available
   });
 
   isAssignedEngineer = computed(() => {
-    const r = this.report(); const u = this.user();
+    const r = this.report();
+    const u = this.user();
     return u !== null && r !== null && this.isEngineer() &&
       r.assignedEngineerId === u.userId;
   });
@@ -165,7 +170,8 @@ export class ReportDetailComponent implements OnInit {
     public router: Router,
     private reportService: ReportService,
     private auth: AuthService
-  ) {}
+  ) {
+  }
 
   ngOnInit(): void {
     this.load();
@@ -175,12 +181,26 @@ export class ReportDetailComponent implements OnInit {
   load(): void {
     this.loading.set(true);
     this.versionsLoading.set(true);
+
     this.reportService.getReport(this.id()).subscribe({
-      next: r => { this.report.set(r); this.loading.set(false); },
-      error: () => this.loading.set(false),
+      next: r => {
+        this.report.set(r);
+        this.loading.set(false);
+      },
+      error: err => {
+        this.loading.set(false);
+        if (err.status === 403) {
+          this.accessDenied.set(true);
+        } else {
+          this.notFound.set(true);
+        }
+      }
     });
     this.reportService.getVersions(this.id()).subscribe({
-      next: v => { this.versions.set(v); this.versionsLoading.set(false); },
+      next: v => {
+        this.versions.set(v);
+        this.versionsLoading.set(false);
+      },
       error: () => this.versionsLoading.set(false),
     });
   }
@@ -206,7 +226,8 @@ export class ReportDetailComponent implements OnInit {
       const a = document.createElement('a');
       a.href = url;
       a.download = `${r.namingKey}_V${r.currentVersion}_stamped.pdf`;
-      a.click(); URL.revokeObjectURL(url);
+      a.click();
+      URL.revokeObjectURL(url);
     });
   }
 
@@ -218,7 +239,8 @@ export class ReportDetailComponent implements OnInit {
       const a = document.createElement('a');
       a.href = url;
       a.download = `${r.namingKey}_V${v.versionNumber}_stamped.pdf`;
-      a.click(); URL.revokeObjectURL(url);
+      a.click();
+      URL.revokeObjectURL(url);
     });
   }
 
@@ -228,7 +250,8 @@ export class ReportDetailComponent implements OnInit {
   }
 
   onDrop(event: DragEvent): void {
-    event.preventDefault(); this.dragging.set(false);
+    event.preventDefault();
+    this.dragging.set(false);
     const f = event.dataTransfer?.files[0];
     if (f?.type === 'application/pdf') this.actionFile.set(f);
   }
@@ -243,9 +266,11 @@ export class ReportDetailComponent implements OnInit {
       const d = this.decision();
       if (!d) return;
       if (d === 'CONDITIONALLY_APPROVED' && !this.conditions.trim()) {
-        this.actionError.set('Conditions are required for conditional approval.'); return;
+        this.actionError.set('Conditions are required for conditional approval.');
+        return;
       }
-      this.submitting.set(true); this.actionError.set('');
+      this.submitting.set(true);
+      this.actionError.set('');
       const fd = new FormData();
       fd.append('file', file);
       fd.append('decision', d);
@@ -266,12 +291,13 @@ export class ReportDetailComponent implements OnInit {
       });
     } else if (this.isOwnerVendor()) {
       // Vendor resubmission
-      this.submitting.set(true); this.actionError.set('');
+      this.submitting.set(true);
+      this.actionError.set('');
       const fd = new FormData();
       fd.append('file', file);
       fd.append('siteId', r.siteId);
       fd.append('project', r.project);
-      fd.append('rat',      r.rat);
+      fd.append('rat', r.rat);
       if (r.assignedEngineerId) fd.append('assignedEngineerId', r.assignedEngineerId);
       this.reportService.uploadReport(fd).subscribe({
         next: res => {
@@ -289,11 +315,24 @@ export class ReportDetailComponent implements OnInit {
     }
   }
 
-  statusBadge(s: string): string { return STATUS_BADGE_CLASS[s as keyof typeof STATUS_BADGE_CLASS] ?? 'badge'; }
-  statusLabel(s: string): string { return STATUS_LABELS[s as keyof typeof STATUS_LABELS] ?? s; }
-  formatDate(d: string): string {
-    return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  statusBadge(s: string): string {
+    return STATUS_BADGE_CLASS[s as keyof typeof STATUS_BADGE_CLASS] ?? 'badge';
   }
+
+  statusLabel(s: string): string {
+    return STATUS_LABELS[s as keyof typeof STATUS_LABELS] ?? s;
+  }
+
+  formatDate(d: string): string {
+    return new Date(d).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
   formatSize(bytes: number): string {
     return bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
   }

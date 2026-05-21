@@ -40,6 +40,7 @@ public class DocumentService {
     private final StorageService storageService;
     private final PdfStampService pdfStampService;
     private final AuditService auditService;
+    private final ReportAccessService reportAccessService;
 
     @Transactional
     public ReportResponse uploadReport(
@@ -89,6 +90,8 @@ public class DocumentService {
 
         if (reportRepository.existsByNamingKey(namingKey)) {
             Report existing = reportRepository.findByNamingKey(namingKey).orElseThrow();
+            reportAccessService.assertCanUploadNextVersion(existing, managedUploader);
+
             int expectedVersion = existing.getCurrentVersion() + 1;
             if (fileVersion != expectedVersion) {
                 throw new IllegalArgumentException(String.format(
@@ -284,13 +287,6 @@ public class DocumentService {
         return storageService.download(key);
     }
 
-//    public byte[] downloadStampedPdf(UUID reportId, int version, User requestingUser, String ipAddress) {
-//        Report report = reportRepository.findById(reportId).orElseThrow();
-//        ReportVersion rv = versionRepository.findByReportIdAndVersionNumber(reportId, version).orElseThrow();
-//        String key = rv.getStampedStorageKey() != null ? rv.getStampedStorageKey() : rv.getOriginalStorageKey();
-//        auditService.log(rv, requestingUser, AuditAction.DOWNLOADED, ipAddress);
-//        return storageService.download(key);
-//    }
 
     public Page<Report> getMyReports(User user, Pageable pageable) {
         if (user.getRole() == UserRole.ENGINEER) {

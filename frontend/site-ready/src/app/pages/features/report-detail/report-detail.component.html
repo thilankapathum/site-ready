@@ -26,12 +26,33 @@
     <div class="flex justify-center py-20">
       <span class="loading loading-spinner loading-lg text-primary"></span>
     </div>
-  } @else if (!report()) {
-    <div class="alert alert-error">Report not found.</div>
+  }
+  @if (accessDenied()) {
+    <div class="flex flex-col items-center justify-center py-24 gap-4">
+      <div class="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center">
+        <svg class="w-8 h-8 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 15v2m0 0v2m0-2h2m-2 0H10m2-11a7 7 0 00-7 7h2a5 5 0 0110 0h2a7 7 0 00-7-7z"/>
+        </svg>
+      </div>
+      <h2 class="text-lg font-bold">Access Denied</h2>
+      <p class="text-base-content/60 text-sm text-center max-w-sm">
+        You do not have permission to view this report.
+        If you believe this is an error, contact your administrator.
+      </p>
+      <button class="btn btn-primary btn-sm" (click)="router.navigate(['/search'])">
+        Back to Search
+      </button>
+    </div>
+  } @else if (notFound()) {
+    <div class="flex flex-col items-center justify-center py-24 gap-4">
+      <p class="text-base-content/60 text-sm">Report not found.</p>
+      <button class="btn btn-ghost btn-sm" (click)="router.navigate(['/search'])">Back</button>
+    </div>
   } @else {
 
     <!-- ── Metadata card ── -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm">
+    <div class="card bg-base-100 border border-base-300 ">
       <div class="card-body p-5">
         <div class="flex items-center justify-between mb-3">
           <h2 class="font-bold">REPORT INFORMATION</h2>
@@ -104,7 +125,7 @@
     </div>
 
     <!-- ── Version history ── -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm">
+    <div class="card bg-base-100 border border-base-300 ">
       <div class="card-body p-5">
         <h2 class="font-bold mb-4">VERSION HISTORY</h2>
         @if (versionsLoading()) {
@@ -132,50 +153,51 @@
                 @for (row of historyRows(); track row.rowKey) {
                   <tr class="hover:bg-base-200/40 bg-opacity-5"
                       [class.bg-success]="row.isApproved"
-                    [class.bg-error]="row.isRejected"
-                    [class.bg-warning]="row.isResubmission">
-                  <td>
+                      [class.bg-error]="row.isRejected"
+                      [class.bg-warning]="row.isResubmission">
+                    <td>
                   <span class="badge badge-ghost badge-sm  font-bold">
                     V{{ row.versionNumber }}
                   </span>
-                  </td>
-                  <td>
+                    </td>
+                    <td>
                   <span [class]="row.actionBadgeClass + ' badge-sm whitespace-nowrap'">
                     {{ row.actionLabel }}
                   </span>
-                  </td>
-                  <td class="text-sm">{{ row.actorName }}</td>
-                  <td>
-                    <span class="badge badge-soft badge-sm">{{ row.actorRole }}</span>
-                  </td>
-                  <td class="text-xs text-base-content/70 whitespace-nowrap">{{ row.dateTime }}</td>
-                  <td class="text-xs text-base-content/60 max-w-[140px] truncate"
-                      [title]="row.filename">
-                    {{ row.filename }}
-                  </td>
-                  <td class="text-xs text-base-content/70 max-w-[160px]">
-                    @if (row.notes) {
-                      <span [title]="row.notes">
+                    </td>
+                    <td class="text-sm">{{ row.actorName }}</td>
+                    <td>
+                      <span class="badge badge-soft badge-sm">{{ row.actorRole }}</span>
+                    </td>
+                    <td class="text-xs text-base-content/70 whitespace-nowrap">{{ row.dateTime }}</td>
+                    <td class="text-xs text-base-content/60 max-w-[140px] truncate"
+                        [title]="row.filename">
+                      {{ row.filename }}
+                    </td>
+                    <td class="text-xs text-base-content/70 max-w-[160px]">
+                      @if (row.notes) {
+                        <span [title]="row.notes">
                       {{ row.notes.length > 50 ? row.notes.substring(0, 47) + '…' : row.notes }}
                     </span>
-                    }
-                    @if (row.conditions) {
-                      <span class="text-warning block" [title]="row.conditions">
+                      }
+                      @if (row.conditions) {
+                        <span class="text-warning block" [title]="row.conditions">
                       Conditions: {{ row.conditions.length > 40 ? row.conditions.substring(0, 37) + '…' : row.conditions }}
                     </span>
-                    }
-                  </td>
-                  <td>
-                    <button class="btn btn-ghost btn-xs gap-1 whitespace-nowrap"
-                            (click)="downloadRow(row)"
-                            [disabled]="!row.hasFile">
-                      <svg class="w-3.5 h-3.5 text-base-content/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                      </svg>
-                      PDF
-                    </button>
-                  </td>
+                      }
+                    </td>
+                    <td>
+                      <button class="btn btn-ghost btn-xs gap-1 whitespace-nowrap"
+                              (click)="downloadRow(row)"
+                              [disabled]="!row.hasFile">
+                        <svg class="w-3.5 h-3.5 text-base-content/50" fill="none" stroke="currentColor"
+                             viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        PDF
+                      </button>
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -187,7 +209,7 @@
 
     <!-- ── Action panel ── -->
     @if (canTakeAction()) {
-      <div class="card bg-base-100 border border-primary/30 shadow-sm">
+      <div class="card bg-base-100 border border-secondary/25 ">
         <div class="card-body p-5 gap-5">
           <h2 class="font-bold text-primary">
             @if (isOwnerVendor() && report()!.currentStatus === 'RESUBMISSION_REQUIRED') {
@@ -266,7 +288,8 @@
           <!-- Engineer decision -->
           @if (isAssignedEngineer() && report()!.currentStatus === 'PENDING_REVIEW') {
             <div class="form-control">
-              <label class="label"><span class="label-text font-bold">Decision <span class="text-error">*</span></span></label>
+              <label class="label"><span class="label-text font-bold">Decision <span
+                class="text-error">*</span></span></label>
               <div class="grid grid-cols-2 gap-2">
                 @for (opt of decisionOptions; track opt.value) {
                   <label class="flex items-center gap-3 cursor-pointer p-3 rounded-lg border-2 transition-colors"

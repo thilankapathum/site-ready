@@ -14,10 +14,7 @@ import dev.thilanka.site_ready.entity.enums.UserRole;
 import dev.thilanka.site_ready.repository.ReportRepository;
 import dev.thilanka.site_ready.repository.ReportVersionRepository;
 import dev.thilanka.site_ready.repository.UserRepository;
-import dev.thilanka.site_ready.service.AuditService;
-import dev.thilanka.site_ready.service.DocumentService;
-import dev.thilanka.site_ready.service.ExportService;
-import dev.thilanka.site_ready.service.StorageService;
+import dev.thilanka.site_ready.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -46,23 +43,7 @@ public class DocumentController {
     private final ReportVersionRepository versionRepository;
     private final StorageService storageService;
     private final AuditService auditService;
-
-//    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    @PreAuthorize("hasRole('VENDOR')")
-//    public ResponseEntity<ReportResponse> upload(
-//            @RequestPart("file") MultipartFile file,
-//            @RequestPart("siteId") String siteId,
-//            @RequestPart("project") String project,
-//            @RequestPart(value = "assignedEngineerId", required = false) String assignedEngineerId,
-//            @AuthenticationPrincipal User user,
-//            HttpServletRequest request
-//    ) throws Exception {
-//        UUID engId = (assignedEngineerId != null && !assignedEngineerId.isBlank())
-//                ? UUID.fromString(assignedEngineerId) : null;
-//        UploadRequest uploadRequest = new UploadRequest(siteId, project, engId);
-//        ReportResponse response = documentService.uploadReport(file, uploadRequest, user, getIp(request));
-//        return ResponseEntity.ok(response);
-//    }
+    private final ReportAccessService reportAccessService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('VENDOR')")
@@ -106,9 +87,11 @@ public class DocumentController {
             @AuthenticationPrincipal User user,
             HttpServletRequest request
     ) {
+        reportAccessService.assertCanRead(reportId, user);
         byte[] data = documentService.downloadStampedPdf(reportId, version, user, getIp(request));
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"report-V" + version + ".pdf\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"report-V" + version + ".pdf\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(data);
     }
@@ -148,20 +131,6 @@ public class DocumentController {
         return ResponseEntity.ok(reports.map(r -> ReportResponse.from(r, null)));
     }
 
-//    @GetMapping("/search")
-//    public ResponseEntity<Page<ReportResponse>> search(
-//            @RequestParam(required = false) String siteId,
-//            @RequestParam(required = false) String project,
-//            @RequestParam(required = false) ReportStatus status,
-//            @RequestParam(required = false) UUID engineerId,
-//            @RequestParam(required = false) UUID vendorId,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "20") int size
-//    ) {
-//        Page<Report> reports = documentService.search(siteId, project, status, engineerId, vendorId,
-//                PageRequest.of(page, size, Sort.by("updatedAt").descending()));
-//        return ResponseEntity.ok(reports.map(r -> ReportResponse.from(r, null)));
-//    }
 
     @GetMapping("/export/excel")
     public ResponseEntity<byte[]> exportExcel(
@@ -171,9 +140,14 @@ public class DocumentController {
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) UUID engineerId,
             @RequestParam(required = false) UUID vendorId,
-            @RequestParam(required = false) UUID vendorCompanyId
+            @RequestParam(required = false) UUID vendorCompanyId,
+            @AuthenticationPrincipal User currentUser
     ) throws Exception {
-        List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId,vendorCompanyId);
+
+        UUID derivedVendorCompanyId = currentUser.getRole() == UserRole.VENDOR
+                ? currentUser.getCompany().getId() : null;
+
+        List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId, derivedVendorCompanyId);
         byte[] data = exportService.exportExcel(reports);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ssv-reports.xlsx\"")
@@ -189,9 +163,12 @@ public class DocumentController {
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) UUID engineerId,
             @RequestParam(required = false) UUID vendorId,
-            @RequestParam(required = false) UUID vendorCompanyId
+            @RequestParam(required = false) UUID vendorCompanyId,
+            @AuthenticationPrincipal User currentUser
     ) {
-        List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId,vendorCompanyId);
+        UUID derivedVendorCompanyId = currentUser.getRole() == UserRole.VENDOR
+                ? currentUser.getCompany().getId() : null;
+        List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId, derivedVendorCompanyId);
         byte[] data = exportService.exportCsv(reports);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ssv-reports.csv\"")
@@ -207,9 +184,12 @@ public class DocumentController {
     }
 
     @GetMapping("/{reportId}")
-    public ResponseEntity<ReportResponse> getReport(@PathVariable UUID reportId) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new IllegalArgumentException("Report not found"));
+    public ResponseEntity<ReportResponse> getReport(
+            @PathVariable UUID reportId,
+            @AuthenticationPrincipal User user
+    ) {
+        reportAccessService.assertCanRead(reportId, user);
+        Report report = reportRepository.findById(reportId).orElseThrow();
         ReportVersion latest = versionRepository
                 .findByReportIdOrderByVersionNumberDesc(reportId)
                 .stream().findFirst().orElse(null);
@@ -217,7 +197,11 @@ public class DocumentController {
     }
 
     @GetMapping("/{reportId}/versions")
-    public ResponseEntity<List<VersionResponse>> getVersions(@PathVariable UUID reportId) {
+    public ResponseEntity<List<VersionResponse>> getVersions(
+            @PathVariable UUID reportId,
+            @AuthenticationPrincipal User user
+    ) {
+        reportAccessService.assertCanRead(reportId, user);
         List<ReportVersion> versions = versionRepository
                 .findByReportIdOrderByVersionNumberDesc(reportId);
         return ResponseEntity.ok(versions.stream().map(VersionResponse::from).toList());
@@ -230,6 +214,7 @@ public class DocumentController {
             @AuthenticationPrincipal User user,
             HttpServletRequest request
     ) {
+        reportAccessService.assertCanRead(reportId, user);
         ReportVersion rv = versionRepository.findById(versionId)
                 .orElseThrow(() -> new IllegalArgumentException("Version not found"));
         String key = rv.getStampedStorageKey() != null
@@ -270,6 +255,7 @@ public class DocumentController {
             @AuthenticationPrincipal User user,
             HttpServletRequest request
     ) {
+        reportAccessService.assertCanRead(reportId, user);
         ReportVersion rv = versionRepository.findById(versionId)
                 .orElseThrow(() -> new IllegalArgumentException("Version not found"));
         if (rv.getReviewedStorageKey() == null) {
