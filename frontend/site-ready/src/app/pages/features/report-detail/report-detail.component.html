@@ -77,7 +77,7 @@
               <select class="select select-bordered select-sm" [(ngModel)]="selectedEngineerId">
                 <option value="">— Unassigned —</option>
                 @for (e of engineers(); track e.userId) {
-                  <option [value]="e.userId">{{ e.fullName }} ({{ e.company }})</option>
+                  <option [value]="e.userId">{{ e.fullName }} ({{ e.companyName }})</option>
                 }
               </select>
             </div>

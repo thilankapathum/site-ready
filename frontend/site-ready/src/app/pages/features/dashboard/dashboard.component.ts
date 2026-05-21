@@ -34,8 +34,8 @@ export class DashboardComponent implements OnInit {
   stats = computed(() => [
     { label: 'Total Reports',  value: this.totalCount(),    color: 'text-base-content' },
     { label: 'Pending Review', value: this.pendingCount(),  color: 'text-info' },
-    { label: 'Approved',       value: this.approvedCount(), color: 'text-success' },
     { label: 'Pending Resubmission',  value: this.actionCount(),   color: 'text-warning' },
+    { label: 'Approved',       value: this.approvedCount(), color: 'text-success' }
   ]);
 
   constructor(private auth: AuthService, private reportService: ReportService, private router: Router) {}

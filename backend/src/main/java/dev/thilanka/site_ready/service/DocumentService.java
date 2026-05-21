@@ -49,25 +49,16 @@ public class DocumentService {
             String ipAddress
     ) throws Exception {
 
+        // Re-fetch uploader within this transaction to ensure all lazy associations are loaded
+        User managedUploader = userRepository.findById(uploader.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Uploader not found"));
+
+
         // ── Filename validation ──
         String filename = file.getOriginalFilename();
         if (filename == null || !filename.toLowerCase().endsWith(".pdf")) {
             throw new IllegalArgumentException("File must be a PDF.");
         }
-
-//        // Pattern: SITEID_PROJECT_Vn.pdf (case-insensitive version suffix)
-//        String nameWithoutExt = filename.replaceAll("(?i)\\.pdf$", "");
-//        String[] parts = nameWithoutExt.split("_");
-//        if (parts.length < 3) {
-//            throw new IllegalArgumentException(
-//                    "Filename must follow the convention: SITEID_PROJECT_Vn.pdf  (e.g. KY0001_4G-upgrade-26_V1.pdf)");
-//        }
-//
-//        String versionPart = parts[parts.length - 1]; // last segment is Vn
-//        if (!versionPart.matches("(?i)V\\d+")) {
-//            throw new IllegalArgumentException(
-//                    "Filename version suffix is invalid. Expected format: V1, V2, … Got: " + versionPart);
-//        }
 
         // Updated filename validation — now expects SITEID_PROJECT_RAT_Vn.pdf
         String nameWithoutExt = filename.replaceAll("(?i)\\.pdf$", "");
@@ -135,7 +126,8 @@ public class DocumentService {
                     .project(request.project())
                     .rat(request.rat())
                     .namingKey(namingKey)
-                    .createdByVendor(uploader)
+                    .createdByVendor(managedUploader)
+                    .vendorCompany(managedUploader.getCompany())
                     .assignedEngineer(assignedEngineer)
                     .currentStatus(ReportStatus.PENDING_REVIEW)
                     .currentVersion(1)
@@ -155,7 +147,7 @@ public class DocumentService {
                 .originalFilename(file.getOriginalFilename())
                 .originalStorageKey(originalKey)
                 .sha256Hash(sha256)
-                .uploadedBy(uploader)
+                .uploadedBy(managedUploader)
                 .statusAtUpload(ReportStatus.PENDING_REVIEW)
                 .build();
 
@@ -168,9 +160,9 @@ public class DocumentService {
 
         // Stamp and sign the PDF
         try {
-//            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(originalBytes, uploader, version, sha256);
+//            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(originalBytes, managedUploader, version, sha256);
             List<ReportVersion> allVersions = versionRepository.findByReportIdOrderByVersionNumberDesc(report.getId());
-            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(originalBytes, uploader, version, sha256, allVersions);
+            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(originalBytes, managedUploader, version, sha256, allVersions);
             String stampedKey = storageService.buildKey(namingKey, versionNumber, "stamped");
             storageService.upload(stampedKey, stamp.signedBytes(), "application/pdf");
             version.setStampedStorageKey(stampedKey);
@@ -181,7 +173,7 @@ public class DocumentService {
             // Don't fail the upload — log and continue without stamp (investigate separately)
         }
 
-        auditService.log(version, uploader, AuditAction.UPLOADED, ipAddress,
+        auditService.log(version, managedUploader, AuditAction.UPLOADED, ipAddress,
                 "version", String.valueOf(versionNumber), "namingKey", namingKey);
 
         return ReportResponse.from(report, version);
@@ -195,6 +187,12 @@ public class DocumentService {
             User engineer,
             String ipAddress
     ) throws Exception {
+
+        // Re-fetch within transaction
+        User managedEngineer = userRepository.findById(engineer.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Engineer not found"));
+
+
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found: " + reportId));
 
@@ -223,7 +221,7 @@ public class DocumentService {
         version.setReviewStatus(newStatus);
         version.setReviewerNotes(request.notes());
         version.setConditions(request.conditions());
-        version.setReviewedBy(engineer);
+        version.setReviewedBy(managedEngineer);
         version.setReviewedAt(OffsetDateTime.now());
 
 // ── Update report status BEFORE stamping so the audit page reflects the new status ──
@@ -236,7 +234,7 @@ public class DocumentService {
             List<ReportVersion> allVersions = versionRepository
                     .findByReportIdOrderByVersionNumberDesc(report.getId());
             PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
-                    reviewBytes, engineer, version, sha256, allVersions);
+                    reviewBytes, managedEngineer, version, sha256, allVersions);
             String stampedReviewKey = storageService.buildKey(
                     report.getNamingKey(), currentVer, "reviewed-stamped");
             storageService.upload(stampedReviewKey, stamp.signedBytes(), "application/pdf");
@@ -259,7 +257,7 @@ public class DocumentService {
             case RESUBMISSION_REQUIRED -> AuditAction.RESUBMISSION_REQUIRED;
             default -> throw new IllegalStateException("Unexpected status: " + newStatus);
         };
-        auditService.log(version, engineer, auditAction, ipAddress,
+        auditService.log(version, managedEngineer, auditAction, ipAddress,
                 "decision", newStatus.name(), "notes", request.notes());
 
         return ReportResponse.from(report, version);
@@ -313,18 +311,20 @@ public class DocumentService {
 //                blank(siteId), blank(project), status, engineerId, vendorId);
 //    }
 
-    public Page<Report> search(String siteId, String project, String rat, ReportStatus status,
-                               UUID engineerId, UUID vendorId, Pageable pageable) {
+    public Page<Report> search(String siteId, String project, String rat,
+                               ReportStatus status, UUID engineerId,
+                               UUID vendorId, UUID vendorCompanyId, Pageable pageable) {
         return reportRepository.findAll(
-                ReportSpecification.filter(siteId, project, rat, status, engineerId, vendorId),
+                ReportSpecification.filter(siteId, project, rat, status, engineerId, vendorId, vendorCompanyId),
                 pageable
         );
     }
 
-    public List<Report> searchAll(String siteId, String project, String rat, ReportStatus status,
-                                  UUID engineerId, UUID vendorId) {
+    public List<Report> searchAll(String siteId, String project, String rat,
+                                  ReportStatus status, UUID engineerId,
+                                  UUID vendorId, UUID vendorCompanyId) {
         return reportRepository.findAll(
-                ReportSpecification.filter(siteId, project, rat, status, engineerId, vendorId),
+                ReportSpecification.filter(siteId, project, rat, status, engineerId, vendorId, vendorCompanyId),
                 Sort.by("siteId").ascending().and(Sort.by("project").ascending())
         );
     }

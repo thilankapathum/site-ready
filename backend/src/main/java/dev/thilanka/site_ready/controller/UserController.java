@@ -27,7 +27,7 @@ public class UserController {
         List<AuthResponse> engineers = userRepository.findByRoleAndActiveTrue(UserRole.ENGINEER)
                 .stream()
                 .map(u -> new AuthResponse(null, u.getId().toString(), u.getEmail(),
-                        u.getFullName(), u.getRole().name(), u.isActive(), u.getCompany()))
+                        u.getFullName(), u.getRole().name(), u.isActive(),null, u.getCompany().getId().toString(),u.getCompany().getName(),u.getCompany().getType().name()))
                 .toList();
         return ResponseEntity.ok(engineers);
     }

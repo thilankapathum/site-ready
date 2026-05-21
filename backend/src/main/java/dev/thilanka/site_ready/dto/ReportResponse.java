@@ -43,7 +43,7 @@ public record ReportResponse(
                 r.getAssignedEngineer() != null ? r.getAssignedEngineer().getFullName() : null,
                 r.getAssignedEngineer() != null ? r.getAssignedEngineer().getId() : null,
                 r.getCreatedByVendor().getFullName(),
-                r.getCreatedByVendor().getCompany(),
+                r.getCreatedByVendor().getCompany().getName(),
                 r.getCreatedAt(),
                 r.getUpdatedAt(),
                 v != null ? v.getId() : null,

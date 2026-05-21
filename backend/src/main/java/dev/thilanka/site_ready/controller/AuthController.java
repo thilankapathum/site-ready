@@ -42,6 +42,6 @@ public class AuthController {
     public ResponseEntity<AuthResponse> me(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(new AuthResponse(
                 null, user.getId().toString(), user.getEmail(),
-                user.getFullName(), user.getRole().name(), user.isActive(), null));
+                user.getFullName(), user.getRole().name(), user.isActive(), null, user.getCompany().getId().toString(), user.getCompany().getName(), user.getCompany().getType().toString()));
     }
 }

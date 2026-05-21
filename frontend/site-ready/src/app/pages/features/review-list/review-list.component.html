@@ -14,13 +14,13 @@
     <button class="tab" [class.tab-active]="filter() === 'all'"
             (click)="setFilter('all')">All</button>
     <button class="tab" [class.tab-active]="filter() === 'PENDING_REVIEW'"
-            (click)="setFilter('PENDING_REVIEW')">Review-Pending</button>
+            (click)="setFilter('PENDING_REVIEW')">Pending Review</button>
+    <button class="tab" [class.tab-active]="filter() === 'RESUBMISSION_REQUIRED'"
+            (click)="setFilter('RESUBMISSION_REQUIRED')">Pending Resubmission</button>
     <button class="tab" [class.tab-active]="filter() === 'APPROVED'"
             (click)="setFilter('APPROVED')">Approved</button>
     <button class="tab" [class.tab-active]="filter() === 'REJECTED'"
             (click)="setFilter('REJECTED')">Rejected</button>
-    <button class="tab" [class.tab-active]="filter() === 'RESUBMISSION_REQUIRED'"
-            (click)="setFilter('RESUBMISSION_REQUIRED')">Resubmission-Pending</button>
   </div>
 
   @if (loading()) {
@@ -52,7 +52,11 @@
                   <span class="badge badge-ghost badge-sm ">V{{ r.currentVersion }}</span>
                 </div>
                 <div class="flex items-center gap-3 mt-1.5 text-xs text-base-content/60 flex-wrap">
+                  <span class="font-semibold">{{ r.vendorCompany }}</span>
+                  <span>·</span>
                   <span>Vendor: {{ r.vendorName }}</span>
+                  <span>·</span>
+                  <span>Engineer: {{ r.assignedEngineerName }}</span>
                   <span>·</span>
                   <span>Updated: {{ formatDate(r.updatedAt) }}</span>
                 </div>
@@ -60,7 +64,7 @@
               <div class="flex items-center gap-2 shrink-0">
                 <span [class]="badge(r.currentStatus) + ' badge-sm'">{{ label(r.currentStatus) }}</span>
                 <a [routerLink]="['/reports', r.id]"
-                   [class]="r.currentStatus === 'PENDING_REVIEW' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'">
+                   [class]="r.currentStatus === 'PENDING_REVIEW' ? 'btn btn-primary btn-outline btn-xs' : 'btn btn-xs'">
                   {{ r.currentStatus === 'PENDING_REVIEW' ? 'Review' : 'View' }}
                 </a>
               </div>

@@ -37,7 +37,7 @@ export class AuthService {
     );
   }
 
-  register(payload: { email: string; password: string; fullName: string; company: string }): Observable<AuthResponse> {
+  register(payload: { email: string; password: string; fullName: string; companyId: string }): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.BASE}/register`, payload);
   }
 

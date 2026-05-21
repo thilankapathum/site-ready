@@ -45,6 +45,10 @@ public class Report {
     @JoinColumn(name = "created_by_vendor_id", nullable = false)
     private User createdByVendor;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "vendor_company_id")
+    private Company vendorCompany;
+
     @Enumerated(EnumType.STRING)
     @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "current_status", nullable = false)

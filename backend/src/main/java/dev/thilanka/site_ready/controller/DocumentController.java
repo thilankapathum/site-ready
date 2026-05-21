@@ -10,6 +10,7 @@ import dev.thilanka.site_ready.entity.ReportVersion;
 import dev.thilanka.site_ready.entity.User;
 import dev.thilanka.site_ready.entity.enums.AuditAction;
 import dev.thilanka.site_ready.entity.enums.ReportStatus;
+import dev.thilanka.site_ready.entity.enums.UserRole;
 import dev.thilanka.site_ready.repository.ReportRepository;
 import dev.thilanka.site_ready.repository.ReportVersionRepository;
 import dev.thilanka.site_ready.repository.UserRepository;
@@ -132,10 +133,17 @@ public class DocumentController {
             @RequestParam(required = false) UUID engineerId,
             @RequestParam(required = false) UUID vendorId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal User currentUser
     ) {
+        // Vendors can only see their own company's reports — enforce this server-side
+        UUID vendorCompanyId = null;
+        if (currentUser.getRole() == UserRole.VENDOR) {
+            vendorCompanyId = currentUser.getCompany().getId();
+        }
+
         Page<Report> reports = documentService.search(
-                siteId, project, rat, status, engineerId, vendorId,
+                siteId, project, rat, status, engineerId, vendorId, vendorCompanyId,
                 PageRequest.of(page, size, Sort.by("updatedAt").descending()));
         return ResponseEntity.ok(reports.map(r -> ReportResponse.from(r, null)));
     }
@@ -162,9 +170,10 @@ public class DocumentController {
             @RequestParam(required = false) String rat,
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) UUID engineerId,
-            @RequestParam(required = false) UUID vendorId
+            @RequestParam(required = false) UUID vendorId,
+            @RequestParam(required = false) UUID vendorCompanyId
     ) throws Exception {
-        List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId);
+        List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId,vendorCompanyId);
         byte[] data = exportService.exportExcel(reports);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ssv-reports.xlsx\"")
@@ -179,9 +188,10 @@ public class DocumentController {
             @RequestParam(required = false) String rat,
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) UUID engineerId,
-            @RequestParam(required = false) UUID vendorId
+            @RequestParam(required = false) UUID vendorId,
+            @RequestParam(required = false) UUID vendorCompanyId
     ) {
-        List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId);
+        List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId,vendorCompanyId);
         byte[] data = exportService.exportCsv(reports);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ssv-reports.csv\"")

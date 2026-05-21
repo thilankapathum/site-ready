@@ -3,7 +3,7 @@
     <h1 class="text-2xl font-bold">Upload SSV Report</h1>
     <p class="text-base-content/60 text-sm mt-1">
       Upload a Single Site Verification report for engineer review.
-      Filename convention: <code class="bg-base-300 px-1 rounded text-xs">SITE_PROJECT_Vn.pdf</code>
+      Filename convention: <code class="bg-base-300 px-1 rounded text-xs">SITE_PROJECT_RAT_Vn.pdf</code>
     </p>
   </div>
 
@@ -101,17 +101,22 @@
         </div>
         <div class="form-control">
           <label class="label"><span class="label-text font-medium">RAT / Technology <span class="text-error">*</span></span></label>
-          <select class="select select-bordered" [(ngModel)]="rat">
-            <option value="">Select RAT</option>
-            <option value="2G">2G</option>
-            <option value="3G">3G</option>
-            <option value="4G">4G</option>
-            <option value="4.5G">4.5G</option>
-            <option value="5G">5G</option>
-            <option value="5G-SA">5G-SA</option>
-            <option value="5G-NSA">5G-NSA</option>
-          </select>
+          <input type="text" class="input input-bordered font-mono"
+                 placeholder="e.g. 4G" [(ngModel)]="rat" />
         </div>
+<!--        <div class="form-control">-->
+<!--          <label class="label"><span class="label-text font-medium">RAT / Technology <span class="text-error">*</span></span></label>-->
+<!--          <select class="select select-bordered" [(ngModel)]="rat">-->
+<!--            <option value="">Select RAT</option>-->
+<!--            <option value="2G">2G</option>-->
+<!--            <option value="3G">3G</option>-->
+<!--            <option value="4G">4G</option>-->
+<!--            <option value="4.5G">4.5G</option>-->
+<!--            <option value="5G">5G</option>-->
+<!--            <option value="5G-SA">5G-SA</option>-->
+<!--            <option value="5G-NSA">5G-NSA</option>-->
+<!--          </select>-->
+<!--        </div>-->
       </div>
 
       <!-- Engineer assignment -->
@@ -121,9 +126,9 @@
           <span class="label-text-alt text-base-content/50">Optional</span>
         </label>
         <select class="select select-bordered" [(ngModel)]="assignedEngineerId">
-          <option value="">— Unassigned / Engineer not yet onboarded —</option>
+          <option value="">— Unassigned —</option>
           @for (eng of engineers(); track eng.userId) {
-            <option [value]="eng.userId">{{ eng.fullName }} ({{ eng.company }})</option>
+            <option [value]="eng.userId">{{ eng.fullName }} ({{ eng.companyName }})</option>
           }
         </select>
       </div>

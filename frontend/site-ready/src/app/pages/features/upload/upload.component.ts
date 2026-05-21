@@ -92,7 +92,7 @@ export class UploadComponent implements OnInit {
       next: res => {
         this.success.set(`Report ${res.namingKey} V${res.currentVersion} uploaded and stamped successfully.`);
         this.clearFile();
-        this.siteId = ''; this.project = ''; this.assignedEngineerId = '';
+        this.siteId = ''; this.project = ''; this.assignedEngineerId = ''; this.rat = '';
         this.uploading.set(false);
       },
       error: err => {

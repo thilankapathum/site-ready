@@ -27,4 +27,10 @@ export class AdminService {
       params: new HttpParams().set('active', String(active)),
     });
   }
+
+  setCompany(userId: string, companyId: string): Observable<AuthResponse> {
+    return this.http.patch<AuthResponse>(`${this.BASE}/users/${userId}/company`, null, {
+      params: new HttpParams().set('companyId', companyId),
+    });
+  }
 }

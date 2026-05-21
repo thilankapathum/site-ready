@@ -153,7 +153,7 @@ public class PdfStampService {
 
         String[][] metaRows = {
                 {"Document Version ID", version.getId().toString()},
-                {"Uploaded By", uploader.getFullName() + " (" + uploader.getCompany() + ")"},
+                {"Uploaded By", uploader.getFullName() + " (" + uploader.getCompany().getName() + ")"},
                 {"Uploader Role", uploader.getRole().name()},
                 {"Uploader Email", uploader.getEmail()},
                 {"Upload Timestamp", timestamp},

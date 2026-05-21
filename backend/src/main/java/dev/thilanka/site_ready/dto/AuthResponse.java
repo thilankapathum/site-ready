@@ -7,5 +7,8 @@ public record AuthResponse(
         String fullName,
         String role,
         boolean active,
-        String message
+        String message,
+        String companyId,
+        String companyName,
+        String companyType
 ) {}

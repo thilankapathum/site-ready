@@ -49,10 +49,19 @@
                      placeholder="John Silva" [(ngModel)]="form.fullName" />
             </div>
 
+<!--            <div class="form-control">-->
+<!--              <label class="label"><span class="label-text font-medium">Company / Organization</span></label>-->
+<!--              <input type="text" class="input input-bordered"-->
+<!--                     placeholder="Vendor Company Ltd" [(ngModel)]="form.company" />-->
+<!--            </div>-->
             <div class="form-control">
-              <label class="label"><span class="label-text font-medium">Company / Organization</span></label>
-              <input type="text" class="input input-bordered"
-                     placeholder="Vendor Company Ltd" [(ngModel)]="form.company" />
+              <label class="label"><span class="label-text font-medium">Company</span></label>
+              <select class="select select-bordered" [(ngModel)]="form.companyId">
+                <option value="">Select your company</option>
+                @for (c of companies(); track c.id) {
+                  <option [value]="c.id">{{ c.name }} ({{ c.type }})</option>
+                }
+              </select>
             </div>
 
             <div class="form-control">

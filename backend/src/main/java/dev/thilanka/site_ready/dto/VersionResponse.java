@@ -31,7 +31,7 @@ public record VersionResponse(
                 v.getSha256Hash(),
                 v.getPadesSignatureId(),
                 v.getUploadedBy().getFullName(),
-                v.getUploadedBy().getCompany(),
+                v.getUploadedBy().getCompany().getName(),
                 v.getUploadedBy().getRole().name(),
                 v.getUploadedAt(),
                 v.getStatusAtUpload().name(),

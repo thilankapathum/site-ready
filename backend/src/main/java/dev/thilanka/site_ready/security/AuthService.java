@@ -4,8 +4,10 @@ import dev.thilanka.site_ready.dto.AuthResponse;
 import dev.thilanka.site_ready.dto.ChangePasswordRequest;
 import dev.thilanka.site_ready.dto.LoginRequest;
 import dev.thilanka.site_ready.dto.RegisterRequest;
+import dev.thilanka.site_ready.entity.Company;
 import dev.thilanka.site_ready.entity.User;
 import dev.thilanka.site_ready.entity.enums.UserRole;
+import dev.thilanka.site_ready.repository.CompanyRepository;
 import dev.thilanka.site_ready.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -23,24 +25,29 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationProvider authenticationProvider;
+    private final CompanyRepository companyRepository;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new IllegalArgumentException("Email already registered");
         }
+        Company company = companyRepository.findById(request.companyId())
+                .orElseThrow(() -> new IllegalArgumentException("Company not found"));
+
         User user = User.builder()
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .fullName(request.fullName())
-                .company(request.company())
+                .company(company)
                 .role(UserRole.VENDOR)
                 .active(false)
                 .build();
         userRepository.save(user);
         return new AuthResponse(null, user.getId().toString(),
                 user.getEmail(), user.getFullName(), user.getRole().name(),
-                false, "Account created. Awaiting admin activation.");
+                false, "Account created. Awaiting admin activation.",
+                company.getId().toString(), company.getName(), company.getType().name());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -49,7 +56,14 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email()).orElseThrow();
         String token = jwtUtil.generateToken(user);
         return new AuthResponse(token, user.getId().toString(),
-                user.getEmail(), user.getFullName(), user.getRole().name(), true, null);
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole().name(),
+                user.isActive(),
+                null,
+                user.getCompany().getId().toString(),
+                user.getCompany().getName(),
+                user.getCompany().getType().toString());
     }
 
     @Transactional

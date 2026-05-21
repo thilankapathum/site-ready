@@ -9,17 +9,17 @@ export type ReportStatus =
 
 export type Responsibility = 'VENDOR' | 'ENGINEER' | 'CLOSED';
 
-export interface AuthResponse {
-  token: string | null;
-  userId: string;
-  email: string;
-  fullName: string;
-  role: UserRole;
-  active: boolean;
-  message?: string | null;
-  /** Admin endpoint repurposes 'message' field for company */
-  company?: string;
-}
+// export interface AuthResponse {
+//   token: string | null;
+//   userId: string;
+//   email: string;
+//   fullName: string;
+//   role: UserRole;
+//   active: boolean;
+//   message?: string | null;
+//   /** Admin endpoint repurposes 'message' field for company */
+//   company?: string;
+// }
 
 export interface ReportResponse {
   id: string;
@@ -112,4 +112,41 @@ export interface VersionResponse {
   reviewedAt: string | null;
   hasStampedPdf: boolean;
   hasReviewedPdf: boolean;
+}
+
+export type CompanyType = 'VENDOR' | 'TELCO' | 'CONTRACTOR';
+
+export interface CompanyResponse {
+  id: string;
+  name: string;
+  shortName: string;
+  type: CompanyType;
+  country: string | null;
+  contactEmail: string | null;
+  notes: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface CompanyRequest {
+  name: string;
+  shortName: string;
+  type: CompanyType;
+  country?: string;
+  contactEmail?: string;
+  notes?: string;
+}
+
+// Update AuthResponse
+export interface AuthResponse {
+  token: string | null;
+  userId: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  active: boolean;
+  message?: string | null;
+  companyId: string;
+  companyName: string;
+  companyType: CompanyType;
 }

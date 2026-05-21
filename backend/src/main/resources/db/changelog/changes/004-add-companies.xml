@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Company type enum -->
+    <changeSet id="004-company-type-enum" author="ssv-dms">
+        <sql>
+            CREATE TYPE company_type AS ENUM (
+            'VENDOR',       -- equipment vendors: ZTE, Ericsson, Nokia, Huawei
+            'TELCO',        -- the telecom company itself
+            'CONTRACTOR'    -- contract companies providing engineers to telco
+            );
+        </sql>
+        <rollback><sql>DROP TYPE IF EXISTS company_type;</sql></rollback>
+    </changeSet>
+
+    <!-- Companies table -->
+    <changeSet id="004-companies-table" author="ssv-dms">
+        <createTable tableName="companies">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="short_name" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="type" type="company_type">
+                <constraints nullable="false"/>
+            </column>
+            <column name="country" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="contact_email" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="notes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMPTZ" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMPTZ" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="companies" indexName="idx_companies_type">
+            <column name="type"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Seed the telco company first (needed for existing users) -->
+    <changeSet id="004-seed-telco-company" author="ssv-dms">
+        <sql>
+            INSERT INTO companies (name, short_name, type, active)
+            VALUES ('SLTMobitel (Pvt) Ltd', 'Mobitel', 'TELCO', true);
+        </sql>
+    </changeSet>
+
+    <!-- Add company_id FK to users, drop old plain-text company column -->
+    <changeSet id="004-users-add-company-fk" author="ssv-dms">
+        <addColumn tableName="users">
+            <column name="company_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_users_company"
+                             references="companies(id)"/>
+            </column>
+        </addColumn>
+
+        <!-- Point all existing users to the telco company as default -->
+        <sql>
+            UPDATE users
+            SET company_id = (SELECT id FROM companies WHERE short_name = 'Mobitel')
+            WHERE company_id IS NULL;
+        </sql>
+
+        <!-- Now make it non-nullable -->
+        <addNotNullConstraint tableName="users" columnName="company_id"
+                              columnDataType="UUID"/>
+
+        <!-- Drop the old free-text company column -->
+        <dropColumn tableName="users" columnName="company"/>
+
+        <createIndex tableName="users" indexName="idx_users_company">
+            <column name="company_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Add vendor_company_id to reports for scoping searches -->
+    <!-- reports already link to the vendor user, but denormalising here
+         makes filtering by company much cheaper -->
+    <changeSet id="004-reports-add-vendor-company-fk" author="ssv-dms">
+        <addColumn tableName="reports">
+            <column name="vendor_company_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_reports_vendor_company"
+                             references="companies(id)"/>
+            </column>
+        </addColumn>
+
+        <!-- Back-fill from the existing vendor user's company -->
+        <sql>
+            UPDATE reports r
+            SET vendor_company_id = u.company_id
+            FROM users u
+            WHERE u.id = r.created_by_vendor_id;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

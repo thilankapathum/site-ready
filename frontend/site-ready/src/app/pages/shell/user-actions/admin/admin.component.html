@@ -1,30 +1,20 @@
-<div class="space-y-5">
+<div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-bold">User Management</h1>
-    <p class="text-base-content/60 text-sm mt-1">
-      Activate accounts and assign roles. New accounts are inactive by default.
-    </p>
+    <h1 class="text-2xl font-bold">Administration</h1>
+    <p class="text-base-content/60 text-sm mt-1">Manage companies and user accounts.</p>
   </div>
 
-  <!-- Legend -->
-  <div class="flex flex-wrap gap-3 text-xs text-base-content/60">
-        <span class="flex items-center gap-1.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-warning inline-block"></span> Pending activation
-        </span>
-    <span class="flex items-center gap-1.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-success inline-block"></span> Active
-        </span>
-    <span class="flex items-center gap-1.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-error inline-block"></span> Deactivated
-        </span>
+  <!-- Tab switcher -->
+  <div class="tabs tabs-boxed bg-base-200 w-fit">
+    <button class="tab" [class.tab-active]="activeTab() === 'users'"
+            (click)="activeTab.set('users')">User Management</button>
+    <button class="tab" [class.tab-active]="activeTab() === 'companies'"
+            (click)="activeTab.set('companies')">Company Management</button>
   </div>
 
-  @if (loading()) {
-    <div class="flex justify-center py-16">
-      <span class="loading loading-spinner loading-lg text-primary"></span>
-    </div>
-  } @else {
-    <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+  <!-- ══ USER MANAGEMENT ══ -->
+  @if (activeTab() === 'users') {
+    <div class="card bg-white border border-base-300 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="table">
           <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/60">
@@ -53,7 +43,12 @@
                     </div>
                   </div>
                 </td>
-                <td class="text-sm">{{ u.message }}</td>
+                <td>
+                  <div>
+                    <p class="text-sm">{{ u.companyName }}</p>
+                    <span class="badge badge-ghost badge-xs">{{ u.companyType }}</span>
+                  </div>
+                </td>
                 <td>
                   <select class="select select-bordered select-xs font-medium"
                           [ngModel]="u.role"
@@ -71,7 +66,16 @@
                   }
                 </td>
                 <td>
-                  <div class="flex gap-1">
+                  <div class="flex items-center gap-2">
+                    <!-- Company assignment -->
+                    <select class="select select-bordered select-xs"
+                            [ngModel]="u.companyId"
+                            (ngModelChange)="changeCompany(u, $event)"
+                            title="Assign company">
+                      @for (c of companies(); track c.id) {
+                        <option [value]="c.id">{{ c.shortName }}</option>
+                      }
+                    </select>
                     @if (!u.active) {
                       <button class="btn btn-success btn-xs text-white"
                               (click)="toggleActive(u, true)">Activate</button>
@@ -86,11 +90,138 @@
           </tbody>
         </table>
       </div>
+      <div class="px-4 py-2 border-t border-base-200 text-xs text-base-content/40">
+        {{ users().length }} user{{ users().length !== 1 ? 's' : '' }} ·
+        {{ pendingUsers }} pending activation
+      </div>
     </div>
+  }
 
-    <div class="text-xs text-base-content/40 text-center">
-      {{ totalUsers() }} user{{ totalUsers() !== 1 ? 's' : '' }} total ·
-      {{ pendingUsers() }} pending activation
+  <!-- ══ COMPANY MANAGEMENT ══ -->
+  @if (activeTab() === 'companies') {
+    <div class="space-y-4">
+      <!-- Add company button -->
+      <div class="flex justify-end">
+        <button class="btn btn-primary btn-sm gap-2" (click)="openCreateForm()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Add Company
+        </button>
+      </div>
+
+      <!-- Create / Edit form -->
+      @if (showForm()) {
+        <div class="card bg-white border border-primary/30 shadow-sm">
+          <div class="card-body p-5 gap-4">
+            <h3 class="font-bold">{{ editingCompany() ? 'Edit Company' : 'New Company' }}</h3>
+
+            @if (formError()) {
+              <div class="alert alert-error text-sm py-2">{{ formError() }}</div>
+            }
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="form-control">
+                <label class="label"><span class="label-text text-sm font-medium">Company Name <span class="text-error">*</span></span></label>
+                <input type="text" class="input input-bordered input-sm"
+                       placeholder="e.g. ZTE Corporation" [(ngModel)]="form.name" />
+              </div>
+              <div class="form-control">
+                <label class="label"><span class="label-text text-sm font-medium">Short Name <span class="text-error">*</span></span></label>
+                <input type="text" class="input input-bordered input-sm"
+                       placeholder="e.g. ZTE" [(ngModel)]="form.shortName" />
+              </div>
+              <div class="form-control">
+                <label class="label"><span class="label-text text-sm font-medium">Type <span class="text-error">*</span></span></label>
+                <select class="select select-bordered select-sm" [(ngModel)]="form.type">
+                  <option value="VENDOR">Vendor (equipment supplier)</option>
+                  <option value="TELCO">Telco (the company itself)</option>
+                  <option value="CONTRACTOR">Contractor (contract engineers)</option>
+                </select>
+              </div>
+              <div class="form-control">
+                <label class="label"><span class="label-text text-sm font-medium">Country</span></label>
+                <input type="text" class="input input-bordered input-sm"
+                       placeholder="e.g. China" [(ngModel)]="form.country" />
+              </div>
+              <div class="form-control">
+                <label class="label"><span class="label-text text-sm font-medium">Contact Email</span></label>
+                <input type="email" class="input input-bordered input-sm"
+                       placeholder="contact@company.com" [(ngModel)]="form.contactEmail" />
+              </div>
+              <div class="form-control col-span-2">
+                <label class="label"><span class="label-text text-sm font-medium">Notes</span></label>
+                <textarea class="textarea textarea-bordered textarea-sm"
+                          placeholder="Optional notes…" [(ngModel)]="form.notes"></textarea>
+              </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+              <button class="btn btn-primary btn-sm" (click)="saveCompany()" [disabled]="saving()">
+                @if (saving()) { <span class="loading loading-spinner loading-xs"></span> }
+                {{ editingCompany() ? 'Update' : 'Create' }}
+              </button>
+              <button class="btn btn-ghost btn-sm" (click)="closeForm()">Cancel</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Companies table -->
+      <div class="card bg-white border border-base-300 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/60">
+            <tr>
+              <th>Company</th>
+              <th>Short Name</th>
+              <th>Type</th>
+              <th>Country</th>
+              <th>Contact</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+              @for (c of companies(); track c.id) {
+                <tr class="hover:bg-base-50">
+                  <td>
+                    <p class="font-medium text-sm">{{ c.name }}</p>
+                    @if (c.notes) {
+                      <p class="text-xs text-base-content/50 truncate max-w-xs">{{ c.notes }}</p>
+                    }
+                  </td>
+                  <td><span class="badge badge-ghost font-mono">{{ c.shortName }}</span></td>
+                  <td>
+                    <span [class]="typeBadge(c.type)">{{ c.type }}</span>
+                  </td>
+                  <td class="text-sm">{{ c.country ?? '—' }}</td>
+                  <td class="text-xs text-base-content/70">{{ c.contactEmail ?? '—' }}</td>
+                  <td>
+                    @if (c.active) {
+                      <span class="badge badge-success badge-sm badge-outline">Active</span>
+                    } @else {
+                      <span class="badge badge-error badge-sm badge-outline">Inactive</span>
+                    }
+                  </td>
+                  <td>
+                    <div class="flex gap-1">
+                      <button class="btn btn-ghost btn-xs" (click)="openEditForm(c)">Edit</button>
+                      @if (c.active) {
+                        <button class="btn btn-error btn-xs btn-outline"
+                                (click)="toggleCompanyActive(c, false)">Deactivate</button>
+                      } @else {
+                        <button class="btn btn-success btn-xs text-white"
+                                (click)="toggleCompanyActive(c, true)">Activate</button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   }
 </div>
