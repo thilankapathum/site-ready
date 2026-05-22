@@ -3,6 +3,7 @@ import {ReportResponse, STATUS_BADGE_CLASS, STATUS_LABELS} from '../../../models
 import {ReportService} from '../../../services/report.service';
 import {RouterLink} from '@angular/router';
 import {forkJoin} from 'rxjs';
+import {AuthService} from '../../../services/auth/auth.service';
 
 @Component({
   selector: 'app-review-list',
@@ -21,6 +22,8 @@ export class ReviewListComponent implements OnInit {
   totalPages = signal(0);
   readonly pageSize = 5;
 
+  user = this.auth.currentUser;
+
   pageNumbers = computed<number[]>(() => {
     const total = this.totalPages();
     const current = this.page();
@@ -36,7 +39,7 @@ export class ReviewListComponent implements OnInit {
     return pages;
   });
 
-  constructor(private reportService: ReportService) {}
+  constructor(private reportService: ReportService , private auth: AuthService) {}
 
   ngOnInit(): void {
     this.load();
@@ -108,22 +111,6 @@ export class ReviewListComponent implements OnInit {
     }
   }
 
-  // load(): void {
-  //   this.loading.set(true);
-  //   this.reportService.getMyReports(this.page(), this.pageSize).subscribe({
-  //     next: res => {
-  //       const content = this.filter() === 'all'
-  //         ? res.content
-  //         : res.content.filter(r => r.currentStatus === this.filter());
-  //       this.reports.set(content);
-  //       this.total.set(res.totalElements ?? res.page?.totalElements ?? 0);
-  //       this.totalPages.set(res.totalPages ?? res.page?.totalPages ?? 0);
-  //       this.loading.set(false);
-  //     },
-  //     error: () => this.loading.set(false),
-  //   });
-  // }
-
   goToPage(p: number): void { this.page.set(p); this.load(); }
   prevPage(): void { if (this.page() > 0) { this.page.update(p => p - 1); this.load(); } }
   nextPage(): void { if (this.page() < this.totalPages() - 1) { this.page.update(p => p + 1); this.load(); } }
@@ -132,5 +119,10 @@ export class ReviewListComponent implements OnInit {
   label(s: string): string { return STATUS_LABELS[s as keyof typeof STATUS_LABELS] ?? s; }
   formatDate(d: string): string {
     return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  isCurrentEngineer(engineerId: string) {
+    const u = this.user();
+    return u !== null && engineerId === u.userId;
   }
 }

@@ -51,80 +51,231 @@
     </div>
   } @else {
 
-    <!-- ── Metadata card ── -->
-    <div class="card bg-base-100 border border-base-300 ">
-      <div class="card-body p-5">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="font-bold">REPORT INFORMATION</h2>
-          <!-- Engineer assignment (admin only) -->
-          @if (isAdmin()) {
-            <button class="btn btn-ghost btn-xs" (click)="toggleAssign()">
-              {{ showAssign() ? 'Cancel' : 'Reassign Engineer' }}
-            </button>
-          }
+    <!-- ── Metadata card (Redesigned) ── -->
+    <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+
+      <!-- Card Header with Signature Seal Integration -->
+      <div
+        class="px-5 pt-5 pb-3 border-b border-base-200 bg-base-200/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <span class="text-xs font-bold tracking-wider text-base-content/40 uppercase">Report Profile</span>
+          <div class="flex items-center gap-4 mt-0.5">
+            <h2 class="text-xl font-semibold text-base-content tracking-tight">{{ report()!.siteId }}</h2>
+            <!--            <div class="divider divider-horizontal my-1 mx-0.5 opacity-30"></div>-->
+            <span class="badge badge-secondary badge-md font-semibold tracking-wide">{{ report()!.rat }}</span>
+          </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-          <div><p class="text-xs text-base-content/60">Site ID</p>
-            <p class=" font-bold">{{ report()!.siteId }}</p></div>
-          <div><p class="text-xs text-base-content/60">Project</p>
-            <p class="font-medium">{{ report()!.project }}</p></div>
-          <div>
-            <p class="text-xs text-base-content/60">RAT / Technology</p>
-            <span class="badge badge-soft badge-sm">{{ report()!.rat }}</span>
+        <div class="flex flex-col items-start sm:items-end gap-1.5">
+          @if (isAdmin()) {
+            <button class="btn btn-ghost btn-xs text-primary bg-primary/5 hover:bg-primary/10 gap-1"
+                    (click)="toggleAssign()">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+              {{ showAssign() ? 'Cancel Assignment' : 'Reassign Engineer' }}
+            </button>
+          }
+
+          @if (report()!.padesSignatureId) {
+            <div
+              class="flex items-center gap-1.5 px-2 py-1 bg-success/5 border border-success/20 rounded-md text-success"
+              [title]="'Signature ID: ' + report()!.padesSignatureId">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+              <span class="text-xs tracking-wider">PAdES Secured</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="card-body p-5 space-y-5">
+        <!-- Main Info Grid split cleanly into logical columns -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 divider-y md:divider-y-0 md:divider-x divider-base-200">
+
+          <!-- Column 1: Project & Assignment Context -->
+          <div class="space-y-3.5">
+            <h3 class="text-[11px] font-bold tracking-wider text-base-content/40 uppercase mb-1">Scope &
+              Engineering</h3>
+            <div>
+              <p class="text-xs text-base-content/50 mb-0.5">Project Allocation</p>
+              <p class="font-semibold text-base-content">{{ report()!.project }}</p>
+            </div>
+            <div class="flex gap-6">
+              <div>
+                <p class="text-xs text-base-content/50 mb-1">Document Version</p>
+                <span class="badge badge-ghost font-mono font-bold px-2.5">V{{ report()!.currentVersion }}</span>
+              </div>
+              <div>
+                <p class="text-xs text-base-content/50 mb-1">Responsibility</p>
+                <p class="text-sm font-semibold"
+                   [class.text-base-content]="report()!.currentResponsibility === 'CLOSED'">
+                  {{ report()!.currentResponsibility === 'CLOSED' ? 'CLOSED' : report()!.currentResponsibility }}
+                </p>
+              </div>
+            </div>
           </div>
-          <div><p class="text-xs text-base-content/60">Current Version</p>
-            <span class="badge badge-ghost ">V{{ report()!.currentVersion }}</span></div>
-          <div><p class="text-xs text-base-content/60">Responsibility</p>
-            <p
-              class="font-medium">{{ report()!.currentResponsibility === 'CLOSED' ? '— Closed —' : report()!.currentResponsibility }}</p>
+
+          <!-- Column 2: Lifecycle Status & Vendor Details -->
+          <div class="space-y-3.5 pt-4 md:pt-0 md:pl-6">
+            <h3 class="text-[11px] font-bold tracking-wider text-base-content/40 uppercase mb-1">State & Ownership</h3>
+            <div>
+              <p class="text-xs text-base-content/50 mb-0.5">Assigned Engineer</p>
+              <div class="flex items-center gap-1.5">
+                <!--                <div class="w-1.5 h-1.5 rounded-full" [class]="report()!.assignedEngineerName ? 'bg-success' : 'bg-base-content/30'"></div>-->
+                @if (isAssignedEngineer()) {
+                  <div class="w-1.5 h-1.5 rounded-full" [class]="isAssignedEngineer() ? 'bg-success' : ''"></div>
+                }
+                <p class="font-medium text-sm">{{ report()!.assignedEngineerName ?? 'Unassigned' }}</p>
+              </div>
+            </div>
+
+            <div>
+              <p class="text-xs text-base-content/50 mb-0.5">Vendor Partner</p>
+              <p class="font-semibold text-sm text-base-content">{{ report()!.vendorName }}</p>
+              <p class="text-[11px] font-medium text-base-content/50 tracking-tight">{{ report()!.vendorCompany }}</p>
+            </div>
           </div>
-          <div><p class="text-xs text-base-content/60">Vendor</p>
-            <p class="font-medium">{{ report()!.vendorName }}</p>
-            <p class="text-xs text-base-content/50">{{ report()!.vendorCompany }}</p></div>
-          <div><p class="text-xs text-base-content/60">Assigned Engineer</p>
-            <p class="font-medium">{{ report()!.assignedEngineerName ?? 'Unassigned' }}</p></div>
-          <div><p class="text-xs text-base-content/60">Created</p>
-            <p class="text-sm">{{ formatDate(report()!.createdAt) }}</p></div>
-          <div><p class="text-xs text-base-content/60">Last Updated</p>
-            <p class="text-sm">{{ formatDate(report()!.updatedAt) }}</p></div>
+
+          <!-- Column 3: Audit System Timestamps -->
+          <div class="space-y-3.5 pt-4 md:pt-0 md:pl-6">
+            <h3 class="text-[11px] font-bold tracking-wider text-base-content/40 uppercase mb-1">Audit Log Dates</h3>
+            <div class="flex items-start gap-2.5">
+              <svg class="w-4 h-4 text-base-content/30 mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                   viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 00-2 2z"/>
+              </svg>
+              <div>
+                <p class="text-xs text-base-content/50 mb-0.5">Initial Entry Created</p>
+                <p class="text-sm font-medium text-base-content/80">{{ formatDate(report()!.createdAt) }}</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-2.5">
+              <svg class="w-4 h-4 text-base-content/30 mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                   viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121 12m-4-7h4v4"/>
+              </svg>
+              <div>
+                <p class="text-xs text-base-content/50 mb-0.5">System Sync / Last Update</p>
+                <p class="text-sm font-medium text-base-content/80">{{ formatDate(report()!.updatedAt) }}</p>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Engineer reassignment panel (admin) -->
         @if (showAssign() && isAdmin()) {
-          <div class="mt-4 pt-4 border-t border-base-200 flex items-end gap-3">
+          <div class="pt-4 border-t border-base-200 bg-base-200/10 p-4 rounded-xl flex items-end gap-3 page-enter">
             <div class="form-control flex-1">
-              <label class="label"><span class="label-text text-sm font-medium">Assign Engineer</span></label>
-              <select class="select select-bordered select-sm" [(ngModel)]="selectedEngineerId">
-                <option value="">— Unassigned —</option>
+              <label class="label pt-0"><span
+                class="label-text text-xs font-semibold tracking-wide text-base-content/60 uppercase">Assign Infrastructure Reviewer</span></label>
+              <select class="select select-bordered select-sm w-full bg-white" [(ngModel)]="selectedEngineerId">
+                <option value="">— Clear Current Assignment —</option>
                 @for (e of engineers(); track e.userId) {
                   <option [value]="e.userId">{{ e.fullName }} ({{ e.companyName }})</option>
                 }
               </select>
             </div>
-            <button class="btn btn-primary btn-sm" (click)="assignEngineer()" [disabled]="assigningEngineer()">
+            <button class="btn btn-secondary btn-sm px-5" (click)="assignEngineer()" [disabled]="assigningEngineer()">
               @if (assigningEngineer()) {
                 <span class="loading loading-spinner loading-xs"></span>
               }
-              Save
+              Commit Route
             </button>
           </div>
         }
 
+        <!-- Raw Signature Hash details (Shown small below if it exists) -->
         @if (report()!.padesSignatureId) {
-          <div class="flex items-center gap-2 mt-3 pt-3 border-t border-base-200">
-            <svg class="w-4 h-4 text-success shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-            </svg>
-            <span class="text-xs text-success font-medium">PAdES digital signature applied</span>
-            <span class="text-xs text-base-content/40 ">{{ report()!.padesSignatureId }}</span>
+          <div
+            class="pt-2 flex items-center justify-between text-[11px] text-base-content/40 font-mono border-t border-base-200/60 bg-base-200/5 -mx-5 -mb-5 px-5 py-2.5">
+            <span>SECURITY BLOB TRACE:</span>
+            <span class="hash-display tracking-wider select-all">{{ report()!.padesSignatureId }}</span>
           </div>
         }
       </div>
     </div>
 
-    <!-- ── Version history ── -->
+    <!--    &lt;!&ndash; ── Metadata card ── &ndash;&gt;-->
+      <!--    <div class="card bg-base-100 border border-base-300 ">-->
+      <!--      <div class="card-body p-5">-->
+      <!--        <div class="flex items-center justify-between mb-3">-->
+      <!--          <h2 class="font-bold">REPORT INFORMATION</h2>-->
+      <!--          &lt;!&ndash; Engineer assignment (admin only) &ndash;&gt;-->
+      <!--          @if (isAdmin()) {-->
+      <!--            <button class="btn btn-ghost btn-xs" (click)="toggleAssign()">-->
+      <!--              {{ showAssign() ? 'Cancel' : 'Reassign Engineer' }}-->
+      <!--            </button>-->
+      <!--          }-->
+      <!--        </div>-->
+
+      <!--        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">-->
+      <!--          <div><p class="text-xs text-base-content/60">Site ID</p>-->
+      <!--            <p class=" font-bold">{{ report()!.siteId }}</p></div>-->
+      <!--          <div><p class="text-xs text-base-content/60">Project</p>-->
+      <!--            <p class="font-medium">{{ report()!.project }}</p></div>-->
+      <!--          <div>-->
+      <!--            <p class="text-xs text-base-content/60">RAT / Technology</p>-->
+      <!--            <span class="badge badge-soft badge-sm">{{ report()!.rat }}</span>-->
+      <!--          </div>-->
+      <!--          <div><p class="text-xs text-base-content/60">Current Version</p>-->
+      <!--            <span class="badge badge-ghost ">V{{ report()!.currentVersion }}</span></div>-->
+      <!--          <div><p class="text-xs text-base-content/60">Responsibility</p>-->
+      <!--            <p-->
+      <!--              class="font-medium">{{ report()!.currentResponsibility === 'CLOSED' ? '— Closed —' : report()!.currentResponsibility }}</p>-->
+      <!--          </div>-->
+      <!--          <div><p class="text-xs text-base-content/60">Vendor</p>-->
+      <!--            <p class="font-medium">{{ report()!.vendorName }}</p>-->
+      <!--            <p class="text-xs text-base-content/50">{{ report()!.vendorCompany }}</p></div>-->
+      <!--          <div><p class="text-xs text-base-content/60">Assigned Engineer</p>-->
+      <!--            <p class="font-medium">{{ report()!.assignedEngineerName ?? 'Unassigned' }}</p></div>-->
+      <!--          <div><p class="text-xs text-base-content/60">Created</p>-->
+      <!--            <p class="text-sm">{{ formatDate(report()!.createdAt) }}</p></div>-->
+      <!--          <div><p class="text-xs text-base-content/60">Last Updated</p>-->
+      <!--            <p class="text-sm">{{ formatDate(report()!.updatedAt) }}</p></div>-->
+      <!--        </div>-->
+
+      <!--        &lt;!&ndash; Engineer reassignment panel (admin) &ndash;&gt;-->
+      <!--        @if (showAssign() && isAdmin()) {-->
+      <!--          <div class="mt-4 pt-4 border-t border-base-200 flex items-end gap-3">-->
+      <!--            <div class="form-control flex-1">-->
+      <!--              <label class="label"><span class="label-text text-sm font-medium">Assign Engineer</span></label>-->
+      <!--              <select class="select select-bordered select-sm" [(ngModel)]="selectedEngineerId">-->
+      <!--                <option value="">— Unassigned —</option>-->
+      <!--                @for (e of engineers(); track e.userId) {-->
+      <!--                  <option [value]="e.userId">{{ e.fullName }} ({{ e.companyName }})</option>-->
+      <!--                }-->
+      <!--              </select>-->
+      <!--            </div>-->
+      <!--            <button class="btn btn-primary btn-sm" (click)="assignEngineer()" [disabled]="assigningEngineer()">-->
+      <!--              @if (assigningEngineer()) {-->
+      <!--                <span class="loading loading-spinner loading-xs"></span>-->
+      <!--              }-->
+      <!--              Save-->
+      <!--            </button>-->
+      <!--          </div>-->
+      <!--        }-->
+
+      <!--        @if (report()!.padesSignatureId) {-->
+      <!--          <div class="flex items-center gap-2 mt-3 pt-3 border-t border-base-200">-->
+      <!--            <svg class="w-4 h-4 text-success shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
+      <!--              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"-->
+      <!--                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>-->
+      <!--            </svg>-->
+      <!--            <span class="text-xs text-success font-medium">PAdES digital signature applied</span>-->
+      <!--            <span class="text-xs text-base-content/40 ">{{ report()!.padesSignatureId }}</span>-->
+      <!--          </div>-->
+      <!--        }-->
+      <!--      </div>-->
+      <!--    </div>-->
+
+      <!-- ── Version history ── -->
     <div class="card bg-base-100 border border-base-300 ">
       <div class="card-body p-5">
         <h2 class="font-bold mb-4">VERSION HISTORY</h2>

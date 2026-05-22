@@ -9,6 +9,7 @@ import {
 import {ReportService} from '../../../services/report.service';
 import {FormsModule} from '@angular/forms';
 import {Router} from '@angular/router';
+import {AuthService} from '../../../services/auth/auth.service';
 
 @Component({
   selector: 'app-search',
@@ -19,18 +20,19 @@ import {Router} from '@angular/router';
   styleUrl: './search.component.css'
 })
 export class SearchComponent implements OnInit {
-  reports    = signal<ReportResponse[]>([]);
-  loading    = signal(false);
-  total      = signal(0);
-  page       = signal(0);
+  reports = signal<ReportResponse[]>([]);
+  loading = signal(false);
+  total = signal(0);
+  page = signal(0);
   totalPages = signal(0);
-  pageSize   = 10;
-  engineers  = signal<AuthResponse[]>([]);
+  pageSize = 10;
+  engineers = signal<AuthResponse[]>([]);
+  user = this.auth.currentUser;
 
   pageNumbers = computed<number[]>(() => {
     const total = this.totalPages();
     const current = this.page();
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i);
+    if (total <= 7) return Array.from({length: total}, (_, i) => i);
     const pages: number[] = [];
     // Always show first
     pages.push(0);
@@ -54,7 +56,8 @@ export class SearchComponent implements OnInit {
     siteId: '', project: '', status: '', rat: '', engineerId: ''
   };
 
-  constructor(private reportService: ReportService, private router:Router) {}
+  constructor(private reportService: ReportService, private router: Router, private auth: AuthService) {
+  }
 
   ngOnInit(): void {
     this.reportService.getActiveEngineers().subscribe(e => this.engineers.set(e));
@@ -69,13 +72,13 @@ export class SearchComponent implements OnInit {
   doSearch(): void {
     this.loading.set(true);
     this.reportService.search({
-      siteId:     this.filters.siteId     || undefined,
-      project:    this.filters.project    || undefined,
-      rat:        this.filters.rat        || undefined,
-      status:     (this.filters.status    || undefined) as ReportStatus | undefined,
+      siteId: this.filters.siteId || undefined,
+      project: this.filters.project || undefined,
+      rat: this.filters.rat || undefined,
+      status: (this.filters.status || undefined) as ReportStatus | undefined,
       engineerId: this.filters.engineerId || undefined,
-      page:       this.page(),
-      size:       this.pageSize
+      page: this.page(),
+      size: this.pageSize
     }).subscribe({
       next: res => {
         this.reports.set(res.content);
@@ -88,7 +91,7 @@ export class SearchComponent implements OnInit {
   }
 
   reset(): void {
-    this.filters = { siteId: '', project: '', rat: '', status: '', engineerId: '' };
+    this.filters = {siteId: '', project: '', rat: '', status: '', engineerId: ''};
     this.search();
   }
 
@@ -98,11 +101,17 @@ export class SearchComponent implements OnInit {
   }
 
   prevPage(): void {
-    if (this.page() > 0) { this.page.update(p => p - 1); this.doSearch(); }
+    if (this.page() > 0) {
+      this.page.update(p => p - 1);
+      this.doSearch();
+    }
   }
 
   nextPage(): void {
-    if (this.page() < this.totalPages() - 1) { this.page.update(p => p + 1); this.doSearch(); }
+    if (this.page() < this.totalPages() - 1) {
+      this.page.update(p => p + 1);
+      this.doSearch();
+    }
   }
 
   onPageSizeChange(): void {
@@ -116,33 +125,54 @@ export class SearchComponent implements OnInit {
       const a = document.createElement('a');
       a.href = url;
       a.download = `${r.namingKey}_V${r.currentVersion}_stamped.pdf`;
-      a.click(); URL.revokeObjectURL(url);
+      a.click();
+      URL.revokeObjectURL(url);
     });
   }
 
   exportExcel(): void {
     this.reportService.exportExcel({
-      ...(this.filters.siteId && { siteId: this.filters.siteId }),
-      ...(this.filters.project && { project: this.filters.project }),
-      ...(this.filters.status && { status: this.filters.status }),
-      ...(this.filters.engineerId && { engineerId: this.filters.engineerId }),
+      ...(this.filters.siteId && {siteId: this.filters.siteId}),
+      ...(this.filters.project && {project: this.filters.project}),
+      ...(this.filters.status && {status: this.filters.status}),
+      ...(this.filters.engineerId && {engineerId: this.filters.engineerId}),
     });
   }
 
   exportCsv(): void {
     this.reportService.exportCsv({
-      ...(this.filters.siteId && { siteId: this.filters.siteId }),
-      ...(this.filters.project && { project: this.filters.project }),
-      ...(this.filters.status && { status: this.filters.status }),
-      ...(this.filters.engineerId && { engineerId: this.filters.engineerId }),
+      ...(this.filters.siteId && {siteId: this.filters.siteId}),
+      ...(this.filters.project && {project: this.filters.project}),
+      ...(this.filters.status && {status: this.filters.status}),
+      ...(this.filters.engineerId && {engineerId: this.filters.engineerId}),
     });
   }
 
-  badge(s: string): string { return STATUS_BADGE_CLASS[s as keyof typeof STATUS_BADGE_CLASS] ?? 'badge'; }
-  label(s: string): string { return STATUS_LABELS[s as keyof typeof STATUS_LABELS] ?? s; }
-  formatDate(d: string): string { return new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
+  badge(s: string): string {
+    return STATUS_BADGE_CLASS[s as keyof typeof STATUS_BADGE_CLASS] ?? 'badge';
+  }
+
+  label(s: string): string {
+    return STATUS_LABELS[s as keyof typeof STATUS_LABELS] ?? s;
+  }
+
+  formatDate(d: string): string {
+    return new Date(d).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'});
+  }
 
   openDetail(r: ReportResponse): void {
     this.router.navigate(['/reports', r.id]);
+  }
+
+  // isAssignedEngineer = computed(() => {
+  //   const r = this.report();
+  //   const u = this.user();
+  //   return u !== null && r !== null && this.isEngineer() &&
+  //     r.assignedEngineerId === u.userId;
+  // });
+
+  isCurrentUser(userId: string) {
+    const u = this.user();
+    return u !== null && userId === u.userId;
   }
 }

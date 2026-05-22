@@ -56,7 +56,11 @@
                   <span>·</span>
                   <span>Vendor: {{ r.vendorName }}</span>
                   <span>·</span>
-                  <span>Engineer: {{ r.assignedEngineerName }}</span>
+                  <span class="flex flex-row gap-1 items-center">
+                    @if (isCurrentEngineer(r.assignedEngineerId!) ) {
+                      <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
+                    }
+                    {{ r.assignedEngineerName }}</span>
                   <span>·</span>
                   <span>Updated: {{ formatDate(r.updatedAt) }}</span>
                 </div>

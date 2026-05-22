@@ -32,6 +32,7 @@ export interface ReportResponse {
   currentResponsibility: Responsibility;
   assignedEngineerName: string | null;
   assignedEngineerId: string | null;
+  vendorId: string;
   vendorName: string;
   vendorCompany: string;
   createdAt: string;
