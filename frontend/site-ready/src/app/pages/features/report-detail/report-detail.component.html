@@ -52,7 +52,7 @@
   } @else {
 
     <!-- ── Metadata card (Redesigned) ── -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+    <div class="card bg-base-100 border border-base-300 overflow-hidden">
 
       <!-- Card Header with Signature Seal Integration -->
       <div
@@ -62,7 +62,7 @@
           <div class="flex items-center gap-4 mt-0.5">
             <h2 class="text-xl font-semibold text-base-content tracking-tight">{{ report()!.siteId }}</h2>
             <!--            <div class="divider divider-horizontal my-1 mx-0.5 opacity-30"></div>-->
-            <span class="badge badge-secondary badge-md font-semibold tracking-wide">{{ report()!.rat }}</span>
+            <span class="badge badge-ghost font-bold px-2.5">V{{ report()!.currentVersion }}</span>
           </div>
         </div>
 
@@ -98,22 +98,22 @@
 
           <!-- Column 1: Project & Assignment Context -->
           <div class="space-y-3.5">
-            <h3 class="text-[11px] font-bold tracking-wider text-base-content/40 uppercase mb-1">Scope &
-              Engineering</h3>
+            <h3 class="text-sm font-bold tracking-wider text-base-content/40 uppercase mb-1">Scope</h3>
             <div>
-              <p class="text-xs text-base-content/50 mb-0.5">Project Allocation</p>
+              <p class="text-xs text-base-content/50 mb-0.5">Project</p>
               <p class="font-semibold text-base-content">{{ report()!.project }}</p>
             </div>
             <div class="flex gap-6">
               <div>
-                <p class="text-xs text-base-content/50 mb-1">Document Version</p>
-                <span class="badge badge-ghost font-mono font-bold px-2.5">V{{ report()!.currentVersion }}</span>
+                <p class="text-xs text-base-content/50 mb-1">Technology</p>
+                <span class="badge badge-neutral badge-outline badge-md text-sm font-semibold tracking-wide">{{ report()!.rat }}</span>
+
               </div>
               <div>
-                <p class="text-xs text-base-content/50 mb-1">Responsibility</p>
-                <p class="text-sm font-semibold"
+                <p class="text-xs text-base-content/50 mb-1">Current Responsibility</p>
+                <p class="text-sm font-semibold tracking-wide"
                    [class.text-base-content]="report()!.currentResponsibility === 'CLOSED'">
-                  {{ report()!.currentResponsibility === 'CLOSED' ? 'CLOSED' : report()!.currentResponsibility }}
+                  {{ report()!.currentResponsibility === 'CLOSED' ? '-CLOSED-' : report()!.currentResponsibility }}
                 </p>
               </div>
             </div>
@@ -121,28 +121,46 @@
 
           <!-- Column 2: Lifecycle Status & Vendor Details -->
           <div class="space-y-3.5 pt-4 md:pt-0 md:pl-6">
-            <h3 class="text-[11px] font-bold tracking-wider text-base-content/40 uppercase mb-1">State & Ownership</h3>
-            <div>
-              <p class="text-xs text-base-content/50 mb-0.5">Assigned Engineer</p>
-              <div class="flex items-center gap-1.5">
-                <!--                <div class="w-1.5 h-1.5 rounded-full" [class]="report()!.assignedEngineerName ? 'bg-success' : 'bg-base-content/30'"></div>-->
-                @if (isAssignedEngineer()) {
-                  <div class="w-1.5 h-1.5 rounded-full" [class]="isAssignedEngineer() ? 'bg-success' : ''"></div>
-                }
-                <p class="font-medium text-sm">{{ report()!.assignedEngineerName ?? 'Unassigned' }}</p>
+            <h3 class="text-sm font-bold tracking-wider text-base-content/40 uppercase mb-1">Ownership</h3>
+            <div class="flex items-start gap-2.5">
+              <svg class="text-base-content/30" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17 21C17 18.2386 14.7614 16 12 16C9.23858 16 7 18.2386 7 21M17 21H17.8031C18.921 21 19.48 21 19.9074 20.7822C20.2837 20.5905 20.5905 20.2837 20.7822 19.9074C21 19.48 21 18.921 21 17.8031V6.19691C21 5.07899 21 4.5192 20.7822 4.0918C20.5905 3.71547 20.2837 3.40973 19.9074 3.21799C19.4796 3 18.9203 3 17.8002 3H6.2002C5.08009 3 4.51962 3 4.0918 3.21799C3.71547 3.40973 3.40973 3.71547 3.21799 4.0918C3 4.51962 3 5.08009 3 6.2002V17.8002C3 18.9203 3 19.4796 3.21799 19.9074C3.40973 20.2837 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H7M17 21H7M12 13C10.3431 13 9 11.6569 9 10C9 8.34315 10.3431 7 12 7C13.6569 7 15 8.34315 15 10C15 11.6569 13.6569 13 12 13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+
+              <div>
+                <div>
+                  <p class="text-xs text-base-content/50 mb-0.5">Assigned Engineer</p>
+                  <div class="flex items-center gap-1.5">
+                    <!--                <div class="w-1.5 h-1.5 rounded-full" [class]="report()!.assignedEngineerName ? 'bg-success' : 'bg-base-content/30'"></div>-->
+                    <p class="font-semibold text-sm flex flex-row gap-1 items-center">
+                      @if (isCurrentUser(report()?.assignedEngineerId!) ) {
+                        <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
+                      }
+                      {{ report()!.assignedEngineerName ?? 'Unassigned' }}</p>
+                  </div>
+                </div>
               </div>
             </div>
+            <div class="flex items-start gap-2.5">
+              <svg class="text-base-content/30" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 18V12M15 14L12 12L9 14M13 3.00087C12.9045 3 12.7973 3 12.6747 3H8.2002C7.08009 3 6.51962 3 6.0918 3.21799C5.71547 3.40973 5.40973 3.71547 5.21799 4.0918C5 4.51962 5 5.08009 5 6.2002V17.8002C5 18.9203 5 19.4801 5.21799 19.9079C5.40973 20.2842 5.71547 20.5905 6.0918 20.7822C6.51921 21 7.079 21 8.19694 21L15.8031 21C16.921 21 17.48 21 17.9074 20.7822C18.2837 20.5905 18.5905 20.2842 18.7822 19.9079C19 19.4805 19 18.9215 19 17.8036V9.32568C19 9.20296 19 9.09561 18.9991 9M13 3.00087C13.2856 3.00347 13.4663 3.01385 13.6388 3.05526C13.8429 3.10425 14.0379 3.18526 14.2168 3.29492C14.4186 3.41857 14.5918 3.59182 14.9375 3.9375L18.063 7.06298C18.4089 7.40889 18.5809 7.58136 18.7046 7.78319C18.8142 7.96214 18.8953 8.15726 18.9443 8.36133C18.9857 8.53376 18.9963 8.71451 18.9991 9M13 3.00087V5.8C13 6.9201 13 7.47977 13.218 7.90759C13.4097 8.28392 13.7155 8.59048 14.0918 8.78223C14.5192 9 15.079 9 16.1969 9H18.9991M18.9991 9H19.0002" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
 
-            <div>
-              <p class="text-xs text-base-content/50 mb-0.5">Vendor Partner</p>
-              <p class="font-semibold text-sm text-base-content">{{ report()!.vendorName }}</p>
-              <p class="text-[11px] font-medium text-base-content/50 tracking-tight">{{ report()!.vendorCompany }}</p>
+              <div>
+                <p class="text-xs text-base-content/50 mb-0.5">Uploader</p>
+                <p class="font-semibold text-sm text-base-content flex flex-row gap-1 items-center">
+                  @if (isCurrentUser(report()?.vendorId!) ) {
+                    <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
+                  }
+                  {{ report()!.vendorName }}</p>
+                <p class="text-xs font-medium text-base-content/50 tracking-tight">{{ report()!.vendorCompany }}</p>
+              </div>
             </div>
           </div>
 
           <!-- Column 3: Audit System Timestamps -->
           <div class="space-y-3.5 pt-4 md:pt-0 md:pl-6">
-            <h3 class="text-[11px] font-bold tracking-wider text-base-content/40 uppercase mb-1">Audit Log Dates</h3>
+            <h3 class="text-sm font-bold tracking-wider text-base-content/40 uppercase mb-1">Audit Log Dates</h3>
             <div class="flex items-start gap-2.5">
               <svg class="w-4 h-4 text-base-content/30 mt-0.5 shrink-0" fill="none" stroke="currentColor"
                    viewBox="0 0 24 24">
@@ -150,18 +168,20 @@
                       d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 00-2 2z"/>
               </svg>
               <div>
-                <p class="text-xs text-base-content/50 mb-0.5">Initial Entry Created</p>
+                <p class="text-xs text-base-content/50 mb-0.5">Initial Upload</p>
                 <p class="text-sm font-medium text-base-content/80">{{ formatDate(report()!.createdAt) }}</p>
               </div>
             </div>
             <div class="flex items-start gap-2.5">
-              <svg class="w-4 h-4 text-base-content/30 mt-0.5 shrink-0" fill="none" stroke="currentColor"
-                   viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121 12m-4-7h4v4"/>
+              <svg class="text-base-content/30" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M4 8H20M4 8V16.8002C4 17.9203 4 18.4801 4.21799 18.9079C4.40973 19.2842 4.71547 19.5905 5.0918 19.7822C5.5192 20 6.07899 20 7.19691 20H16.8031C17.921 20 18.48 20 18.9074 19.7822C19.2837 19.5905 19.5905 19.2842 19.7822 18.9079C20 18.4805 20 17.9215 20 16.8036V8M4 8V7.2002C4 6.08009 4 5.51962 4.21799 5.0918C4.40973 4.71547 4.71547 4.40973 5.0918 4.21799C5.51962 4 6.08009 4 7.2002 4H8M20 8V7.19691C20 6.07899 20 5.5192 19.7822 5.0918C19.5905 4.71547 19.2837 4.40973 18.9074 4.21799C18.4796 4 17.9203 4 16.8002 4H16M8 4H16M8 4V2M16 4V2M15 12L11 16L9 14"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
+
               <div>
-                <p class="text-xs text-base-content/50 mb-0.5">System Sync / Last Update</p>
+                <p class="text-xs text-base-content/50 mb-0.5">Last Update</p>
                 <p class="text-sm font-medium text-base-content/80">{{ formatDate(report()!.updatedAt) }}</p>
               </div>
             </div>
@@ -194,8 +214,8 @@
         <!-- Raw Signature Hash details (Shown small below if it exists) -->
         @if (report()!.padesSignatureId) {
           <div
-            class="pt-2 flex items-center justify-between text-[11px] text-base-content/40 font-mono border-t border-base-200/60 bg-base-200/5 -mx-5 -mb-5 px-5 py-2.5">
-            <span>SECURITY BLOB TRACE:</span>
+            class="pt-2 flex items-center text-xs text-base-content/40 font-mono border-t border-base-200/60 bg-base-200/5 -mx-5 -mb-5 px-5 py-2.5">
+            <span>SECURITY BLOB TRACE: &nbsp;</span>
             <span class="hash-display tracking-wider select-all">{{ report()!.padesSignatureId }}</span>
           </div>
         }
@@ -302,7 +322,7 @@
               </thead>
               <tbody>
                 @for (row of historyRows(); track row.rowKey) {
-                  <tr class="hover:bg-base-200/40"
+                  <tr class="hover:bg-opacity-10 bg-opacity-5"
                       [class.bg-success]="row.isApproved"
                       [class.bg-error]="row.isRejected || row.hasDeletions"
                       [class.bg-warning]="row.isResubmission">
@@ -311,8 +331,13 @@
                     <td><span
                       [class]="row.actionBadgeClass + ' badge-sm whitespace-nowrap'">{{ row.actionLabel }}</span></td>
                     <td class="text-sm">{{ row.actorName }}</td>
-                    <td><span class="badge badge-outline badge-xs">{{ row.actorRole }}</span></td>
-                    <td class="text-xs text-base-content/70 whitespace-nowrap">{{ row.dateTime }}</td>
+                    <td><span class="badge badge-xs">{{ row.actorRole }}</span></td>
+                    <td class="text-xs text-base-content/70 whitespace-nowrap">
+                      <div>
+                        <p>{{ formatShortDate(row.dateTime) }}</p>
+                        <p class="text-base-content/40">{{formatShortTime(row.dateTime)}}</p>
+                      </div>
+                    </td>
                     <td class="text-xs text-base-content/60 max-w-[140px] truncate" [title]="row.filename">
                       {{ row.filename }}
                     </td>
@@ -331,7 +356,7 @@
                     <td>
                       <button class="btn btn-ghost btn-xs gap-1 whitespace-nowrap"
                               (click)="downloadRow(row)" [disabled]="!row.hasFile">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-3.5 h-3.5 text-base-content/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                         </svg>

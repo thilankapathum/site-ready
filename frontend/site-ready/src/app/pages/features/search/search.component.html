@@ -29,12 +29,12 @@
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Site ID</span></label>
           <input type="text" class="input input-bordered input-xs "
-                 placeholder="e.g. KY0001" [(ngModel)]="filters.siteId" (keydown.enter)="search()"/>
+                 placeholder="e.g. KYKAN1" [(ngModel)]="filters.siteId" (keydown.enter)="search()"/>
         </div>
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">Project</span></label>
           <input type="text" class="input input-bordered input-xs"
-                 placeholder="e.g. 4G-upgrade-26" [(ngModel)]="filters.project" (keydown.enter)="search()"/>
+                 placeholder="e.g. BBE-2021" [(ngModel)]="filters.project" (keydown.enter)="search()"/>
         </div>
         <div class="form-control">
           <label class="label py-1"><span class="label-text text-xs font-medium">RAT</span></label>
@@ -85,28 +85,8 @@
             </button>
             <button class="btn btn-ghost btn-xs" (click)="reset()">Reset</button>
           </div>
-
-<!--          <span class="ml-auto text-xs text-base-content/50 self-center">-->
-<!--              {{ total() }} result{{ total() !== 1 ? 's' : '' }}-->
-<!--            </span>-->
         </div>
       </div>
-<!--      <div class="flex gap-2 mt-3">-->
-<!--        <button class="btn btn-primary btn-xs gap-1" (click)="search()" [disabled]="loading()">-->
-<!--          @if (loading()) {-->
-<!--            <span class="loading loading-spinner loading-xs"></span>-->
-<!--          }-->
-<!--          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
-<!--            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"-->
-<!--                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>-->
-<!--          </svg>-->
-<!--          Search-->
-<!--        </button>-->
-<!--        <button class="btn btn-ghost btn-xs" (click)="reset()">Reset</button>-->
-<!--        <span class="ml-auto text-xs text-base-content/50 self-center">-->
-<!--              {{ total() }} result{{ total() !== 1 ? 's' : '' }}-->
-<!--            </span>-->
-<!--      </div>-->
     </div>
   </div>
 
@@ -172,6 +152,7 @@
                     </div>
                     <span>{{ r.vendorName }}</span>
                   </div>
+                    <p class="text-xs text-base-content/40">{{ r.vendorCompany }}</p>
                 </td>
                 <td class="text-xs text-base-content/60 whitespace-nowrap">{{ formatDate(r.updatedAt) }}</td>
 <!--                <td>-->

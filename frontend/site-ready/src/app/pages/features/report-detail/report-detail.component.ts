@@ -338,6 +338,21 @@ export class ReportDetailComponent implements OnInit {
     });
   }
 
+  formatShortDate(d: string): string {
+    return new Date(d).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'numeric',
+      year: 'numeric'
+    });
+  }
+
+  formatShortTime(d: string): string {
+    return new Date(d).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
   formatSize(bytes: number): string {
     return bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
   }
@@ -367,6 +382,11 @@ export class ReportDetailComponent implements OnInit {
   objectKeys(obj: Record<string, number> | null | undefined): string[] {
     if (!obj) return [];
     return Object.keys(obj);
+  }
+
+  isCurrentUser(userId:string):boolean{
+    const u = this.user();
+    return u !== null && userId === u.userId;
   }
 
 }
