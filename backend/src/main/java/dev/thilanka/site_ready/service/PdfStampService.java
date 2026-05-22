@@ -15,6 +15,7 @@ import com.itextpdf.kernel.pdf.*;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.*;
+import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.signatures.*;
@@ -58,44 +59,72 @@ public class PdfStampService {
     }
 
     public StampResult stampAndSign(
-            byte[] originalBytes,
-            User uploader,
-            ReportVersion version,
-            String sha256Hash,
-            List<ReportVersion> allVersions,
-            PageDiff pageDiff             // ← new parameter
+            byte[] originalBytes, User uploader, ReportVersion version,
+            String sha256Hash, List<ReportVersion> allVersions, PageDiff pageDiff
     ) throws Exception {
+        String verifyUrl = appProperties.baseUrl() + "/verify/" + version.getId();
+        String timestamp = OffsetDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss 'UTC'"));
         byte[] withAuditPage = appendAuditPage(
-                originalBytes, uploader, version, sha256Hash, allVersions, pageDiff);
+                originalBytes, uploader, version, sha256Hash, allVersions, pageDiff, verifyUrl, timestamp);
         String signatureId = "SSV-" + UUID.randomUUID().toString()
                 .replace("-", "").substring(0, 12).toUpperCase();
         byte[] signedBytes = applyPadesSignature(withAuditPage, signatureId);
         return new StampResult(signedBytes, signatureId);
     }
 
-    /**
-     * Appends a fresh audit trail page to the PDF.
-     * Detects whether the source PDF is already PAdES-signed and uses
-     * append mode if so, avoiding cross-reference corruption.
-     */
     private byte[] appendAuditPage(
             byte[] original, User uploader, ReportVersion version,
-            String sha256Hash, List<ReportVersion> allVersions, PageDiff pageDiff
+            String sha256Hash, List<ReportVersion> allVersions,
+            PageDiff pageDiff, String verifyUrl, String timestamp
     ) throws Exception {
+        // Always strip any existing audit page(s) and replace with a fresh one.
+        // If the source is a signed PDF, copy it to an unsigned document first
+        // so the full rewrite can work without append-mode conflicts.
+        byte[] base = isPdfSigned(original)
+                ? copyToUnsignedPdf(original)
+                : original;
 
-        String verifyUrl = appProperties.baseUrl() + "/verify/" + version.getId();
-        String timestamp = OffsetDateTime.now()
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss 'UTC'"));
+        byte[] stripped = stripAllAuditPages(base);
 
-        boolean isSigned = isPdfSigned(original);
+        return appendAuditPageFullRewrite(
+                stripped, uploader, version, sha256Hash, allVersions, pageDiff, verifyUrl, timestamp);
+    }
 
-        if (isSigned) {
-            return appendAuditPageAppendMode(
-                    original, uploader, version, sha256Hash, allVersions, pageDiff, verifyUrl, timestamp);
-        } else {
-            return appendAuditPageFullRewrite(
-                    original, uploader, version, sha256Hash, allVersions, pageDiff, verifyUrl, timestamp);
+    private byte[] stripAllAuditPages(byte[] pdfBytes) {
+        try {
+            byte[] current = pdfBytes;
+            for (int i = 0; i < 10; i++) {
+                byte[] stripped = stripLastAuditPageIfPresent(current);
+                if (stripped == current) break;
+                current = stripped;
+            }
+            return current;
+        } catch (Exception e) {
+            log.warn("stripAllAuditPages failed, using original: {}", e.getMessage());
+            return pdfBytes;
         }
+    }
+
+    private byte[] stripLastAuditPageIfPresent(byte[] pdfBytes) throws Exception {
+        try (PdfReader reader = new PdfReader(new ByteArrayInputStream(pdfBytes));
+             PdfDocument pdfDoc = new PdfDocument(reader)) {
+            int totalPages = pdfDoc.getNumberOfPages();
+            if (totalPages <= 1) return pdfBytes;
+            PdfPage lastPage = pdfDoc.getPage(totalPages);
+            String lastPageText = com.itextpdf.kernel.pdf.canvas.parser
+                    .PdfTextExtractor.getTextFromPage(lastPage);
+            if (!lastPageText.contains("SSV DOCUMENT MANAGEMENT SYSTEM")) {
+                return pdfBytes;
+            }
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PdfReader reader2 = new PdfReader(new ByteArrayInputStream(pdfBytes));
+        reader2.setUnethicalReading(true);
+        try (PdfDocument pdfDoc2 = new PdfDocument(reader2, new PdfWriter(out))) {
+            pdfDoc2.removePage(pdfDoc2.getNumberOfPages());
+        }
+        return out.toByteArray();
     }
 
     private boolean isPdfSigned(byte[] pdfBytes) {
@@ -108,9 +137,6 @@ public class PdfStampService {
         }
     }
 
-    /**
-     * For unsigned PDFs — full rewrite with new audit page appended.
-     */
     private byte[] appendAuditPageFullRewrite(
             byte[] original, User uploader, ReportVersion version,
             String sha256Hash, List<ReportVersion> allVersions, PageDiff pageDiff,
@@ -118,61 +144,70 @@ public class PdfStampService {
     ) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PdfReader reader = new PdfReader(new ByteArrayInputStream(original));
-        PdfWriter writer = new PdfWriter(out);
-        PdfDocument pdfDoc = new PdfDocument(reader, writer);
+        reader.setUnethicalReading(true);
+        PdfDocument pdfDoc = new PdfDocument(reader, new PdfWriter(out));
         Document document = new Document(pdfDoc, PageSize.A4);
         document.setMargins(36, 36, 36, 36);
 //        document.setPageNumber(pdfDoc.getNumberOfPages());
-        document.add(new AreaBreak(com.itextpdf.layout.properties.AreaBreakType.LAST_PAGE));
+        document.add(new AreaBreak(AreaBreakType.LAST_PAGE));
         document.add(new AreaBreak(com.itextpdf.layout.properties.AreaBreakType.NEXT_PAGE));
-        addAuditContent(document, uploader, version, sha256Hash, allVersions, pageDiff, verifyUrl, timestamp);
+        addAuditContent(document, uploader, version, sha256Hash,
+                allVersions, pageDiff, verifyUrl, timestamp);
         document.close();
         return out.toByteArray();
     }
 
+//    /**
+//     * For signed PDFs: copies the PDF into a fresh non-signed document
+//     * (preserving all pages/content), then appends the audit page via full rewrite.
+//     * This avoids the blank-page bug caused by combining append mode with NEXT_PAGE break.
+//     */
+//    private byte[] appendAuditPageLowLevel(
+//            byte[] original, User uploader, ReportVersion version,
+//            String sha256Hash, List<ReportVersion> allVersions, PageDiff pageDiff,
+//            String verifyUrl, String timestamp
+//    ) throws Exception {
+//        // Copy all pages from the signed PDF into a fresh unsigned document.
+//        // The original signature is embedded in the page content stream so it
+//        // remains visible in the PDF, but iText no longer treats the doc as signed,
+//        // allowing the full-rewrite audit page append to work correctly.
+//        byte[] unsigned = copyToUnsignedPdf(original);
+//        return appendAuditPageFullRewrite(
+//                unsigned, uploader, version, sha256Hash, allVersions, pageDiff, verifyUrl, timestamp);
+//    }
+
     /**
-     * For already-signed PDFs — uses append mode to avoid invalidating existing signature.
-     * Adds a new page at the end without touching the signed content.
+     * Copies all pages from a (possibly signed) PDF into a brand-new PDF document.
+     * The resulting document has identical visual content but no AcroForm signatures,
+     * so it can be opened with a standard PdfWriter (no append mode needed).
      */
-    private byte[] appendAuditPageAppendMode(
-            byte[] original, User uploader, ReportVersion version,
-            String sha256Hash, List<ReportVersion> allVersions, PageDiff pageDiff,
-            String verifyUrl, String timestamp
-    ) throws Exception {
+    private byte[] copyToUnsignedPdf(byte[] pdfBytes) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PdfReader reader = new PdfReader(new ByteArrayInputStream(original));
-        // useAppendMode() — does not alter any existing page or object
-        PdfWriter writer = new PdfWriter(out, new WriterProperties().useSmartMode());
-        StampingProperties sp = new StampingProperties().useAppendMode();
-        PdfDocument pdfDoc = new PdfDocument(reader, writer, sp);
-        Document document = new Document(pdfDoc, PageSize.A4);
-        document.setMargins(36, 36, 36, 36);
-//        document.setPageNumber(pdfDoc.getNumberOfPages());
-        document.add(new AreaBreak(com.itextpdf.layout.properties.AreaBreakType.LAST_PAGE));
-        document.add(new AreaBreak(com.itextpdf.layout.properties.AreaBreakType.NEXT_PAGE));
-        addAuditContent(document, uploader, version, sha256Hash, allVersions, pageDiff, verifyUrl, timestamp);
-        document.close();
+        PdfReader reader = new PdfReader(new ByteArrayInputStream(pdfBytes));
+        reader.setUnethicalReading(true);
+        PdfDocument source = new PdfDocument(reader);
+        PdfDocument dest   = new PdfDocument(new PdfWriter(out));
+        // Copy all pages preserving content, fonts, images, and annotations
+        source.copyPagesTo(1, source.getNumberOfPages(), dest);
+        source.close();
+        dest.close();
         return out.toByteArray();
     }
 
-    /**
-     * Writes all audit trail content into the document.
-     * Shared between full-rewrite and append-mode paths.
-     */
     private void addAuditContent(
             Document document, User uploader, ReportVersion version,
             String sha256Hash, List<ReportVersion> allVersions, PageDiff pageDiff,
             String verifyUrl, String timestamp
     ) throws Exception {
 
-        DeviceRgb headerBlue  = new DeviceRgb(15, 76, 129);
+        DeviceRgb headerBlue   = new DeviceRgb(15, 76, 129);
         DeviceRgb successGreen = new DeviceRgb(22, 163, 74);
         DeviceRgb warningAmber = new DeviceRgb(217, 119, 6);
         DeviceRgb errorRed     = new DeviceRgb(220, 38, 38);
+        DeviceRgb infoBlue     = new DeviceRgb(2, 132, 199);
         DeviceRgb lightGray    = new DeviceRgb(245, 247, 250);
         DeviceRgb white        = new DeviceRgb(255, 255, 255);
         DeviceRgb darkText     = new DeviceRgb(30, 30, 30);
-        DeviceRgb amber        = new DeviceRgb(180, 100, 0);
 
         PdfFont bold   = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
         PdfFont normal = PdfFontFactory.createFont(StandardFonts.HELVETICA);
@@ -226,21 +261,14 @@ public class PdfStampService {
         }
         document.add(metaTable);
 
-        // ── Page change summary (only for V2+) ──
-        if (pageDiff != null && pageDiff.totalPagesOld() > 0) {
-            addPageDiffSection(document, pageDiff, bold, normal, mono,
-                    headerBlue, successGreen, warningAmber, errorRed, amber, lightGray, white, darkText);
-        }
-
-        // ── Complete action history ──
+        // ── Complete Action History ──
         document.add(new Paragraph("COMPLETE ACTION HISTORY")
                 .setFont(bold).setFontSize(8).setFontColor(headerBlue).setMarginBottom(3));
 
-        Table histTable = new Table(UnitValue.createPercentArray(new float[]{8, 18, 18, 14, 18, 24}))
+        Table histTable = new Table(UnitValue.createPercentArray(new float[]{8, 18, 20, 12, 18, 24}))
                 .useAllAvailableWidth().setMarginBottom(10);
 
-        String[] colHeaders = {"Ver.", "Date", "Actor", "Role", "Action", "Notes"};
-        for (String h : colHeaders) {
+        for (String h : new String[]{"Ver.", "Date", "Actor", "Role", "Action", "Notes"}) {
             histTable.addHeaderCell(new Cell()
                     .setBackgroundColor(headerBlue).setPadding(4).setBorder(Border.NO_BORDER)
                     .add(new Paragraph(h).setFont(bold).setFontSize(7).setFontColor(ColorConstants.WHITE)));
@@ -251,6 +279,7 @@ public class PdfStampService {
 
         int rowNum = 0;
         for (ReportVersion rv : sorted) {
+            // Vendor upload row
             DeviceRgb rowBg = (rowNum++ % 2 == 0) ? lightGray : white;
             String uploadedAt = rv.getUploadedAt() != null
                     ? rv.getUploadedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "";
@@ -264,6 +293,7 @@ public class PdfStampService {
                         .add(new Paragraph(val).setFont(normal).setFontSize(6.5f)));
             }
 
+            // Engineer review row
             if (rv.getReviewStatus() != null && rv.getReviewedBy() != null) {
                 rowBg = (rowNum++ % 2 == 0) ? lightGray : white;
                 String reviewedAt = rv.getReviewedAt() != null
@@ -294,18 +324,166 @@ public class PdfStampService {
         }
         document.add(histTable);
 
+        // ── Cumulative Document Change Analysis ──
+        boolean anyDiff = sorted.stream().anyMatch(rv ->
+                rv.getPageDiff() != null || rv.getReviewerPageDiff() != null);
+
+        if (anyDiff) {
+            document.add(new Paragraph("DOCUMENT CHANGE ANALYSIS — ALL VERSIONS")
+                    .setFont(bold).setFontSize(8).setFontColor(headerBlue).setMarginBottom(3));
+
+            // Check if any version has deletions — show warning banner
+            boolean anyDeletions = sorted.stream().anyMatch(rv ->
+                    (rv.getPageDiff() != null && rv.getPageDiff().hasDeletions()) ||
+                            (rv.getReviewerPageDiff() != null && rv.getReviewerPageDiff().hasDeletions()));
+
+            if (anyDeletions) {
+                Table warningTable = new Table(UnitValue.createPercentArray(new float[]{1}))
+                        .useAllAvailableWidth().setMarginBottom(6);
+                warningTable.addCell(new Cell()
+                        .setBackgroundColor(new DeviceRgb(254, 226, 226))
+                        .setPadding(6).setBorder(Border.NO_BORDER)
+                        .add(new Paragraph("⚠  ONE OR MORE VERSIONS CONTAIN PAGE DELETIONS — Engineer verification required")
+                                .setFont(bold).setFontSize(7.5f).setFontColor(errorRed)));
+                document.add(warningTable);
+            }
+
+            Table changeTable = new Table(
+                    UnitValue.createPercentArray(new float[]{7, 14, 16, 12, 51}))
+                    .useAllAvailableWidth().setMarginBottom(10);
+
+            for (String h : new String[]{"Ver.", "Actor", "Role", "Pages", "Changes"}) {
+                changeTable.addHeaderCell(new Cell()
+                        .setBackgroundColor(headerBlue).setPadding(4).setBorder(Border.NO_BORDER)
+                        .add(new Paragraph(h).setFont(bold).setFontSize(7).setFontColor(ColorConstants.WHITE)));
+            }
+
+            int changeRowNum = 0;
+            for (ReportVersion rv : sorted) {
+                // Vendor upload diff row
+                PageDiff vDiff = rv.getPageDiff();
+                if (vDiff != null) {
+                    DeviceRgb bg = (changeRowNum++ % 2 == 0) ? lightGray : white;
+                    String uploadedAt = rv.getUploadedAt() != null
+                            ? rv.getUploadedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "";
+                    String pagesSummary = vDiff.totalPagesOld() == 0
+                            ? String.valueOf(vDiff.totalPagesNew())
+                            : vDiff.totalPagesOld() + " → " + vDiff.totalPagesNew();
+                    String changeDetail = buildChangeDetail(vDiff);
+                    DeviceRgb pagesColor = vDiff.hasDeletions() ? errorRed
+                            : vDiff.totalPagesNew() > vDiff.totalPagesOld() ? successGreen : darkText;
+
+                    addChangeRow(changeTable, bg,
+                            "V" + rv.getVersionNumber(),
+                            rv.getUploadedBy().getFullName(),
+                            "VENDOR",
+                            pagesSummary, pagesColor,
+                            changeDetail,
+                            vDiff.hasDeletions(), false,
+                            bold, normal, errorRed, darkText);
+                }
+
+                // Engineer review diff row
+                PageDiff rDiff = rv.getReviewerPageDiff();
+                if (rDiff != null && rv.getReviewedBy() != null) {
+                    DeviceRgb bg = (changeRowNum++ % 2 == 0) ? lightGray : white;
+                    String pagesSummary = rDiff.totalPagesOld() + " → " + rDiff.totalPagesNew();
+                    String changeDetail = buildChangeDetail(rDiff);
+                    DeviceRgb pagesColor = rDiff.hasDeletions() ? errorRed
+                            : rDiff.totalPagesNew() > rDiff.totalPagesOld() ? successGreen : darkText;
+
+                    addChangeRow(changeTable, bg,
+                            "V" + rv.getVersionNumber(),
+                            rv.getReviewedBy().getFullName(),
+                            "ENGINEER",
+                            pagesSummary, pagesColor,
+                            changeDetail,
+                            rDiff.hasDeletions(), true,
+                            bold, normal, errorRed, darkText);
+                }
+            }
+            document.add(changeTable);
+        }
+
         // ── QR + legal notice ──
         byte[] qrBytes = generateQrCode(verifyUrl, 80);
         Image qrImage = new Image(ImageDataFactory.create(qrBytes)).setWidth(60).setHeight(60);
-        Table footerTable = new Table(UnitValue.createPercentArray(new float[]{15, 85})).useAllAvailableWidth();
+        Table footerTable = new Table(UnitValue.createPercentArray(new float[]{15, 85}))
+                .useAllAvailableWidth();
         footerTable.addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(4).add(qrImage));
         footerTable.addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(4)
                 .add(new Paragraph(
-                        "This page is automatically generated and maintained by the SSV Document Management System. " +
-                                "A PAdES-B digital signature covers the entire document including this page. " +
+                        "This audit trail page is automatically replaced on every upload or review action — " +
+                                "there is always exactly one audit page per document. " +
+                                "The SHA-256 hash uniquely identifies the original uploaded file. " +
+                                "A PAdES-B digital signature covers the complete document. " +
                                 "Verify authenticity at: " + verifyUrl)
                         .setFont(normal).setFontSize(6.5f).setFontColor(new DeviceRgb(90, 90, 90))));
         document.add(footerTable);
+    }
+
+    /**
+     * Builds a human-readable change detail string from a PageDiff.
+     */
+    private String buildChangeDetail(PageDiff diff) {
+        List<String> parts = new ArrayList<>();
+
+        if (diff.totalPagesOld() == 0) {
+            parts.add("Initial submission (" + diff.totalPagesNew() + " pages)");
+        } else {
+            if (!diff.addedPages().isEmpty()) {
+                parts.add("Added p" + diff.addedPages().stream()
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(", p")));
+            }
+            if (!diff.deletedPages().isEmpty()) {
+                parts.add("⚠ Deleted p" + diff.deletedPages().stream()
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(", p")));
+            }
+            if (!diff.modifiedPages().isEmpty()) {
+                parts.add("Modified p" + diff.modifiedPages().stream()
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(", p")));
+            }
+            if (!diff.newAnnotationsByPage().isEmpty()) {
+                int total = diff.newAnnotationsByPage().values().stream().mapToInt(Integer::intValue).sum();
+                String pages = diff.newAnnotationsByPage().keySet().stream()
+                        .map(p -> "p" + p).collect(java.util.stream.Collectors.joining(", "));
+                parts.add(total + " new annotation" + (total != 1 ? "s" : "") + " on " + pages);
+            }
+            if (parts.isEmpty()) {
+                parts.add("No structural changes");
+            }
+        }
+
+        String result = String.join("; ", parts);
+        return result.length() > 200 ? result.substring(0, 197) + "..." : result;
+    }
+
+    /**
+     * Adds one row to the cumulative change analysis table.
+     */
+    private void addChangeRow(
+            Table table, DeviceRgb bg,
+            String version, String actor, String role,
+            String pages, DeviceRgb pagesColor,
+            String changes, boolean hasDeletions, boolean isEngineer,
+            PdfFont bold, PdfFont normal,
+            DeviceRgb errorRed, DeviceRgb darkText
+    ) {
+        DeviceRgb roleColor = isEngineer ? new DeviceRgb(15, 76, 129) : new DeviceRgb(22, 163, 74);
+
+        table.addCell(new Cell().setBackgroundColor(bg).setPadding(3).setBorder(Border.NO_BORDER)
+                .add(new Paragraph(version).setFont(bold).setFontSize(7f)));
+        table.addCell(new Cell().setBackgroundColor(bg).setPadding(3).setBorder(Border.NO_BORDER)
+                .add(new Paragraph(actor).setFont(normal).setFontSize(6.5f)));
+        table.addCell(new Cell().setBackgroundColor(bg).setPadding(3).setBorder(Border.NO_BORDER)
+                .add(new Paragraph(role).setFont(bold).setFontSize(6.5f).setFontColor(roleColor)));
+        table.addCell(new Cell().setBackgroundColor(bg).setPadding(3).setBorder(Border.NO_BORDER)
+                .add(new Paragraph(pages).setFont(bold).setFontSize(6.5f).setFontColor(pagesColor)));
+        table.addCell(new Cell().setBackgroundColor(bg).setPadding(3).setBorder(Border.NO_BORDER)
+                .add(new Paragraph(changes)
+                        .setFont(hasDeletions ? bold : normal)
+                        .setFontSize(6.5f)
+                        .setFontColor(hasDeletions ? errorRed : darkText)));
     }
 
     /**
@@ -446,4 +624,23 @@ public class PdfStampService {
     }
 
     public record StampResult(byte[] signedBytes, String signatureId) {}
+
+    private byte[] stripLastAuditPage(byte[] pdfBytes) throws Exception {
+        try (PdfReader reader = new PdfReader(new ByteArrayInputStream(pdfBytes));
+             PdfDocument pdfDoc = new PdfDocument(reader)) {
+            int totalPages = pdfDoc.getNumberOfPages();
+            if (totalPages <= 1) return pdfBytes;
+            PdfPage lastPage = pdfDoc.getPage(totalPages);
+            String lastPageText = com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor
+                    .getTextFromPage(lastPage);
+            if (!lastPageText.contains("SSV DOCUMENT MANAGEMENT SYSTEM")) return pdfBytes;
+        }
+        // Remove last page
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (PdfReader reader2 = new PdfReader(new ByteArrayInputStream(pdfBytes));
+             PdfDocument pdfDoc2 = new PdfDocument(reader2, new PdfWriter(out))) {
+            pdfDoc2.removePage(pdfDoc2.getNumberOfPages());
+        }
+        return out.toByteArray();
+    }
 }

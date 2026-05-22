@@ -113,7 +113,8 @@ export interface VersionResponse {
   reviewedAt: string | null;
   hasStampedPdf: boolean;
   hasReviewedPdf: boolean;
-  pageDiff: PageDiff | null;   // ← new
+  pageDiff: PageDiff | null;
+  reviewerPageDiff: PageDiff | null;
 }
 
 export type CompanyType = 'VENDOR' | 'TELCO' | 'CONTRACTOR';

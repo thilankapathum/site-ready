@@ -50,6 +50,10 @@ public class ReportVersion {
     @Column(name = "page_diff", columnDefinition = "jsonb")
     private PageDiff pageDiff;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reviewer_page_diff", columnDefinition = "jsonb")
+    private PageDiff reviewerPageDiff;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploaded_by", nullable = false)
     private User uploadedBy;

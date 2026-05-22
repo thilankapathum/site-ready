@@ -30,8 +30,9 @@ interface HistoryRow {
   isResubmission: boolean;
   versionId: string;
   downloadType: 'vendor' | 'reviewed';
-  pageDiff: PageDiff | null;     // ← new
-  hasDeletions: boolean;         // ← for row tinting
+  diff: PageDiff | null;
+  hasDeletions: boolean;
+  label: string;
 }
 
 
@@ -54,61 +55,57 @@ export class ReportDetailComponent implements OnInit {
     const sorted = [...this.versions()].sort((a, b) => a.versionNumber - b.versionNumber);
 
     for (const v of sorted) {
-      // Row 1 — vendor upload
+      // Vendor upload row
       rows.push({
-        rowKey: `${v.id}-upload`,
+        rowKey:        `${v.id}-upload`,
         versionNumber: v.versionNumber,
-        actionLabel: 'Uploaded',
+        actionLabel:   'Uploaded',
         actionBadgeClass: 'badge badge-info badge-outline',
-        actorName: v.uploaderName,
-        actorRole: v.uploaderRole,
-        dateTime: v.uploadedAt ? this.formatDate(v.uploadedAt) : '—',
-        filename: v.originalFilename,
-        notes: null,
-        conditions: null,
-        hasFile: true,
-        isApproved: false,
-        isRejected: false,
+        actorName:     v.uploaderName,
+        actorRole:     v.uploaderRole,
+        dateTime:      v.uploadedAt ? this.formatDate(v.uploadedAt) : '—',
+        filename:      v.originalFilename,
+        notes:         null,
+        conditions:    null,
+        hasFile:       true,
+        isApproved:    false,
+        isRejected:    false,
         isResubmission: false,
-        versionId: v.id,
-        downloadType: 'vendor',
-        pageDiff: v.pageDiff,
-        hasDeletions: v.pageDiff?.hasDeletions ?? false,
+        versionId:     v.id,
+        downloadType:  'vendor',
+        diff:          v.pageDiff,                         // ← vendor's own diff
+        hasDeletions:  v.pageDiff?.hasDeletions ?? false,
+        label:         'Change analysis',
       });
 
-      // Row 2 — engineer review (only if reviewed)
+      // Engineer review row
       if (v.reviewStatus && v.reviewerName) {
-        const isApproved = v.reviewStatus === 'APPROVED' || v.reviewStatus === 'CONDITIONALLY_APPROVED';
-        const isRejected = v.reviewStatus === 'REJECTED';
+        const isApproved     = v.reviewStatus === 'APPROVED' || v.reviewStatus === 'CONDITIONALLY_APPROVED';
+        const isRejected     = v.reviewStatus === 'REJECTED';
         const isResubmission = v.reviewStatus === 'RESUBMISSION_REQUIRED';
 
-        const actionBadgeClass =
-          isApproved ? 'badge badge-success' :
-            isRejected ? 'badge badge-error' :
-              isResubmission ? 'badge badge-warning badge-outline' :
-                'badge badge-ghost';
-
-        const actionLabel = STATUS_LABELS[v.reviewStatus as keyof typeof STATUS_LABELS] ?? v.reviewStatus;
-
         rows.push({
-          rowKey: `${v.id}-review`,
+          rowKey:        `${v.id}-review`,
           versionNumber: v.versionNumber,
-          actionLabel,
-          actionBadgeClass,
-          actorName: v.reviewerName,
-          actorRole: 'ENGINEER',
-          dateTime: v.reviewedAt ? this.formatDate(v.reviewedAt) : '—',
-          filename: `Reviewed V${v.versionNumber}`,
-          notes: v.reviewerNotes,
-          conditions: v.conditions,
-          hasFile: v.hasReviewedPdf,
+          actionLabel:   STATUS_LABELS[v.reviewStatus as keyof typeof STATUS_LABELS] ?? v.reviewStatus,
+          actionBadgeClass: isApproved     ? 'badge badge-success' :
+            isRejected     ? 'badge badge-error' :
+              isResubmission ? 'badge badge-warning badge-outline' : 'badge badge-ghost',
+          actorName:     v.reviewerName,
+          actorRole:     'ENGINEER',
+          dateTime:      v.reviewedAt ? this.formatDate(v.reviewedAt) : '—',
+          filename:      `Reviewed V${v.versionNumber}`,
+          notes:         v.reviewerNotes,
+          conditions:    v.conditions,
+          hasFile:       v.hasReviewedPdf,
           isApproved,
           isRejected,
           isResubmission,
-          versionId: v.id,
-          downloadType: 'reviewed',
-          pageDiff:         v.pageDiff,
-          hasDeletions:     v.pageDiff?.hasDeletions ?? false,
+          versionId:     v.id,
+          downloadType:  'reviewed',
+          diff:          v.reviewerPageDiff,               // ← engineer's own diff
+          hasDeletions:  v.reviewerPageDiff?.hasDeletions ?? false,
+          label:         'Engineer changes',
         });
       }
     }

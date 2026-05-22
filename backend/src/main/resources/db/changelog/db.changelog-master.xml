@@ -10,5 +10,6 @@
     <include file="classpath:db/changelog/changes/003-add-rat-field.xml"/>
     <include file="classpath:db/changelog/changes/004-add-companies.xml"/>
     <include file="classpath:db/changelog/changes/005-add-page-diff.xml"/>
+    <include file="classpath:db/changelog/changes/006-reviewer-page-diff.xml"/>
 
 </databaseChangeLog>

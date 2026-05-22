@@ -22,7 +22,8 @@ public record VersionResponse(
         OffsetDateTime reviewedAt,
         boolean hasStampedPdf,
         boolean hasReviewedPdf,
-        PageDiff pageDiff
+        PageDiff pageDiff,
+        PageDiff reviewerPageDiff
 ) {
     public static VersionResponse from(ReportVersion v) {
         return new VersionResponse(
@@ -43,7 +44,8 @@ public record VersionResponse(
                 v.getReviewedAt(),
                 v.getStampedStorageKey() != null,
                 v.getReviewedStorageKey() != null,
-                v.getPageDiff()
+                v.getPageDiff(),
+                v.getReviewerPageDiff()
         );
     }
 }

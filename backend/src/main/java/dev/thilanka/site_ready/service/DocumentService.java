@@ -168,14 +168,28 @@ public class DocumentService {
         if (versionNumber == 1) {
             pageDiff = PageDiff.firstVersion(countPages(originalBytes));
         } else {
-            // Fetch the previous version's original from storage
             ReportVersion previousVersion = versionRepository
                     .findByReportIdAndVersionNumber(report.getId(), versionNumber - 1)
                     .orElse(null);
             if (previousVersion != null) {
                 try {
-                    byte[] previousOriginal = storageService.download(previousVersion.getOriginalStorageKey());
-                    pageDiff = pdfDiffService.diff(previousOriginal, originalBytes);
+                    byte[] previousOriginal = storageService.download(
+                            previousVersion.getOriginalStorageKey());
+
+                    // Fetch engineer's reviewed file as annotation baseline
+                    // so engineer's markups are NOT counted as vendor's new annotations
+                    byte[] engineerReviewed = null;
+                    if (previousVersion.getReviewedStorageKey() != null) {
+                        try {
+                            engineerReviewed = storageService.download(
+                                    previousVersion.getReviewedStorageKey());
+                        } catch (Exception e) {
+                            log.debug("Could not fetch engineer reviewed file for baseline: {}",
+                                    e.getMessage());
+                        }
+                    }
+
+                    pageDiff = pdfDiffService.diff(previousOriginal, originalBytes, engineerReviewed);
                 } catch (Exception e) {
                     log.warn("Page diff failed, continuing without diff: {}", e.getMessage());
                     pageDiff = PageDiff.firstVersion(countPages(originalBytes));
@@ -261,22 +275,31 @@ public class DocumentService {
         report.setCurrentResponsibility(resolveResponsibility(newStatus));
         reportRepository.save(report);    // persist so version.getReport() returns updated state
 
-// Now stamp — report.getCurrentStatus() is correct
+// ── Compute diff: vendor's original vs engineer's reviewed file ──
+        PageDiff engineerDiff = null;
+        try {
+            byte[] vendorOriginal = storageService.download(version.getOriginalStorageKey());
+            // No baseline subtraction needed here — we WANT to show all engineer changes
+            engineerDiff = pdfDiffService.diff(vendorOriginal, reviewBytes);
+        } catch (Exception e) {
+            log.warn("Engineer page diff failed: {}", e.getMessage());
+        }
+        version.setReviewerPageDiff(engineerDiff);
+
+// Stamp reviewed PDF
         try {
             List<ReportVersion> allVersions = versionRepository
                     .findByReportIdOrderByVersionNumberDesc(report.getId());
             PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
-                    reviewBytes, managedEngineer, version, sha256, allVersions, null);
+                    reviewBytes, managedEngineer, version, sha256, allVersions, engineerDiff);
             String stampedReviewKey = storageService.buildKey(
                     report.getNamingKey(), currentVer, "reviewed-stamped");
             storageService.upload(stampedReviewKey, stamp.signedBytes(), "application/pdf");
             version.setReviewedStorageKey(stampedReviewKey);
         } catch (Exception e) {
             log.warn("Stamping reviewed PDF failed: {}", e.getMessage());
-            version.setReviewedStorageKey(reviewKey);
         }
 
-// Save version after stamping
         versionRepository.save(version);
 
 // Report already saved above — no need to save again unless something else changed

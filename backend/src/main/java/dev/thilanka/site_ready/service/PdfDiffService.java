@@ -1,15 +1,13 @@
 package dev.thilanka.site_ready.service;
 
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfName;
-import com.itextpdf.kernel.pdf.PdfPage;
-import com.itextpdf.kernel.pdf.PdfReader;
+import com.itextpdf.kernel.pdf.*;
 import com.itextpdf.kernel.pdf.annot.PdfAnnotation;
 import dev.thilanka.site_ready.dto.PageDiff;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
 import java.util.*;
 
@@ -18,94 +16,91 @@ import java.util.*;
 public class PdfDiffService {
 
     /**
-     * Compares two PDF byte arrays and returns a structural diff.
+     * Diffs two PDFs, subtracting a known "baseline" annotation count
+     * (e.g. engineer's annotations already present in the document the vendor downloaded).
      *
-     * @param previousBytes  Original bytes of the previous version (pre-stamp)
-     * @param currentBytes   Original bytes of the current version (pre-stamp)
-     * @return PageDiff describing structural changes
+     * @param previousOriginalBytes  Vendor's original of V(n-1) — clean upload
+     * @param currentBytes           Vendor's new upload V(n)
+     * @param engineerReviewedBytes  Engineer's reviewed file of V(n-1), or null if not available
      */
-    public PageDiff diff(byte[] previousBytes, byte[] currentBytes) {
+
+    public PageDiff diff(byte[] previousOriginalBytes, byte[] currentBytes,
+                         byte[] engineerReviewedBytes) {
         try {
-            List<String> prevHashes  = getPageHashes(previousBytes);
-            List<String> currHashes  = getPageHashes(currentBytes);
-            Map<Integer, Integer> prevAnnotCounts = getAnnotationCounts(previousBytes);
-            Map<Integer, Integer> currAnnotCounts = getAnnotationCounts(currentBytes);
+            // Strip any existing audit trail pages before diffing
+            // so system-generated pages don't appear as added/deleted content
+            byte[] prevClean = stripAuditPages(previousOriginalBytes);
+            byte[] currClean = stripAuditPages(currentBytes);
+            byte[] baseClean = engineerReviewedBytes != null
+                    ? stripAuditPages(engineerReviewedBytes) : null;
+
+            List<String> prevHashes = getPageHashes(prevClean);
+            List<String> currHashes = getPageHashes(currClean);
+
+            Map<Integer, Integer> baselineAnnotCounts = baseClean != null
+                    ? getAnnotationCounts(baseClean)
+                    : getAnnotationCounts(prevClean);
+
+            Map<Integer, Integer> currAnnotCounts = getAnnotationCounts(currClean);
 
             int prevTotal = prevHashes.size();
             int currTotal = currHashes.size();
 
-            // Build a set of all previous hashes for fast lookup
             Set<String> prevHashSet = new HashSet<>(prevHashes);
             Set<String> currHashSet = new HashSet<>(currHashes);
 
-            // Added pages: pages in current whose hash doesn't appear in previous at all
             List<Integer> added = new ArrayList<>();
             for (int i = 0; i < currHashes.size(); i++) {
-                if (!prevHashSet.contains(currHashes.get(i))) {
-                    added.add(i + 1); // 1-based
-                }
+                if (!prevHashSet.contains(currHashes.get(i))) added.add(i + 1);
             }
 
-            // Deleted pages: pages in previous whose hash doesn't appear in current at all
             List<Integer> deleted = new ArrayList<>();
             for (int i = 0; i < prevHashes.size(); i++) {
-                if (!currHashSet.contains(prevHashes.get(i))) {
-                    deleted.add(i + 1); // 1-based
-                }
+                if (!currHashSet.contains(prevHashes.get(i))) deleted.add(i + 1);
             }
 
-            // Modified pages: same position in both, different hash, but hash
-            // exists somewhere in current (so it's not just deleted)
-            // We compare position-by-position for pages that exist in both
             List<Integer> modified = new ArrayList<>();
             int compareLen = Math.min(prevHashes.size(), currHashes.size());
             for (int i = 0; i < compareLen; i++) {
-                String prevHash = prevHashes.get(i);
-                String currHash = currHashes.get(i);
-                if (!prevHash.equals(currHash)) {
-                    // Only flag as modified if this page wasn't already counted
-                    // as deleted (to avoid double-counting)
-                    if (!deleted.contains(i + 1) && !added.contains(i + 1)) {
-                        modified.add(i + 1);
-                    }
+                if (!prevHashes.get(i).equals(currHashes.get(i))
+                        && !deleted.contains(i + 1) && !added.contains(i + 1)) {
+                    modified.add(i + 1);
                 }
             }
 
-            // New annotations: pages where annotation count increased
+            // New annotations = current count minus baseline (engineer's + vendor's previous)
+            // This isolates ONLY annotations the vendor added in this submission
             Map<Integer, Integer> newAnnotations = new LinkedHashMap<>();
             for (int pageNum = 1; pageNum <= currTotal; pageNum++) {
-                int prevCount = prevAnnotCounts.getOrDefault(pageNum, 0);
-                int currCount = currAnnotCounts.getOrDefault(pageNum, 0);
-                if (currCount > prevCount) {
-                    newAnnotations.put(pageNum, currCount - prevCount);
+                int baselineCount = baselineAnnotCounts.getOrDefault(pageNum, 0);
+                int currCount     = currAnnotCounts.getOrDefault(pageNum, 0);
+                int vendorNew     = currCount - baselineCount;
+                if (vendorNew > 0) {
+                    newAnnotations.put(pageNum, vendorNew);
                 }
             }
 
             boolean hasDeletions     = !deleted.isEmpty();
             boolean hasModifications = !modified.isEmpty();
+            String summary = buildSummary(added, deleted, modified, newAnnotations, prevTotal, currTotal);
 
-            String summary = buildSummary(added, deleted, modified, newAnnotations,
-                    prevTotal, currTotal);
-
-            return new PageDiff(
-                    prevTotal, currTotal,
+            return new PageDiff(prevTotal, currTotal,
                     Collections.unmodifiableList(added),
                     Collections.unmodifiableList(deleted),
                     Collections.unmodifiableList(modified),
                     Collections.unmodifiableMap(newAnnotations),
-                    hasDeletions, hasModifications,
-                    summary
-            );
+                    hasDeletions, hasModifications, summary);
 
         } catch (Exception e) {
             log.warn("Page diff failed: {}", e.getMessage());
-            // Return a safe fallback — don't fail the upload
-            return new PageDiff(
-                    0, 0, List.of(), List.of(), List.of(), Map.of(),
-                    false, false,
-                    "Change analysis unavailable for this version."
-            );
+            return new PageDiff(0, 0, List.of(), List.of(), List.of(), Map.of(),
+                    false, false, "Change analysis unavailable for this version.");
         }
+    }
+
+    // Keep the old 2-argument overload for backward compatibility
+    public PageDiff diff(byte[] previousBytes, byte[] currentBytes) {
+        return diff(previousBytes, currentBytes, null);
     }
 
     // ── Helpers ──
@@ -233,5 +228,47 @@ public class PdfDiffService {
         // Abbreviate long lists
         return sorted.subList(0, 4).toString().replace("[", "").replace("]", "")
                 + " … (+" + (sorted.size() - 4) + " more)";
+    }
+
+    /**
+     * Removes all trailing pages that contain the SSV audit trail marker.
+     * Handles multiple consecutive audit pages (e.g. vendor + engineer audit pages).
+     */
+    private byte[] stripAuditPages(byte[] pdfBytes) {
+        try {
+            byte[] current = pdfBytes;
+            // Keep stripping from the end until no more audit pages found
+            for (int i = 0; i < 5; i++) { // max 5 iterations as safety limit
+                byte[] stripped = stripLastAuditPageIfPresent(current);
+                if (stripped == current) break; // no audit page was stripped
+                current = stripped;
+            }
+            return current;
+        } catch (Exception e) {
+            log.debug("stripAuditPages failed, using original: {}", e.getMessage());
+            return pdfBytes;
+        }
+    }
+
+    private byte[] stripLastAuditPageIfPresent(byte[] pdfBytes) throws Exception {
+        try (PdfReader reader = new PdfReader(new ByteArrayInputStream(pdfBytes));
+             PdfDocument pdfDoc = new PdfDocument(reader)) {
+            int totalPages = pdfDoc.getNumberOfPages();
+            if (totalPages <= 1) return pdfBytes;
+            PdfPage lastPage = pdfDoc.getPage(totalPages);
+            String lastPageText = com.itextpdf.kernel.pdf.canvas.parser
+                    .PdfTextExtractor.getTextFromPage(lastPage);
+            if (!lastPageText.contains("SSV DOCUMENT MANAGEMENT SYSTEM")) {
+                return pdfBytes; // signal: nothing was stripped
+            }
+        }
+        // Strip the audit page
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PdfReader reader2 = new PdfReader(new ByteArrayInputStream(pdfBytes));
+        reader2.setUnethicalReading(true);
+        try (PdfDocument pdfDoc2 = new PdfDocument(reader2, new PdfWriter(out))) {
+            pdfDoc2.removePage(pdfDoc2.getNumberOfPages());
+        }
+        return out.toByteArray();
     }
 }
