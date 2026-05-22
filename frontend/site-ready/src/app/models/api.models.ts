@@ -113,6 +113,7 @@ export interface VersionResponse {
   reviewedAt: string | null;
   hasStampedPdf: boolean;
   hasReviewedPdf: boolean;
+  pageDiff: PageDiff | null;   // ← new
 }
 
 export type CompanyType = 'VENDOR' | 'TELCO' | 'CONTRACTOR';
@@ -150,4 +151,16 @@ export interface AuthResponse {
   companyId: string;
   companyName: string;
   companyType: CompanyType;
+}
+
+export interface PageDiff {
+  totalPagesOld: number;
+  totalPagesNew: number;
+  addedPages: number[];
+  deletedPages: number[];
+  modifiedPages: number[];
+  newAnnotationsByPage: Record<number, number>;
+  hasDeletions: boolean;
+  hasModifications: boolean;
+  summary: string;
 }

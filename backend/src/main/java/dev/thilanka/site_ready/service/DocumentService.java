@@ -1,5 +1,6 @@
 package dev.thilanka.site_ready.service;
 
+import dev.thilanka.site_ready.dto.PageDiff;
 import dev.thilanka.site_ready.dto.ReportResponse;
 import dev.thilanka.site_ready.dto.ReviewRequest;
 import dev.thilanka.site_ready.dto.UploadRequest;
@@ -41,6 +42,7 @@ public class DocumentService {
     private final PdfStampService pdfStampService;
     private final AuditService auditService;
     private final ReportAccessService reportAccessService;
+    private final PdfDiffService pdfDiffService;
 
     @Transactional
     public ReportResponse uploadReport(
@@ -161,11 +163,38 @@ public class DocumentService {
         reportRepository.save(report);
         version = versionRepository.save(version);
 
-        // Stamp and sign the PDF
+        // Compute page diff against previous version's original
+        PageDiff pageDiff;
+        if (versionNumber == 1) {
+            pageDiff = PageDiff.firstVersion(countPages(originalBytes));
+        } else {
+            // Fetch the previous version's original from storage
+            ReportVersion previousVersion = versionRepository
+                    .findByReportIdAndVersionNumber(report.getId(), versionNumber - 1)
+                    .orElse(null);
+            if (previousVersion != null) {
+                try {
+                    byte[] previousOriginal = storageService.download(previousVersion.getOriginalStorageKey());
+                    pageDiff = pdfDiffService.diff(previousOriginal, originalBytes);
+                } catch (Exception e) {
+                    log.warn("Page diff failed, continuing without diff: {}", e.getMessage());
+                    pageDiff = PageDiff.firstVersion(countPages(originalBytes));
+                }
+            } else {
+                pageDiff = PageDiff.firstVersion(countPages(originalBytes));
+            }
+        }
+
+// Store diff on version
+        version.setPageDiff(pageDiff);
+        versionRepository.save(version);
+
+// Stamp and sign
         try {
-//            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(originalBytes, managedUploader, version, sha256);
-            List<ReportVersion> allVersions = versionRepository.findByReportIdOrderByVersionNumberDesc(report.getId());
-            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(originalBytes, managedUploader, version, sha256, allVersions);
+            List<ReportVersion> allVersions = versionRepository
+                    .findByReportIdOrderByVersionNumberDesc(report.getId());
+            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
+                    originalBytes, managedUploader, version, sha256, allVersions, pageDiff);
             String stampedKey = storageService.buildKey(namingKey, versionNumber, "stamped");
             storageService.upload(stampedKey, stamp.signedBytes(), "application/pdf");
             version.setStampedStorageKey(stampedKey);
@@ -237,7 +266,7 @@ public class DocumentService {
             List<ReportVersion> allVersions = versionRepository
                     .findByReportIdOrderByVersionNumberDesc(report.getId());
             PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
-                    reviewBytes, managedEngineer, version, sha256, allVersions);
+                    reviewBytes, managedEngineer, version, sha256, allVersions, null);
             String stampedReviewKey = storageService.buildKey(
                     report.getNamingKey(), currentVer, "reviewed-stamped");
             storageService.upload(stampedReviewKey, stamp.signedBytes(), "application/pdf");
@@ -366,5 +395,16 @@ public class DocumentService {
 
     private String blank(String s) {
         return (s == null || s.isBlank()) ? null : s;
+    }
+
+    private int countPages(byte[] pdfBytes) {
+        try (com.itextpdf.kernel.pdf.PdfReader reader =
+                     new com.itextpdf.kernel.pdf.PdfReader(new java.io.ByteArrayInputStream(pdfBytes));
+             com.itextpdf.kernel.pdf.PdfDocument doc =
+                     new com.itextpdf.kernel.pdf.PdfDocument(reader)) {
+            return doc.getNumberOfPages();
+        } catch (Exception e) {
+            return 0;
+        }
     }
 }

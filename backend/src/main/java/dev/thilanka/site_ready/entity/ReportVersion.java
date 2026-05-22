@@ -1,10 +1,13 @@
 package dev.thilanka.site_ready.entity;
 
+import dev.thilanka.site_ready.dto.PageDiff;
 import dev.thilanka.site_ready.entity.enums.ReportStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcType;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -42,6 +45,10 @@ public class ReportVersion {
 
     @Column(name = "pades_signature_id")
     private String padesSignatureId;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "page_diff", columnDefinition = "jsonb")
+    private PageDiff pageDiff;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploaded_by", nullable = false)

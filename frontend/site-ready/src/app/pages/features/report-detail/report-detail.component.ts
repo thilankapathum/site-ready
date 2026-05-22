@@ -1,6 +1,6 @@
 import {Component, computed, input, OnInit, signal} from '@angular/core';
 import {
-  AuthResponse,
+  AuthResponse, PageDiff,
   ReportResponse,
   STATUS_BADGE_CLASS,
   STATUS_LABELS,
@@ -28,9 +28,10 @@ interface HistoryRow {
   isApproved: boolean;
   isRejected: boolean;
   isResubmission: boolean;
-  // download context
   versionId: string;
   downloadType: 'vendor' | 'reviewed';
+  pageDiff: PageDiff | null;     // ← new
+  hasDeletions: boolean;         // ← for row tinting
 }
 
 
@@ -65,12 +66,14 @@ export class ReportDetailComponent implements OnInit {
         filename: v.originalFilename,
         notes: null,
         conditions: null,
-        hasFile: v.hasStampedPdf,
+        hasFile: true,
         isApproved: false,
         isRejected: false,
         isResubmission: false,
         versionId: v.id,
         downloadType: 'vendor',
+        pageDiff: v.pageDiff,
+        hasDeletions: v.pageDiff?.hasDeletions ?? false,
       });
 
       // Row 2 — engineer review (only if reviewed)
@@ -104,6 +107,8 @@ export class ReportDetailComponent implements OnInit {
           isResubmission,
           versionId: v.id,
           downloadType: 'reviewed',
+          pageDiff:         v.pageDiff,
+          hasDeletions:     v.pageDiff?.hasDeletions ?? false,
         });
       }
     }
@@ -118,7 +123,7 @@ export class ReportDetailComponent implements OnInit {
   assigningEngineer = signal(false);
 
   accessDenied = signal(false);
-  notFound     = signal(false);
+  notFound = signal(false);
 
   // Action state
   actionFile = signal<File | null>(null);
@@ -357,6 +362,11 @@ export class ReportDetailComponent implements OnInit {
       a.click();
       URL.revokeObjectURL(url);
     });
+  }
+
+  objectKeys(obj: Record<string, number> | null | undefined): string[] {
+    if (!obj) return [];
+    return Object.keys(obj);
   }
 
 }

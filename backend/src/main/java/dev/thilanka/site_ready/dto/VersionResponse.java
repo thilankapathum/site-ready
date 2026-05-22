@@ -21,7 +21,8 @@ public record VersionResponse(
         String reviewerName,
         OffsetDateTime reviewedAt,
         boolean hasStampedPdf,
-        boolean hasReviewedPdf       // ← new
+        boolean hasReviewedPdf,
+        PageDiff pageDiff
 ) {
     public static VersionResponse from(ReportVersion v) {
         return new VersionResponse(
@@ -41,7 +42,8 @@ public record VersionResponse(
                 v.getReviewedBy() != null ? v.getReviewedBy().getFullName() : null,
                 v.getReviewedAt(),
                 v.getStampedStorageKey() != null,
-                v.getReviewedStorageKey() != null    // ← new
+                v.getReviewedStorageKey() != null,
+                v.getPageDiff()
         );
     }
 }

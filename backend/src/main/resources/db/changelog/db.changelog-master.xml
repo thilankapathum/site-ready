@@ -9,5 +9,6 @@
     <include file="classpath:db/changelog/changes/002-reviewed-storage-key.xml"/>
     <include file="classpath:db/changelog/changes/003-add-rat-field.xml"/>
     <include file="classpath:db/changelog/changes/004-add-companies.xml"/>
+    <include file="classpath:db/changelog/changes/005-add-page-diff.xml"/>
 
 </databaseChangeLog>
