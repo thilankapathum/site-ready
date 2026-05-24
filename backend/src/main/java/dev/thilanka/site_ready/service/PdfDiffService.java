@@ -15,21 +15,10 @@ import java.util.*;
 @Service
 public class PdfDiffService {
 
-    /**
-     * Diffs two PDFs, subtracting a known "baseline" annotation count
-     * (e.g. engineer's annotations already present in the document the vendor downloaded).
-     *
-     * @param previousOriginalBytes  Vendor's original of V(n-1) — clean upload
-     * @param currentBytes           Vendor's new upload V(n)
-     * @param engineerReviewedBytes  Engineer's reviewed file of V(n-1), or null if not available
-     */
-
-    public PageDiff diff(byte[] previousOriginalBytes, byte[] currentBytes,
+    public PageDiff diff(byte[] whatVendorDownloaded, byte[] currentBytes,
                          byte[] engineerReviewedBytes) {
         try {
-            // Strip any existing audit trail pages before diffing
-            // so system-generated pages don't appear as added/deleted content
-            byte[] prevClean = stripAuditPages(previousOriginalBytes);
+            byte[] prevClean = stripAuditPages(whatVendorDownloaded);
             byte[] currClean = stripAuditPages(currentBytes);
             byte[] baseClean = engineerReviewedBytes != null
                     ? stripAuditPages(engineerReviewedBytes) : null;
@@ -37,39 +26,51 @@ public class PdfDiffService {
             List<String> prevHashes = getPageHashes(prevClean);
             List<String> currHashes = getPageHashes(currClean);
 
-            Map<Integer, Integer> baselineAnnotCounts = baseClean != null
-                    ? getAnnotationCounts(baseClean)
-                    : getAnnotationCounts(prevClean);
-
-            Map<Integer, Integer> currAnnotCounts = getAnnotationCounts(currClean);
+            // "known" hashes = what the vendor downloaded (already includes engineer annotations)
+            // since prevClean IS the engineer's reviewed file when called correctly
+            Set<String> knownHashes = new HashSet<>(prevHashes);
+            if (baseClean != null) {
+                knownHashes.addAll(getPageHashes(baseClean));
+            }
 
             int prevTotal = prevHashes.size();
             int currTotal = currHashes.size();
-
-            Set<String> prevHashSet = new HashSet<>(prevHashes);
             Set<String> currHashSet = new HashSet<>(currHashes);
 
+            // Added: genuinely new content not seen in what vendor downloaded
             List<Integer> added = new ArrayList<>();
             for (int i = 0; i < currHashes.size(); i++) {
-                if (!prevHashSet.contains(currHashes.get(i))) added.add(i + 1);
+                if (!knownHashes.contains(currHashes.get(i))) {
+                    added.add(i + 1);
+                }
             }
 
+            // Deleted: content from what vendor downloaded that's now missing
             List<Integer> deleted = new ArrayList<>();
             for (int i = 0; i < prevHashes.size(); i++) {
-                if (!currHashSet.contains(prevHashes.get(i))) deleted.add(i + 1);
+                if (!currHashSet.contains(prevHashes.get(i))) {
+                    deleted.add(i + 1);
+                }
             }
 
+            // Modified: same position, different content, not a known page
             List<Integer> modified = new ArrayList<>();
             int compareLen = Math.min(prevHashes.size(), currHashes.size());
             for (int i = 0; i < compareLen; i++) {
-                if (!prevHashes.get(i).equals(currHashes.get(i))
-                        && !deleted.contains(i + 1) && !added.contains(i + 1)) {
+                String prevHash = prevHashes.get(i);
+                String currHash = currHashes.get(i);
+                if (!prevHash.equals(currHash)
+                        && !knownHashes.contains(currHash)
+                        && !deleted.contains(i + 1)
+                        && !added.contains(i + 1)) {
                     modified.add(i + 1);
                 }
             }
 
-            // New annotations = current count minus baseline (engineer's + vendor's previous)
-            // This isolates ONLY annotations the vendor added in this submission
+            // Annotations: subtract from what vendor downloaded as baseline
+            Map<Integer, Integer> baselineAnnotCounts = getAnnotationCounts(prevClean);
+            Map<Integer, Integer> currAnnotCounts = getAnnotationCounts(currClean);
+
             Map<Integer, Integer> newAnnotations = new LinkedHashMap<>();
             for (int pageNum = 1; pageNum <= currTotal; pageNum++) {
                 int baselineCount = baselineAnnotCounts.getOrDefault(pageNum, 0);
@@ -82,9 +83,11 @@ public class PdfDiffService {
 
             boolean hasDeletions     = !deleted.isEmpty();
             boolean hasModifications = !modified.isEmpty();
-            String summary = buildSummary(added, deleted, modified, newAnnotations, prevTotal, currTotal);
+            String summary = buildSummary(
+                    added, deleted, modified, newAnnotations, prevTotal, currTotal);
 
-            return new PageDiff(prevTotal, currTotal,
+            return new PageDiff(
+                    prevTotal, currTotal,
                     Collections.unmodifiableList(added),
                     Collections.unmodifiableList(deleted),
                     Collections.unmodifiableList(modified),

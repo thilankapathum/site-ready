@@ -176,20 +176,28 @@ public class DocumentService {
                     byte[] previousOriginal = storageService.download(
                             previousVersion.getOriginalStorageKey());
 
-                    // Fetch engineer's reviewed file as annotation baseline
-                    // so engineer's markups are NOT counted as vendor's new annotations
+                    // Per workflow: vendor always works from engineer's reviewed file.
+                    // Use reviewed-stamped as annotation baseline so engineer's markups
+                    // on V(n-1) are correctly subtracted from V(n)'s annotation count.
                     byte[] engineerReviewed = null;
                     if (previousVersion.getReviewedStorageKey() != null) {
                         try {
                             engineerReviewed = storageService.download(
                                     previousVersion.getReviewedStorageKey());
-                        } catch (Exception e) {
+                        } catch (Exception ex) {
                             log.debug("Could not fetch engineer reviewed file for baseline: {}",
-                                    e.getMessage());
+                                    ex.getMessage());
                         }
                     }
 
-                    pageDiff = pdfDiffService.diff(previousOriginal, originalBytes, engineerReviewed);
+                    // If engineer added pages to their reviewed file, use that as the
+                    // "previous" for page count comparison, not the vendor's original.
+                    // This way, pages the engineer added are not flagged as vendor additions.
+                    byte[] previousForPageCount = engineerReviewed != null
+                            ? engineerReviewed : previousOriginal;
+
+                    pageDiff = pdfDiffService.diff(previousForPageCount, originalBytes, engineerReviewed);
+
                 } catch (Exception e) {
                     log.warn("Page diff failed, continuing without diff: {}", e.getMessage());
                     pageDiff = PageDiff.firstVersion(countPages(originalBytes));
@@ -275,12 +283,19 @@ public class DocumentService {
         report.setCurrentResponsibility(resolveResponsibility(newStatus));
         reportRepository.save(report);    // persist so version.getReport() returns updated state
 
-// ── Compute diff: vendor's original vs engineer's reviewed file ──
+        // Compute engineer diff: compare vendor's stamped upload vs engineer's reviewed file
         PageDiff engineerDiff = null;
         try {
-            byte[] vendorOriginal = storageService.download(version.getOriginalStorageKey());
-            // No baseline subtraction needed here — we WANT to show all engineer changes
-            engineerDiff = pdfDiffService.diff(vendorOriginal, reviewBytes);
+            // Per workflow: engineer always works from vendor's stamped file.
+            // Use stamped (not original) as baseline — it includes the audit page
+            // which stripAuditPages() will remove before comparison.
+            String vendorBaselineKey = version.getStampedStorageKey() != null
+                    ? version.getStampedStorageKey()
+                    : version.getOriginalStorageKey();
+            byte[] vendorBaseline = storageService.download(vendorBaselineKey);
+
+            // No third baseline needed — engineer is the first actor on this version
+            engineerDiff = pdfDiffService.diff(vendorBaseline, reviewBytes);
         } catch (Exception e) {
             log.warn("Engineer page diff failed: {}", e.getMessage());
         }
@@ -347,18 +362,6 @@ public class DocumentService {
         return reportRepository.findByCreatedByVendorId(user.getId(), pageable);
     }
 
-//    public Page<Report> search(String siteId, String project, ReportStatus status,
-//                               UUID engineerId, UUID vendorId, Pageable pageable) {
-//        return reportRepository.search(
-//                blank(siteId), blank(project), status, engineerId, vendorId, pageable);
-//    }
-//
-//    public List<Report> searchAll(String siteId, String project, ReportStatus status,
-//                                  UUID engineerId, UUID vendorId) {
-//        return reportRepository.searchAll(
-//                blank(siteId), blank(project), status, engineerId, vendorId);
-//    }
-
     public Page<Report> search(String siteId, String project, String rat,
                                ReportStatus status, UUID engineerId,
                                UUID vendorId, UUID vendorCompanyId, Pageable pageable) {
@@ -376,23 +379,6 @@ public class DocumentService {
                 Sort.by("siteId").ascending().and(Sort.by("project").ascending())
         );
     }
-
-
-//    public Page<Report> search(String siteId, String project, ReportStatus status,
-//                               UUID engineerId, UUID vendorId, Pageable pageable) {
-//        return reportRepository.findAll(
-//                ReportSpecification.filter(siteId, project, status, engineerId, vendorId),
-//                pageable
-//        );
-//    }
-//
-//    public List<Report> searchAll(String siteId, String project, ReportStatus status,
-//                                  UUID engineerId, UUID vendorId) {
-//        return reportRepository.findAll(
-//                ReportSpecification.filter(siteId, project, status, engineerId, vendorId),
-//                Sort.by("siteId").ascending().and(Sort.by("project").ascending())
-//        );
-//    }
 
     // --- Helpers ---
 

@@ -4,6 +4,7 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import com.itextpdf.forms.PdfPageFormCopier;
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.ColorConstants;
@@ -12,6 +13,8 @@ import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.*;
+import com.itextpdf.kernel.pdf.annot.PdfAnnotation;
+import com.itextpdf.kernel.pdf.xobject.PdfFormXObject;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.*;
@@ -78,17 +81,42 @@ public class PdfStampService {
             String sha256Hash, List<ReportVersion> allVersions,
             PageDiff pageDiff, String verifyUrl, String timestamp
     ) throws Exception {
-        // Always strip any existing audit page(s) and replace with a fresh one.
-        // If the source is a signed PDF, copy it to an unsigned document first
-        // so the full rewrite can work without append-mode conflicts.
+
+        // 1. Normalize the PDF: rip out signatures OR strip corrupted tags
         byte[] base = isPdfSigned(original)
                 ? copyToUnsignedPdf(original)
-                : original;
+                : sanitizeCorruptedTags(original);
 
+        // 2. Now perfectly safe to process using standard iText methods
         byte[] stripped = stripAllAuditPages(base);
 
         return appendAuditPageFullRewrite(
                 stripped, uploader, version, sha256Hash, allVersions, pageDiff, verifyUrl, timestamp);
+    }
+
+    private byte[] sanitizeCorruptedTags(byte[] pdfBytes) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PdfReader reader = new PdfReader(new ByteArrayInputStream(pdfBytes));
+        reader.setUnethicalReading(true);
+
+        PdfDocument srcDoc = new PdfDocument(reader);
+        PdfWriter writer = new PdfWriter(out);
+        PdfDocument destDoc = new PdfDocument(writer);
+
+        // CRITICAL: Strip accessibility tags BEFORE copying.
+        // Third-party tools often mangle the structure tree.
+        // Removing these forces iText to skip tag processing entirely during copyPagesTo.
+        srcDoc.getCatalog().remove(PdfName.StructTreeRoot);
+        srcDoc.getCatalog().remove(PdfName.MarkInfo);
+        srcDoc.getCatalog().remove(PdfName.Lang);
+
+        // Copy pages safely using standard iText logic
+        srcDoc.copyPagesTo(1, srcDoc.getNumberOfPages(), destDoc);
+
+        srcDoc.close();
+        destDoc.close();
+
+        return out.toByteArray();
     }
 
     private byte[] stripAllAuditPages(byte[] pdfBytes) {
@@ -157,38 +185,92 @@ public class PdfStampService {
         return out.toByteArray();
     }
 
-//    /**
-//     * For signed PDFs: copies the PDF into a fresh non-signed document
-//     * (preserving all pages/content), then appends the audit page via full rewrite.
-//     * This avoids the blank-page bug caused by combining append mode with NEXT_PAGE break.
-//     */
-//    private byte[] appendAuditPageLowLevel(
-//            byte[] original, User uploader, ReportVersion version,
-//            String sha256Hash, List<ReportVersion> allVersions, PageDiff pageDiff,
-//            String verifyUrl, String timestamp
-//    ) throws Exception {
-//        // Copy all pages from the signed PDF into a fresh unsigned document.
-//        // The original signature is embedded in the page content stream so it
-//        // remains visible in the PDF, but iText no longer treats the doc as signed,
-//        // allowing the full-rewrite audit page append to work correctly.
-//        byte[] unsigned = copyToUnsignedPdf(original);
-//        return appendAuditPageFullRewrite(
-//                unsigned, uploader, version, sha256Hash, allVersions, pageDiff, verifyUrl, timestamp);
-//    }
-
     /**
-     * Copies all pages from a (possibly signed) PDF into a brand-new PDF document.
-     * The resulting document has identical visual content but no AcroForm signatures,
-     * so it can be opened with a standard PdfWriter (no append mode needed).
+     * Converts a signed/tagged PDF to a clean unsigned flat PDF by writing
+     * each page's raw content stream bytes directly into a new document.
+     * This completely bypasses iText's page-copy machinery and tag traversal,
+     * which crash on PDFs produced by online merge tools with broken MCR references.
      */
     private byte[] copyToUnsignedPdf(byte[] pdfBytes) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
+
         PdfReader reader = new PdfReader(new ByteArrayInputStream(pdfBytes));
         reader.setUnethicalReading(true);
+        // Open source WITHOUT a writer — read-only, no iText processing
         PdfDocument source = new PdfDocument(reader);
-        PdfDocument dest   = new PdfDocument(new PdfWriter(out));
-        // Copy all pages preserving content, fonts, images, and annotations
-        source.copyPagesTo(1, source.getNumberOfPages(), dest);
+
+        PdfWriter destWriter = new PdfWriter(out);
+        PdfDocument dest = new PdfDocument(destWriter);
+        // Explicitly mark as non-tagged to prevent any tag processing
+        dest.getCatalog().getPdfObject().remove(PdfName.MarkInfo);
+
+        for (int i = 1; i <= source.getNumberOfPages(); i++) {
+            PdfPage srcPage = source.getPage(i);
+            com.itextpdf.kernel.geom.Rectangle mediaBox = srcPage.getMediaBox();
+
+            PdfPage destPage = dest.addNewPage(new PageSize(mediaBox));
+
+            // ── Copy raw content stream bytes directly ──
+            // This is the key: we never call copyAsFormXObject or copyPagesTo.
+            // We read the raw bytes of the content stream and write them directly.
+            // No tag traversal, no structure element resolution, no MCR lookup.
+            try {
+                byte[] rawContent = srcPage.getContentBytes();
+                if (rawContent != null && rawContent.length > 0) {
+                    destPage.getFirstContentStream().setData(rawContent);
+                }
+            } catch (Exception e) {
+                log.debug("Could not copy content stream for page {}: {}", i, e.getMessage());
+            }
+
+            // ── Copy resources (fonts, images, color spaces, etc.) ──
+            // Resources must be copied so the content stream can reference them
+            try {
+                PdfDictionary srcResources = srcPage.getResources().getPdfObject();
+                if (srcResources != null) {
+                    // deep copy to dest document context
+                    PdfObject resCopy = srcResources.copyTo(dest, false);
+                    destPage.getPdfObject().put(PdfName.Resources, resCopy);
+                }
+            } catch (Exception e) {
+                log.debug("Could not copy resources for page {}: {}", i, e.getMessage());
+            }
+
+            // ── Copy annotations (skip signature and widget fields) ──
+            try {
+                for (PdfAnnotation annot : srcPage.getAnnotations()) {
+                    PdfName subtype = annot.getSubtype();
+                    if (PdfName.Sig.equals(subtype) || PdfName.Widget.equals(subtype)) continue;
+                    try {
+                        // Copy annotation dict without following indirect refs to struct tree
+                        PdfDictionary annotDict = annot.getPdfObject();
+                        PdfDictionary annotCopy = new PdfDictionary();
+                        // Only copy safe keys — skip StructParent which links to broken MCR
+                        for (PdfName key : annotDict.keySet()) {
+                            if (new PdfName("StructParent").equals(key)) continue;
+                            if (PdfName.P.equals(key)) continue; // page back-reference
+                            try {
+                                PdfObject val = annotDict.get(key);
+                                if (val != null) {
+                                    annotCopy.put(key, val.copyTo(dest, false));
+                                }
+                            } catch (Exception ex) {
+                                log.debug("Skipping annotation key {}: {}", key, ex.getMessage());
+                            }
+                        }
+                        if (annotCopy.get(PdfName.Subtype) != null) {
+                            PdfAnnotation copied = PdfAnnotation.makeAnnotation(annotCopy);
+                            destPage.addAnnotation(copied);
+                        }
+                    } catch (Exception ex) {
+                        log.debug("Skipping annotation on page {}: {}", i, ex.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("Could not copy annotations for page {}: {}", i, e.getMessage());
+            }
+        }
+
         source.close();
         dest.close();
         return out.toByteArray();
