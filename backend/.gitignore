@@ -33,3 +33,5 @@ build/
 .vscode/
 
 /keystore/
+
+/src/main/resources/fonts/*.ttf

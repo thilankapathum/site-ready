@@ -4,7 +4,7 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-import com.itextpdf.forms.PdfPageFormCopier;
+import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.ColorConstants;
@@ -14,7 +14,6 @@ import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.*;
 import com.itextpdf.kernel.pdf.annot.PdfAnnotation;
-import com.itextpdf.kernel.pdf.xobject.PdfFormXObject;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.*;
@@ -29,18 +28,17 @@ import dev.thilanka.site_ready.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import com.itextpdf.layout.element.Image;
+import org.springframework.util.StreamUtils;
 
+import java.io.*;
 import java.util.*;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.Security;
@@ -174,8 +172,8 @@ public class PdfStampService {
         PdfReader reader = new PdfReader(new ByteArrayInputStream(original));
         reader.setUnethicalReading(true);
         PdfDocument pdfDoc = new PdfDocument(reader, new PdfWriter(out));
-        Document document = new Document(pdfDoc, PageSize.A4);
-        document.setMargins(36, 36, 36, 36);
+        Document document = new Document(pdfDoc, PageSize.LEGAL);
+        document.setMargins(18, 36, 18, 36);
 //        document.setPageNumber(pdfDoc.getNumberOfPages());
         document.add(new AreaBreak(AreaBreakType.LAST_PAGE));
         document.add(new AreaBreak(com.itextpdf.layout.properties.AreaBreakType.NEXT_PAGE));
@@ -282,29 +280,34 @@ public class PdfStampService {
             String verifyUrl, String timestamp
     ) throws Exception {
 
-        DeviceRgb headerBlue   = new DeviceRgb(15, 76, 129);
-        DeviceRgb successGreen = new DeviceRgb(22, 163, 74);
-        DeviceRgb warningAmber = new DeviceRgb(217, 119, 6);
-        DeviceRgb errorRed     = new DeviceRgb(220, 38, 38);
-        DeviceRgb infoBlue     = new DeviceRgb(2, 132, 199);
-        DeviceRgb lightGray    = new DeviceRgb(245, 247, 250);
+        DeviceRgb headerBlue   = new DeviceRgb(97, 115, 137);
+        DeviceRgb successGreen = new DeviceRgb(0, 200, 80);
+        DeviceRgb warningAmber = new DeviceRgb(250, 151, 0);
+        DeviceRgb errorRed     = new DeviceRgb(248, 40, 52);
+        DeviceRgb infoBlue     = new DeviceRgb(42, 126, 255);
+        DeviceRgb lightGray    = new DeviceRgb(245, 245, 244);
         DeviceRgb white        = new DeviceRgb(255, 255, 255);
-        DeviceRgb darkText     = new DeviceRgb(30, 30, 30);
+        DeviceRgb darkText     = new DeviceRgb(26, 39, 58);
 
-        PdfFont bold   = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
-        PdfFont normal = PdfFontFactory.createFont(StandardFonts.HELVETICA);
-        PdfFont mono   = PdfFontFactory.createFont(StandardFonts.COURIER);
+//        PdfFont bold   = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+//        PdfFont normal = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+        PdfFont bold   = loadCustomFont("fonts/Inter_18pt-Bold.ttf");
+        PdfFont normal = loadCustomFont("fonts/Inter_18pt-Regular.ttf");
+        PdfFont mono   = loadCustomFont("fonts/JetBrainsMono-Regular.ttf");
 
         // ── Header banner ──
         Table headerTable = new Table(UnitValue.createPercentArray(new float[]{1}))
                 .useAllAvailableWidth().setMarginBottom(8);
         Cell headerCell = new Cell()
                 .setBackgroundColor(headerBlue).setPadding(10).setBorder(Border.NO_BORDER)
-                .add(new Paragraph("SSV DOCUMENT MANAGEMENT SYSTEM — AUDIT TRAIL")
-                        .setFont(bold).setFontSize(11).setFontColor(ColorConstants.WHITE)
+                .add(new Paragraph("SLTMobitel SiteReady")
+                        .setFont(bold).setFontSize(12).setFontColor(ColorConstants.WHITE)
+                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2))
+                .add(new Paragraph("SSV DOCUMENT MANAGEMENT SYSTEM — VERSION HISTORY")
+                        .setFont(bold).setFontSize(10).setFontColor(ColorConstants.WHITE)
                         .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2))
                 .add(new Paragraph(String.format(
-                        "Site: %s  |  Project: %s  |  RAT: %s  |  Version: V%d  |  Status: %s",
+                        "Site ID: %s  |  Project: %s  |  RAT: %s  |  Version: V%d  |  Status: %s",
                         version.getReport().getSiteId(),
                         version.getReport().getProject(),
                         version.getReport().getRat(),
@@ -344,7 +347,7 @@ public class PdfStampService {
         document.add(metaTable);
 
         // ── Complete Action History ──
-        document.add(new Paragraph("COMPLETE ACTION HISTORY")
+        document.add(new Paragraph("ACTION HISTORY")
                 .setFont(bold).setFontSize(8).setFontColor(headerBlue).setMarginBottom(3));
 
         Table histTable = new Table(UnitValue.createPercentArray(new float[]{8, 18, 20, 12, 18, 24}))
@@ -367,7 +370,8 @@ public class PdfStampService {
                     ? rv.getUploadedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "";
             String[] uploadRow = {
                     "V" + rv.getVersionNumber(), uploadedAt,
-                    rv.getUploadedBy().getFullName(), rv.getUploadedBy().getRole().name(),
+                    rv.getUploadedBy().getFullName() + " (" + rv.getUploadedBy().getCompany().getName() + ")",
+                    rv.getUploadedBy().getRole().name(),
                     "UPLOADED", rv.getOriginalFilename()
             };
             for (String val : uploadRow) {
@@ -392,7 +396,7 @@ public class PdfStampService {
                 };
                 String[] reviewRow = {
                         "V" + rv.getVersionNumber(), reviewedAt,
-                        rv.getReviewedBy().getFullName(), rv.getReviewedBy().getRole().name(),
+                        rv.getReviewedBy().getFullName() + " (" + rv.getReviewedBy().getCompany().getName() + ")", rv.getReviewedBy().getRole().name(),
                         rv.getReviewStatus().name(),
                         notes.length() > 80 ? notes.substring(0, 77) + "..." : notes
                 };
@@ -411,7 +415,7 @@ public class PdfStampService {
                 rv.getPageDiff() != null || rv.getReviewerPageDiff() != null);
 
         if (anyDiff) {
-            document.add(new Paragraph("DOCUMENT CHANGE ANALYSIS — ALL VERSIONS")
+            document.add(new Paragraph("DOCUMENT CHANGES")
                     .setFont(bold).setFontSize(8).setFontColor(headerBlue).setMarginBottom(3));
 
             // Check if any version has deletions — show warning banner
@@ -425,7 +429,7 @@ public class PdfStampService {
                 warningTable.addCell(new Cell()
                         .setBackgroundColor(new DeviceRgb(254, 226, 226))
                         .setPadding(6).setBorder(Border.NO_BORDER)
-                        .add(new Paragraph("⚠  ONE OR MORE VERSIONS CONTAIN PAGE DELETIONS — Engineer verification required")
+                        .add(new Paragraph("⚠  ONE OR MORE VERSIONS CONTAIN PAGE DELETIONS")
                                 .setFont(bold).setFontSize(7.5f).setFontColor(errorRed)));
                 document.add(warningTable);
             }
@@ -450,7 +454,7 @@ public class PdfStampService {
                             ? rv.getUploadedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "";
                     String pagesSummary = vDiff.totalPagesOld() == 0
                             ? String.valueOf(vDiff.totalPagesNew())
-                            : vDiff.totalPagesOld() + " → " + vDiff.totalPagesNew();
+                            : vDiff.totalPagesOld() + " - " + vDiff.totalPagesNew();
                     String changeDetail = buildChangeDetail(vDiff);
                     DeviceRgb pagesColor = vDiff.hasDeletions() ? errorRed
                             : vDiff.totalPagesNew() > vDiff.totalPagesOld() ? successGreen : darkText;
@@ -469,7 +473,7 @@ public class PdfStampService {
                 PageDiff rDiff = rv.getReviewerPageDiff();
                 if (rDiff != null && rv.getReviewedBy() != null) {
                     DeviceRgb bg = (changeRowNum++ % 2 == 0) ? lightGray : white;
-                    String pagesSummary = rDiff.totalPagesOld() + " → " + rDiff.totalPagesNew();
+                    String pagesSummary = rDiff.totalPagesOld() + " - " + rDiff.totalPagesNew();
                     String changeDetail = buildChangeDetail(rDiff);
                     DeviceRgb pagesColor = rDiff.hasDeletions() ? errorRed
                             : rDiff.totalPagesNew() > rDiff.totalPagesOld() ? successGreen : darkText;
@@ -495,10 +499,8 @@ public class PdfStampService {
         footerTable.addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(4).add(qrImage));
         footerTable.addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(4)
                 .add(new Paragraph(
-                        "This audit trail page is automatically replaced on every upload or review action — " +
-                                "there is always exactly one audit page per document. " +
-                                "The SHA-256 hash uniquely identifies the original uploaded file. " +
-                                "A PAdES-B digital signature covers the complete document. " +
+                        "This audit trail page is automatically generated on every upload or review action — " +
+                                "A PAdES-B digital signature covers the document. " +
                                 "Verify authenticity at: " + verifyUrl)
                         .setFont(normal).setFontSize(6.5f).setFontColor(new DeviceRgb(90, 90, 90))));
         document.add(footerTable);
@@ -518,7 +520,7 @@ public class PdfStampService {
                         .map(String::valueOf).collect(java.util.stream.Collectors.joining(", p")));
             }
             if (!diff.deletedPages().isEmpty()) {
-                parts.add("⚠ Deleted p" + diff.deletedPages().stream()
+                parts.add("Deleted p" + diff.deletedPages().stream()
                         .map(String::valueOf).collect(java.util.stream.Collectors.joining(", p")));
             }
             if (!diff.modifiedPages().isEmpty()) {
@@ -532,7 +534,7 @@ public class PdfStampService {
                 parts.add(total + " new annotation" + (total != 1 ? "s" : "") + " on " + pages);
             }
             if (parts.isEmpty()) {
-                parts.add("No structural changes");
+                parts.add("No changes");
             }
         }
 
@@ -571,87 +573,87 @@ public class PdfStampService {
     /**
      * Renders the page change summary section on the audit page.
      */
-    private void addPageDiffSection(
-            Document document, PageDiff diff,
-            PdfFont bold, PdfFont normal, PdfFont mono,
-            DeviceRgb headerBlue, DeviceRgb successGreen, DeviceRgb warningAmber,
-            DeviceRgb errorRed, DeviceRgb amber, DeviceRgb lightGray,
-            DeviceRgb white, DeviceRgb darkText
-    ) {
-        // Section header
-        document.add(new Paragraph("DOCUMENT CHANGE ANALYSIS (vs. PREVIOUS VERSION)")
-                .setFont(bold).setFontSize(8).setFontColor(headerBlue).setMarginBottom(3));
-
-        // Warning banner if deletions detected
-        if (diff.hasDeletions()) {
-            Table warningTable = new Table(UnitValue.createPercentArray(new float[]{1}))
-                    .useAllAvailableWidth().setMarginBottom(6);
-            warningTable.addCell(new Cell()
-                    .setBackgroundColor(new DeviceRgb(254, 226, 226))
-                    .setPadding(6).setBorder(Border.NO_BORDER)
-                    .add(new Paragraph("⚠  PAGE DELETIONS DETECTED — Engineer verification required")
-                            .setFont(bold).setFontSize(8).setFontColor(errorRed)));
-            document.add(warningTable);
-        }
-
-        // Change summary table
-        Table diffTable = new Table(UnitValue.createPercentArray(new float[]{35, 65}))
-                .useAllAvailableWidth().setMarginBottom(10);
-
-        // Page count row
-        addDiffRow(diffTable, "Total pages (previous → current)",
-                diff.totalPagesOld() + " → " + diff.totalPagesNew(),
-                diff.totalPagesNew() > diff.totalPagesOld() ? successGreen :
-                        diff.totalPagesNew() < diff.totalPagesOld() ? errorRed : darkText,
-                0, lightGray, white, bold, normal);
-
-        // Added pages
-        if (!diff.addedPages().isEmpty()) {
-            addDiffRow(diffTable, "✓  Pages added",
-                    "Page" + (diff.addedPages().size() != 1 ? "s" : "") + " " +
-                            formatPageList(diff.addedPages()),
-                    successGreen, 1, lightGray, white, bold, normal);
-        }
-
-        // Deleted pages
-        if (!diff.deletedPages().isEmpty()) {
-            addDiffRow(diffTable, "✗  Pages deleted",
-                    "Page" + (diff.deletedPages().size() != 1 ? "s" : "") + " " +
-                            formatPageList(diff.deletedPages()),
-                    errorRed, 2, lightGray, white, bold, normal);
-        }
-
-        // Modified pages
-        if (!diff.modifiedPages().isEmpty()) {
-            addDiffRow(diffTable, "~  Pages with content changes",
-                    "Page" + (diff.modifiedPages().size() != 1 ? "s" : "") + " " +
-                            formatPageList(diff.modifiedPages()) +
-                            " (may be PDF re-export artefact — verify manually)",
-                    warningAmber, 3, lightGray, white, bold, normal);
-        }
-
-        // New annotations
-        if (!diff.newAnnotationsByPage().isEmpty()) {
-            StringBuilder annotDesc = new StringBuilder();
-            diff.newAnnotationsByPage().forEach((page, count) ->
-                    annotDesc.append("p").append(page).append(": ").append(count)
-                            .append(" new; "));
-            String desc = annotDesc.toString();
-            if (desc.endsWith("; ")) desc = desc.substring(0, desc.length() - 2);
-            addDiffRow(diffTable, "✎  New annotations/comments",
-                    desc, amber, 4, lightGray, white, bold, normal);
-        }
-
-        // No changes
-        if (diff.addedPages().isEmpty() && diff.deletedPages().isEmpty()
-                && diff.modifiedPages().isEmpty() && diff.newAnnotationsByPage().isEmpty()) {
-            addDiffRow(diffTable, "No structural changes detected",
-                    "Document content unchanged from previous version",
-                    darkText, 0, lightGray, white, bold, normal);
-        }
-
-        document.add(diffTable);
-    }
+//    private void addPageDiffSection(
+//            Document document, PageDiff diff,
+//            PdfFont bold, PdfFont normal, PdfFont mono,
+//            DeviceRgb headerBlue, DeviceRgb successGreen, DeviceRgb warningAmber,
+//            DeviceRgb errorRed, DeviceRgb amber, DeviceRgb lightGray,
+//            DeviceRgb white, DeviceRgb darkText
+//    ) {
+//        // Section header
+//        document.add(new Paragraph("DOCUMENT CHANGE ANALYSIS (vs. PREVIOUS VERSION)")
+//                .setFont(bold).setFontSize(8).setFontColor(headerBlue).setMarginBottom(3));
+//
+//        // Warning banner if deletions detected
+//        if (diff.hasDeletions()) {
+//            Table warningTable = new Table(UnitValue.createPercentArray(new float[]{1}))
+//                    .useAllAvailableWidth().setMarginBottom(6);
+//            warningTable.addCell(new Cell()
+//                    .setBackgroundColor(new DeviceRgb(254, 226, 226))
+//                    .setPadding(6).setBorder(Border.NO_BORDER)
+//                    .add(new Paragraph("⚠  PAGE DELETIONS DETECTED — Engineer verification required")
+//                            .setFont(bold).setFontSize(8).setFontColor(errorRed)));
+//            document.add(warningTable);
+//        }
+//
+//        // Change summary table
+//        Table diffTable = new Table(UnitValue.createPercentArray(new float[]{35, 65}))
+//                .useAllAvailableWidth().setMarginBottom(10);
+//
+//        // Page count row
+//        addDiffRow(diffTable, "Total pages (previous → current)",
+//                diff.totalPagesOld() + " → " + diff.totalPagesNew(),
+//                diff.totalPagesNew() > diff.totalPagesOld() ? successGreen :
+//                        diff.totalPagesNew() < diff.totalPagesOld() ? errorRed : darkText,
+//                0, lightGray, white, bold, normal);
+//
+//        // Added pages
+//        if (!diff.addedPages().isEmpty()) {
+//            addDiffRow(diffTable, "✓  Pages added",
+//                    "Page" + (diff.addedPages().size() != 1 ? "s" : "") + " " +
+//                            formatPageList(diff.addedPages()),
+//                    successGreen, 1, lightGray, white, bold, normal);
+//        }
+//
+//        // Deleted pages
+//        if (!diff.deletedPages().isEmpty()) {
+//            addDiffRow(diffTable, "✗  Pages deleted",
+//                    "Page" + (diff.deletedPages().size() != 1 ? "s" : "") + " " +
+//                            formatPageList(diff.deletedPages()),
+//                    errorRed, 2, lightGray, white, bold, normal);
+//        }
+//
+//        // Modified pages
+//        if (!diff.modifiedPages().isEmpty()) {
+//            addDiffRow(diffTable, "~  Pages with content changes",
+//                    "Page" + (diff.modifiedPages().size() != 1 ? "s" : "") + " " +
+//                            formatPageList(diff.modifiedPages()) +
+//                            " (may be PDF re-export artefact — verify manually)",
+//                    warningAmber, 3, lightGray, white, bold, normal);
+//        }
+//
+//        // New annotations
+//        if (!diff.newAnnotationsByPage().isEmpty()) {
+//            StringBuilder annotDesc = new StringBuilder();
+//            diff.newAnnotationsByPage().forEach((page, count) ->
+//                    annotDesc.append("p").append(page).append(": ").append(count)
+//                            .append(" new; "));
+//            String desc = annotDesc.toString();
+//            if (desc.endsWith("; ")) desc = desc.substring(0, desc.length() - 2);
+//            addDiffRow(diffTable, "✎  New annotations/comments",
+//                    desc, amber, 4, lightGray, white, bold, normal);
+//        }
+//
+//        // No changes
+//        if (diff.addedPages().isEmpty() && diff.deletedPages().isEmpty()
+//                && diff.modifiedPages().isEmpty() && diff.newAnnotationsByPage().isEmpty()) {
+//            addDiffRow(diffTable, "No structural changes detected",
+//                    "Document content unchanged from previous version",
+//                    darkText, 0, lightGray, white, bold, normal);
+//        }
+//
+//        document.add(diffTable);
+//    }
 
     private void addDiffRow(
             Table table, String label, String value, DeviceRgb valueColor,
@@ -687,7 +689,7 @@ public class PdfStampService {
         PdfSigner signer = new PdfSigner(reader, out, stampProps);
         signer.setFieldName(signatureId);
         signer.getSignatureAppearance()
-                .setReason("SSV DMS — Document received and registered")
+                .setReason("SLTMobitel SiteReady — Document received and registered")
                 .setLocation("Colombo, Sri Lanka");
         IExternalSignature pks = new PrivateKeySignature(
                 privateKey, DigestAlgorithms.SHA256, BouncyCastleProvider.PROVIDER_NAME);
@@ -707,22 +709,40 @@ public class PdfStampService {
 
     public record StampResult(byte[] signedBytes, String signatureId) {}
 
-    private byte[] stripLastAuditPage(byte[] pdfBytes) throws Exception {
-        try (PdfReader reader = new PdfReader(new ByteArrayInputStream(pdfBytes));
-             PdfDocument pdfDoc = new PdfDocument(reader)) {
-            int totalPages = pdfDoc.getNumberOfPages();
-            if (totalPages <= 1) return pdfBytes;
-            PdfPage lastPage = pdfDoc.getPage(totalPages);
-            String lastPageText = com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor
-                    .getTextFromPage(lastPage);
-            if (!lastPageText.contains("SSV DOCUMENT MANAGEMENT SYSTEM")) return pdfBytes;
+    private PdfFont loadCustomFont(String classpathLocation) throws IOException {
+        ClassPathResource resource = new ClassPathResource(classpathLocation);
+
+        try (InputStream inputStream = resource.getInputStream()) {
+            // Read the font file bytes completely
+            byte[] fontBytes = StreamUtils.copyToByteArray(inputStream);
+
+            // Create the font.
+            // IDENTITY_H ensures proper Unicode support.
+            // PREFER_EMBEDDED physically attaches the font to the PDF.
+            return PdfFontFactory.createFont(
+                    fontBytes,
+                    PdfEncodings.IDENTITY_H,
+                    PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED
+            );
         }
-        // Remove last page
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (PdfReader reader2 = new PdfReader(new ByteArrayInputStream(pdfBytes));
-             PdfDocument pdfDoc2 = new PdfDocument(reader2, new PdfWriter(out))) {
-            pdfDoc2.removePage(pdfDoc2.getNumberOfPages());
-        }
-        return out.toByteArray();
     }
+
+//    private byte[] stripLastAuditPage(byte[] pdfBytes) throws Exception {
+//        try (PdfReader reader = new PdfReader(new ByteArrayInputStream(pdfBytes));
+//             PdfDocument pdfDoc = new PdfDocument(reader)) {
+//            int totalPages = pdfDoc.getNumberOfPages();
+//            if (totalPages <= 1) return pdfBytes;
+//            PdfPage lastPage = pdfDoc.getPage(totalPages);
+//            String lastPageText = com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor
+//                    .getTextFromPage(lastPage);
+//            if (!lastPageText.contains("SSV DOCUMENT MANAGEMENT SYSTEM")) return pdfBytes;
+//        }
+//        // Remove last page
+//        ByteArrayOutputStream out = new ByteArrayOutputStream();
+//        try (PdfReader reader2 = new PdfReader(new ByteArrayInputStream(pdfBytes));
+//             PdfDocument pdfDoc2 = new PdfDocument(reader2, new PdfWriter(out))) {
+//            pdfDoc2.removePage(pdfDoc2.getNumberOfPages());
+//        }
+//        return out.toByteArray();
+//    }
 }
