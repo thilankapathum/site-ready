@@ -294,15 +294,24 @@ public class PdfStampService {
         PdfFont bold   = loadCustomFont("fonts/Inter_18pt-Bold.ttf");
         PdfFont normal = loadCustomFont("fonts/Inter_18pt-Regular.ttf");
         PdfFont mono   = loadCustomFont("fonts/JetBrainsMono-Regular.ttf");
+        PdfFont title = loadCustomFont("fonts/Oswald-Regular.ttf");
 
         // ── Header banner ──
         Table headerTable = new Table(UnitValue.createPercentArray(new float[]{1}))
                 .useAllAvailableWidth().setMarginBottom(8);
+        Paragraph siteReadyParagraph = new Paragraph()
+                .add(new Text("SLTMobitel ").setFont(bold))
+                .add(new Text(" SiteReady").setFont(title))
+                .setFontSize(12)
+                .setFontColor(ColorConstants.WHITE)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(2);
         Cell headerCell = new Cell()
                 .setBackgroundColor(headerBlue).setPadding(10).setBorder(Border.NO_BORDER)
-                .add(new Paragraph("SLTMobitel SiteReady")
-                        .setFont(bold).setFontSize(12).setFontColor(ColorConstants.WHITE)
-                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2))
+                .add(siteReadyParagraph)
+//                .add(new Paragraph("SLTMobitel SiteReady")
+//                        .setFont(bold).setFontSize(12).setFontColor(ColorConstants.WHITE)
+//                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2))
                 .add(new Paragraph("SSV DOCUMENT MANAGEMENT SYSTEM — VERSION HISTORY")
                         .setFont(bold).setFontSize(10).setFontColor(ColorConstants.WHITE)
                         .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2))
@@ -570,90 +579,6 @@ public class PdfStampService {
                         .setFontColor(hasDeletions ? errorRed : darkText)));
     }
 
-    /**
-     * Renders the page change summary section on the audit page.
-     */
-//    private void addPageDiffSection(
-//            Document document, PageDiff diff,
-//            PdfFont bold, PdfFont normal, PdfFont mono,
-//            DeviceRgb headerBlue, DeviceRgb successGreen, DeviceRgb warningAmber,
-//            DeviceRgb errorRed, DeviceRgb amber, DeviceRgb lightGray,
-//            DeviceRgb white, DeviceRgb darkText
-//    ) {
-//        // Section header
-//        document.add(new Paragraph("DOCUMENT CHANGE ANALYSIS (vs. PREVIOUS VERSION)")
-//                .setFont(bold).setFontSize(8).setFontColor(headerBlue).setMarginBottom(3));
-//
-//        // Warning banner if deletions detected
-//        if (diff.hasDeletions()) {
-//            Table warningTable = new Table(UnitValue.createPercentArray(new float[]{1}))
-//                    .useAllAvailableWidth().setMarginBottom(6);
-//            warningTable.addCell(new Cell()
-//                    .setBackgroundColor(new DeviceRgb(254, 226, 226))
-//                    .setPadding(6).setBorder(Border.NO_BORDER)
-//                    .add(new Paragraph("⚠  PAGE DELETIONS DETECTED — Engineer verification required")
-//                            .setFont(bold).setFontSize(8).setFontColor(errorRed)));
-//            document.add(warningTable);
-//        }
-//
-//        // Change summary table
-//        Table diffTable = new Table(UnitValue.createPercentArray(new float[]{35, 65}))
-//                .useAllAvailableWidth().setMarginBottom(10);
-//
-//        // Page count row
-//        addDiffRow(diffTable, "Total pages (previous → current)",
-//                diff.totalPagesOld() + " → " + diff.totalPagesNew(),
-//                diff.totalPagesNew() > diff.totalPagesOld() ? successGreen :
-//                        diff.totalPagesNew() < diff.totalPagesOld() ? errorRed : darkText,
-//                0, lightGray, white, bold, normal);
-//
-//        // Added pages
-//        if (!diff.addedPages().isEmpty()) {
-//            addDiffRow(diffTable, "✓  Pages added",
-//                    "Page" + (diff.addedPages().size() != 1 ? "s" : "") + " " +
-//                            formatPageList(diff.addedPages()),
-//                    successGreen, 1, lightGray, white, bold, normal);
-//        }
-//
-//        // Deleted pages
-//        if (!diff.deletedPages().isEmpty()) {
-//            addDiffRow(diffTable, "✗  Pages deleted",
-//                    "Page" + (diff.deletedPages().size() != 1 ? "s" : "") + " " +
-//                            formatPageList(diff.deletedPages()),
-//                    errorRed, 2, lightGray, white, bold, normal);
-//        }
-//
-//        // Modified pages
-//        if (!diff.modifiedPages().isEmpty()) {
-//            addDiffRow(diffTable, "~  Pages with content changes",
-//                    "Page" + (diff.modifiedPages().size() != 1 ? "s" : "") + " " +
-//                            formatPageList(diff.modifiedPages()) +
-//                            " (may be PDF re-export artefact — verify manually)",
-//                    warningAmber, 3, lightGray, white, bold, normal);
-//        }
-//
-//        // New annotations
-//        if (!diff.newAnnotationsByPage().isEmpty()) {
-//            StringBuilder annotDesc = new StringBuilder();
-//            diff.newAnnotationsByPage().forEach((page, count) ->
-//                    annotDesc.append("p").append(page).append(": ").append(count)
-//                            .append(" new; "));
-//            String desc = annotDesc.toString();
-//            if (desc.endsWith("; ")) desc = desc.substring(0, desc.length() - 2);
-//            addDiffRow(diffTable, "✎  New annotations/comments",
-//                    desc, amber, 4, lightGray, white, bold, normal);
-//        }
-//
-//        // No changes
-//        if (diff.addedPages().isEmpty() && diff.deletedPages().isEmpty()
-//                && diff.modifiedPages().isEmpty() && diff.newAnnotationsByPage().isEmpty()) {
-//            addDiffRow(diffTable, "No structural changes detected",
-//                    "Document content unchanged from previous version",
-//                    darkText, 0, lightGray, white, bold, normal);
-//        }
-//
-//        document.add(diffTable);
-//    }
 
     private void addDiffRow(
             Table table, String label, String value, DeviceRgb valueColor,

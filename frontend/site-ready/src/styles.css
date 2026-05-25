@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -15,8 +15,8 @@ html {
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  /*font-family: 'DM Sans', sans-serif;*/
+  /*font-family: 'Inter', sans-serif;*/
+  font-family: 'Google Sans', sans-serif;
   @apply bg-base-100 text-base-content;
 }
 
@@ -95,4 +95,8 @@ a.text-primary {
 /* ── Input focus ring ── */
 .input:focus, .select:focus, .textarea:focus {
   @apply outline-none ring-2 ring-secondary/30 border-secondary/60;
+}
+
+.title-font {
+  font-family: Oswald,sans-serif;
 }

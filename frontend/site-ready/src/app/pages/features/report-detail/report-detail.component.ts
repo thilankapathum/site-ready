@@ -75,7 +75,7 @@ export class ReportDetailComponent implements OnInit {
         downloadType:  'vendor',
         diff:          v.pageDiff,                         // ← vendor's own diff
         hasDeletions:  v.pageDiff?.hasDeletions ?? false,
-        label:         'Change analysis',
+        label:         'Changes',
       });
 
       // Engineer review row
@@ -105,7 +105,7 @@ export class ReportDetailComponent implements OnInit {
           downloadType:  'reviewed',
           diff:          v.reviewerPageDiff,               // ← engineer's own diff
           hasDeletions:  v.reviewerPageDiff?.hasDeletions ?? false,
-          label:         'Engineer changes',
+          label:         'Changes',
         });
       }
     }
