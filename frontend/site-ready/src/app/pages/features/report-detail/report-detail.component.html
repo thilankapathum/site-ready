@@ -132,16 +132,37 @@
               </svg>
 
               <div>
-                <div>
-                  <p class="text-xs text-base-content/50 mb-0.5">Assigned Engineer</p>
-                  <div class="flex items-center gap-1.5">
-                    <!--                <div class="w-1.5 h-1.5 rounded-full" [class]="report()!.assignedEngineerName ? 'bg-success' : 'bg-base-content/30'"></div>-->
-                    <p class="font-semibold text-sm flex flex-row gap-1 items-center">
-                      @if (isCurrentUser(report()?.assignedEngineerId!)) {
-                        <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
-                      }
-                      {{ report()!.assignedEngineerName ?? 'Unassigned' }}</p>
-                  </div>
+                <!--                <div>-->
+                <!--                  <p class="text-xs text-base-content/50 mb-0.5">Assigned Engineer</p>-->
+                <!--                  <div class="flex items-center gap-1.5">-->
+                <!--                    &lt;!&ndash;                <div class="w-1.5 h-1.5 rounded-full" [class]="report()!.assignedEngineerName ? 'bg-success' : 'bg-base-content/30'"></div>&ndash;&gt;-->
+                <!--                    <p class="font-semibold text-sm flex flex-row gap-1 items-center">-->
+                <!--                      @if (isCurrentUser(report()?.assignedEngineerId!)) {-->
+                <!--                        <div class="w-1.5 h-1.5 rounded-full bg-success"></div>-->
+                <!--                      }-->
+                <!--                      {{ report()!.assignedEngineerName ?? 'Unassigned' }}</p>-->
+                <!--                  </div>-->
+                <!--                </div>-->
+                <!-- Engineer assignment info + action -->
+                <div class="sm:col-span-1">
+                  <p class="text-xs text-base-content/60">Assigned Engineer</p>
+                  @if (report()!.assignedEngineerId) {
+                    <p class="font-semibold text-sm">{{ report()!.assignedEngineerName }}</p>
+                  } @else {
+                    <p class="text-warning font-medium text-sm flex items-center gap-1">
+                      <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      Unassigned
+                    </p>
+                  }
+                  @if (canAssignEngineer()) {
+                    <button class="btn btn-ghost btn-xs mt-1 text-neutral border border-neutral/15"
+                            (click)="toggleAssign()">
+                      {{ showAssign() ? 'Cancel' : (report()!.assignedEngineerId ? 'Reassign' : 'Assign Engineer') }}
+                    </button>
+                  }
                 </div>
               </div>
             </div>
@@ -197,26 +218,26 @@
         </div>
 
         <!-- Engineer reassignment panel (admin) -->
-        @if (showAssign() && isAdmin()) {
-          <div class="pt-4 border-t border-base-200 bg-base-200/10 p-4 rounded-xl flex items-end gap-3 page-enter">
-            <div class="form-control flex-1">
-              <label class="label pt-0"><span
-                class="label-text text-xs font-semibold tracking-wide text-base-content/60 uppercase">Assign Infrastructure Reviewer</span></label>
-              <select class="select select-bordered select-sm w-full bg-white" [(ngModel)]="selectedEngineerId">
-                <option value="">— Clear Current Assignment —</option>
-                @for (e of engineers(); track e.userId) {
-                  <option [value]="e.userId">{{ e.fullName }} ({{ e.companyName }})</option>
-                }
-              </select>
-            </div>
-            <button class="btn btn-secondary btn-sm px-5" (click)="assignEngineer()" [disabled]="assigningEngineer()">
-              @if (assigningEngineer()) {
-                <span class="loading loading-spinner loading-xs"></span>
-              }
-              Commit Route
-            </button>
-          </div>
-        }
+        <!--        @if (showAssign() && isAdmin()) {-->
+        <!--          <div class="pt-4 border-t border-base-200 bg-base-200/10 p-4 rounded-xl flex items-end gap-3 page-enter">-->
+        <!--            <div class="form-control flex-1">-->
+        <!--              <label class="label pt-0"><span-->
+        <!--                class="label-text text-xs font-semibold tracking-wide text-base-content/60 uppercase">Assign Infrastructure Reviewer</span></label>-->
+        <!--              <select class="select select-bordered select-sm w-full bg-white" [(ngModel)]="selectedEngineerId">-->
+        <!--                <option value="">— Clear Current Assignment —</option>-->
+        <!--                @for (e of engineers(); track e.userId) {-->
+        <!--                  <option [value]="e.userId">{{ e.fullName }} ({{ e.companyName }})</option>-->
+        <!--                }-->
+        <!--              </select>-->
+        <!--            </div>-->
+        <!--            <button class="btn btn-secondary btn-sm px-5" (click)="assignEngineer()" [disabled]="assigningEngineer()">-->
+        <!--              @if (assigningEngineer()) {-->
+        <!--                <span class="loading loading-spinner loading-xs"></span>-->
+        <!--              }-->
+        <!--              Commit Route-->
+        <!--            </button>-->
+        <!--          </div>-->
+        <!--        }-->
 
         <!-- Raw Signature Hash details (Shown small below if it exists) -->
         @if (report()!.padesSignatureId) {
@@ -227,6 +248,46 @@
           </div>
         }
       </div>
+      <!-- Engineer assignment panel -->
+      @if (showAssign() && canAssignEngineer()) {
+        <div class=" p-4 border-t border-base-200 bg-base-200">
+          <p class="text-sm font-medium mb-2">
+            {{ report()!.assignedEngineerId ? 'Reassign Engineer' : 'Assign Engineer' }}
+          </p>
+          @if (!report()!.assignedEngineerId) {
+            <div class="alert alert-warning bg-warning/80 text-xs py-2 mb-3">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              No engineer is assigned. The report cannot be reviewed until an engineer is assigned.
+            </div>
+          }
+          <div class="flex items-end gap-3">
+            <div class="form-control flex-1">
+              <label class="label py-1">
+                <span class="label-text text-sm">Select Engineer</span>
+              </label>
+              <select class="select w-fit select-bordered select-sm" [(ngModel)]="selectedEngineerId">
+                <option value="">— Unassigned —</option>
+                @for (e of engineers(); track e.userId) {
+                  <option [value]="e.userId">
+                    {{ e.fullName }} ({{ e.companyName ?? e.companyName }})
+                  </option>
+                }
+              </select>
+            </div>
+            <button class="btn btn-primary btn-sm mb-1"
+                    (click)="assignEngineer()"
+                    [disabled]="assigningEngineer()">
+              @if (assigningEngineer()) {
+                <span class="loading loading-spinner loading-xs"></span>
+              }
+              Save
+            </button>
+          </div>
+        </div>
+      }
     </div>
 
     <!--    &lt;!&ndash; ── Metadata card ── &ndash;&gt;-->
@@ -384,7 +445,8 @@
                           @if (row.diff.totalPagesOld === 0) {
                             <!-- V1 initial submission -->
                             <span class="text-base-content/60">
-                              Initial submission — {{ row.diff.totalPagesNew }} page{{ row.diff.totalPagesNew !== 1 ? 's' : '' }}
+                              Initial submission — {{ row.diff.totalPagesNew }}
+                              page{{ row.diff.totalPagesNew !== 1 ? 's' : '' }}
                             </span>
                           } @else {
                             <!-- V2+ diff -->
@@ -417,7 +479,8 @@
                             @if (row.diff.modifiedPages.length > 0) {
                               <span class="flex items-center gap-1 text-warning font-medium">
                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                                  <path
+                                    d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
                                 </svg>
                                 Modified: p{{ row.diff.modifiedPages.join(', p') }}
                               </span>

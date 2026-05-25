@@ -112,6 +112,18 @@ export class ReportDetailComponent implements OnInit {
     return rows;
   });
 
+  canAssignEngineer = computed(() => {
+    const r = this.report();
+    if (!r) return false;
+    // Admin can always reassign
+    if (this.isAdmin()) return true;
+    // Owning vendor can assign when unassigned or report is still pending
+    if (this.isOwnerVendor()) {
+      return !r.assignedEngineerId || r.currentStatus === 'PENDING_REVIEW';
+    }
+    return false;
+  });
+
   loading = signal(true);
   versionsLoading = signal(true);
   engineers = signal<AuthResponse[]>([]);
@@ -146,11 +158,18 @@ export class ReportDetailComponent implements OnInit {
   isVendor = computed(() => this.role() === 'VENDOR');
   isEngineer = computed(() => this.role() === 'ENGINEER');
 
+  // isOwnerVendor = computed(() => {
+  //   const r = this.report();
+  //   const u = this.user();
+  //   return u !== null && r !== null && this.isVendor() &&
+  //     r.vendorName === u.fullName; // compare by id in production if available
+  // });
+
   isOwnerVendor = computed(() => {
     const r = this.report();
     const u = this.user();
-    return u !== null && r !== null && this.isVendor() &&
-      r.vendorName === u.fullName; // compare by id in production if available
+    if (!u || !r) return false;
+    return this.isVendor() && r.vendorId === u.userId;
   });
 
   isAssignedEngineer = computed(() => {
@@ -214,9 +233,18 @@ export class ReportDetailComponent implements OnInit {
       next: r => {
         this.report.set(r);
         this.showAssign.set(false);
+        this.selectedEngineerId = '';
         this.assigningEngineer.set(false);
+        // Show brief success feedback
+        this.actionSuccess.set(
+          engId ? 'Engineer assigned successfully.' : 'Engineer unassigned.'
+        );
+        setTimeout(() => this.actionSuccess.set(''), 3000);
       },
-      error: () => this.assigningEngineer.set(false),
+      error: err => {
+        this.assigningEngineer.set(false);
+        this.actionError.set(err.error?.detail ?? 'Failed to assign engineer.');
+      },
     });
   }
 

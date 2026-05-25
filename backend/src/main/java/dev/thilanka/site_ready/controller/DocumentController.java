@@ -228,8 +228,28 @@ public class DocumentController {
                 .body(data);
     }
 
+//    @PatchMapping("/{reportId}/assign-engineer")
+//    @PreAuthorize("hasRole('ADMIN') or hasRole('ENGINEER')")
+//    public ResponseEntity<ReportResponse> assignEngineer(
+//            @PathVariable UUID reportId,
+//            @RequestParam(required = false) UUID engineerId,
+//            @AuthenticationPrincipal User user
+//    ) {
+//        Report report = reportRepository.findById(reportId)
+//                .orElseThrow(() -> new IllegalArgumentException("Report not found"));
+//        User engineer = engineerId != null
+//                ? userRepository.findById(engineerId).orElseThrow(() -> new IllegalArgumentException("Engineer not found"))
+//                : null;
+//        report.setAssignedEngineer(engineer);
+//        reportRepository.save(report);
+//        ReportVersion latest = versionRepository
+//                .findByReportIdOrderByVersionNumberDesc(reportId)
+//                .stream().findFirst().orElse(null);
+//        return ResponseEntity.ok(ReportResponse.from(report, latest));
+//    }
+
     @PatchMapping("/{reportId}/assign-engineer")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('ENGINEER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('ENGINEER') or hasRole('VENDOR')")
     public ResponseEntity<ReportResponse> assignEngineer(
             @PathVariable UUID reportId,
             @RequestParam(required = false) UUID engineerId,
@@ -237,16 +257,33 @@ public class DocumentController {
     ) {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found"));
+
+        // Vendors can only assign engineers to their own reports
+        if (user.getRole() == UserRole.VENDOR) {
+            reportAccessService.assertCanRead(report, user);
+            // Only allow assignment if no engineer is currently assigned
+            // OR if the report is still pending (not yet reviewed)
+            if (report.getAssignedEngineer() != null
+                    && report.getCurrentStatus() != ReportStatus.PENDING_REVIEW) {
+                throw new IllegalStateException(
+                        "Engineer can only be reassigned while the report is pending review.");
+            }
+        }
+
         User engineer = engineerId != null
-                ? userRepository.findById(engineerId).orElseThrow(() -> new IllegalArgumentException("Engineer not found"))
+                ? userRepository.findById(engineerId)
+                .orElseThrow(() -> new IllegalArgumentException("Engineer not found"))
                 : null;
         report.setAssignedEngineer(engineer);
         reportRepository.save(report);
+
         ReportVersion latest = versionRepository
                 .findByReportIdOrderByVersionNumberDesc(reportId)
                 .stream().findFirst().orElse(null);
         return ResponseEntity.ok(ReportResponse.from(report, latest));
     }
+
+
 
     @GetMapping("/{reportId}/download-version/{versionId}/reviewed")
     public ResponseEntity<byte[]> downloadReviewedVersion(
