@@ -55,18 +55,20 @@ export class ReviewListComponent implements OnInit {
     this.loading.set(true);
 
     const filter = this.filter();
+    const currentUserId = this.user()?.userId; // Extract the logged-in user's UUID
 
     if (filter === 'APPROVED') {
-      // Fetch both APPROVED and CONDITIONALLY_APPROVED in parallel then merge
       const approved$ = this.reportService.search({
-        status: 'APPROVED' as any,
+        status: 'APPROVED',
+        engineerId: currentUserId, // Correctly mapped to your service payload
         page: this.page(),
         size: this.pageSize
       });
       const conditional$ = this.reportService.search({
-        status: 'CONDITIONALLY_APPROVED' as any,
+        status: 'CONDITIONALLY_APPROVED',
+        engineerId: currentUserId, // Correctly mapped to your service payload
         page: 0,
-        size: 200   // fetch all conditional approvals — typically few
+        size: 200 // Fetching all conditional approvals
       });
 
       forkJoin({ approved: approved$, conditional: conditional$ }).subscribe({
@@ -74,7 +76,6 @@ export class ReviewListComponent implements OnInit {
           const approvedItems   = results.approved.content;
           const conditionalItems = results.conditional.content;
 
-          // Merge and sort by updatedAt descending
           const merged = [...approvedItems, ...conditionalItems]
             .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
@@ -83,7 +84,6 @@ export class ReviewListComponent implements OnInit {
 
           this.reports.set(merged);
           this.total.set(total);
-          // Pagination based on primary approved page (conditional fetched all at once)
           this.totalPages.set(results.approved.totalPages ?? results.approved.page?.totalPages ?? 1);
           this.loading.set(false);
         },
@@ -94,7 +94,8 @@ export class ReviewListComponent implements OnInit {
       const request$ = filter === 'all'
         ? this.reportService.getMyReports(this.page(), this.pageSize)
         : this.reportService.search({
-          status: filter as any,
+          status: filter as any, // Cast to match ReportStatus enum/type expected by your service
+          engineerId: currentUserId, // Correctly mapped to your service payload
           page: this.page(),
           size: this.pageSize
         });
