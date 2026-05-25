@@ -119,7 +119,7 @@ export class ReportDetailComponent implements OnInit {
     if (this.isAdmin()) return true;
     // Owning vendor can assign when unassigned or report is still pending
     if (this.isOwnerVendor()) {
-      return !r.assignedEngineerId || r.currentStatus === 'PENDING_REVIEW';
+      return (!r.assignedEngineerId || r.currentStatus === 'PENDING_REVIEW') && r.currentVersion ===1;
     }
     return false;
   });

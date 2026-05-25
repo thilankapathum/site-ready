@@ -228,25 +228,6 @@ public class DocumentController {
                 .body(data);
     }
 
-//    @PatchMapping("/{reportId}/assign-engineer")
-//    @PreAuthorize("hasRole('ADMIN') or hasRole('ENGINEER')")
-//    public ResponseEntity<ReportResponse> assignEngineer(
-//            @PathVariable UUID reportId,
-//            @RequestParam(required = false) UUID engineerId,
-//            @AuthenticationPrincipal User user
-//    ) {
-//        Report report = reportRepository.findById(reportId)
-//                .orElseThrow(() -> new IllegalArgumentException("Report not found"));
-//        User engineer = engineerId != null
-//                ? userRepository.findById(engineerId).orElseThrow(() -> new IllegalArgumentException("Engineer not found"))
-//                : null;
-//        report.setAssignedEngineer(engineer);
-//        reportRepository.save(report);
-//        ReportVersion latest = versionRepository
-//                .findByReportIdOrderByVersionNumberDesc(reportId)
-//                .stream().findFirst().orElse(null);
-//        return ResponseEntity.ok(ReportResponse.from(report, latest));
-//    }
 
     @PatchMapping("/{reportId}/assign-engineer")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ENGINEER') or hasRole('VENDOR')")
@@ -261,12 +242,15 @@ public class DocumentController {
         // Vendors can only assign engineers to their own reports
         if (user.getRole() == UserRole.VENDOR) {
             reportAccessService.assertCanRead(report, user);
-            // Only allow assignment if no engineer is currently assigned
-            // OR if the report is still pending (not yet reviewed)
-            if (report.getAssignedEngineer() != null
-                    && report.getCurrentStatus() != ReportStatus.PENDING_REVIEW) {
+            // Only allow assignment if version is 1
+            // AND if the report is still pending (not yet reviewed)
+            if (report.getCurrentStatus() != ReportStatus.PENDING_REVIEW) {
                 throw new IllegalStateException(
                         "Engineer can only be reassigned while the report is pending review.");
+            }
+            if (report.getCurrentVersion() != 1) {
+                throw new IllegalStateException(
+                        "Engineer can only be reassigned before assigned engineer reviews V1.");
             }
         }
 
@@ -276,10 +260,12 @@ public class DocumentController {
                 : null;
         report.setAssignedEngineer(engineer);
         reportRepository.save(report);
+        System.out.println("4");
 
         ReportVersion latest = versionRepository
                 .findByReportIdOrderByVersionNumberDesc(reportId)
                 .stream().findFirst().orElse(null);
+        System.out.println("5");
         return ResponseEntity.ok(ReportResponse.from(report, latest));
     }
 

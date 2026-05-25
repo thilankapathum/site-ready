@@ -67,16 +67,16 @@
         </div>
 
         <div class="flex flex-col items-start sm:items-end gap-1.5">
-          @if (isAdmin()) {
-            <button class="btn btn-ghost btn-xs text-primary bg-primary/5 hover:bg-primary/10 gap-1"
-                    (click)="toggleAssign()">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-              </svg>
-              {{ showAssign() ? 'Cancel Assignment' : 'Reassign Engineer' }}
-            </button>
-          }
+<!--          @if (isAdmin()) {-->
+<!--            <button class="btn btn-ghost btn-xs text-primary bg-primary/5 hover:bg-primary/10 gap-1"-->
+<!--                    (click)="toggleAssign()">-->
+<!--              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
+<!--                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"-->
+<!--                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>-->
+<!--              </svg>-->
+<!--              {{ showAssign() ? 'Cancel Assignment' : 'Reassign Engineer' }}-->
+<!--            </button>-->
+<!--          }-->
 
           @if (report()!.padesSignatureId) {
             <div
