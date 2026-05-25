@@ -146,17 +146,23 @@
                 <!-- Engineer assignment info + action -->
                 <div class="sm:col-span-1">
                   <p class="text-xs text-base-content/60">Assigned Engineer</p>
-                  @if (report()!.assignedEngineerId) {
-                    <p class="font-semibold text-sm">{{ report()!.assignedEngineerName }}</p>
-                  } @else {
-                    <p class="text-warning font-medium text-sm flex items-center gap-1">
-                      <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                      Unassigned
-                    </p>
-                  }
+                  <div class="flex flex-row gap-1 items-center">
+                    @if (report()!.assignedEngineerId) {
+                      @if (isCurrentUser(report()?.assignedEngineerId!)) {
+                        <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
+                      }
+                      <p class="font-semibold text-sm">{{ report()!.assignedEngineerName }}</p>
+                    } @else {
+                      <p class="text-warning font-medium text-sm flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Unassigned
+                      </p>
+                    }
+                  </div>
+
                   @if (canAssignEngineer()) {
                     <button class="btn btn-ghost btn-xs mt-1 text-neutral border border-neutral/15"
                             (click)="toggleAssign()">
