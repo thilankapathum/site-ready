@@ -1,10 +1,15 @@
 import {Component, computed, signal} from '@angular/core';
 import {EngineerStatsResponse} from '../../../models/api.models';
 import {ManagerService} from '../../../services/manager.service';
+import {RouterLink} from '@angular/router';
+import {NgClass} from '@angular/common';
 
 @Component({
   selector: 'app-manager-dashboard',
-  imports: [],
+  imports: [
+    RouterLink,
+    NgClass
+  ],
   templateUrl: './manager-dashboard.component.html',
   styleUrl: './manager-dashboard.component.css'
 })
@@ -17,12 +22,13 @@ export class ManagerDashboardComponent {
     const total   = s.reduce((a, e) => a + e.totalReports, 0);
     const pending = s.reduce((a, e) => a + e.pendingReview, 0);
     const approved = s.reduce((a, e) => a + e.totalApproved, 0);
+    const condApproved = s.reduce((a, e) => a + e.conditionallyApproved, 0);
     const resub   = s.reduce((a, e) => a + e.resubmissionRequired, 0);
     return [
       { label: 'Total Reports',   value: total,   color: 'text-base-content', sub: `${s.length} engineers` },
       { label: 'Pending Review',  value: pending,  color: 'text-info',         sub: null },
-      { label: 'Approved',        value: approved, color: 'text-success',      sub: null },
       { label: 'Resubmission',    value: resub,    color: 'text-warning',      sub: null },
+      { label: 'Approved',        value: approved, color: 'text-success',      sub: `Including ${condApproved} Conditionally Approved` },
     ];
   });
 
@@ -47,9 +53,9 @@ export class ManagerDashboardComponent {
 
   performanceLabel(e: EngineerStatsResponse): string {
     if (e.totalReports === 0) return '—';
-    if (e.longestPendingDays !== null && e.longestPendingDays > 7) return '🔴';
-    if (e.pendingReview === 0 && e.totalReports > 0) return '🟢';
-    if (e.avgReviewHours !== null && e.avgReviewHours > 48) return '🟡';
-    return '🟢';
+    if (e.longestPendingDays !== null && e.longestPendingDays > 28) return 'bg-error';
+    if (e.pendingReview === 0 && e.totalReports > 0) return 'bg-success';
+    if (e.avgReviewHours !== null && e.avgReviewHours > 72) return 'bg-warning';
+    return 'bg-info';
   }
 }

@@ -1,4 +1,4 @@
-<div class="space-y-6">
+<div class="space-y-4">
   <div>
     <h1 class="text-2xl font-bold">Team Overview</h1>
     <p class="text-base-content/60 text-sm mt-1">
@@ -7,9 +7,9 @@
   </div>
 
   <!-- Summary stat cards -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
     @for (stat of summaryStats(); track stat.label) {
-      <div class="card bg-white border border-base-300 shadow-sm">
+      <div class="card bg-white border border-base-300 ">
         <div class="card-body p-4">
           <p class="text-xs text-base-content/60 font-medium uppercase tracking-wide">
             {{ stat.label }}
@@ -24,11 +24,11 @@
   </div>
 
   <!-- Engineer performance table -->
-  <div class="card bg-white border border-base-300 shadow-sm overflow-hidden">
+  <div class="card bg-white border border-base-300  overflow-hidden">
     <div class="card-body p-0">
       <div class="px-5 py-4 border-b border-base-200 flex items-center justify-between">
-        <h2 class="font-bold">Engineer Performance</h2>
-        <a routerLink="/review" class="btn btn-ghost btn-sm">
+        <h2 class="font-bold">REVIEW PROGRESS</h2>
+        <a routerLink="/review" class="btn border  btn-xs text-sm text-neutral">
           View All Reports →
         </a>
       </div>
@@ -119,9 +119,9 @@
                 <td class="text-center">
                   @if (e.avgReviewHours !== null) {
                     <span class="text-sm font-mono"
-                          [class.text-success]="e.avgReviewHours < 24"
-                          [class.text-warning]="e.avgReviewHours >= 24 && e.avgReviewHours < 72"
-                          [class.text-error]="e.avgReviewHours >= 72">
+                          [class.text-success]="e.avgReviewHours < 72"
+                          [class.text-warning]="e.avgReviewHours >= 72 && e.avgReviewHours < 168"
+                          [class.text-error]="e.avgReviewHours >= 168">
                             {{ formatHours(e.avgReviewHours) }}
                           </span>
                   } @else {
@@ -132,9 +132,9 @@
                   @if (e.longestPendingDays !== null) {
                     <div class="flex flex-col items-center">
                             <span class="font-mono text-sm font-bold"
-                                  [class.text-error]="e.longestPendingDays > 7"
-                                  [class.text-warning]="e.longestPendingDays >= 3 && e.longestPendingDays <= 7"
-                                  [class.text-success]="e.longestPendingDays < 3">
+                                  [class.text-error]="e.longestPendingDays > 28"
+                                  [class.text-warning]="e.longestPendingDays >= 7 && e.longestPendingDays <= 28"
+                                  [class.text-success]="e.longestPendingDays < 7">
                               {{ e.longestPendingDays }}d
                             </span>
                       @if (e.longestPendingReport) {
@@ -148,9 +148,12 @@
                     <span class="text-base-content/30 text-xs">—</span>
                   }
                 </td>
-                <td class="text-center">
-                  {{ performanceLabel(e) }}
-                </td>
+                  <td class="text-center align-middle">
+                    <div
+                      [class]="performanceLabel(e)"
+                      class="w-3 h-3 rounded-full mx-auto">
+                    </div>
+                  </td>
                 </tr>
               }
             </tbody>
