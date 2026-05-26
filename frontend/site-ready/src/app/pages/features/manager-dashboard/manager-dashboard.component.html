@@ -1,0 +1,170 @@
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold">Team Overview</h1>
+    <p class="text-base-content/60 text-sm mt-1">
+      Review performance summary for your assigned engineers.
+    </p>
+  </div>
+
+  <!-- Summary stat cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    @for (stat of summaryStats(); track stat.label) {
+      <div class="card bg-white border border-base-300 shadow-sm">
+        <div class="card-body p-4">
+          <p class="text-xs text-base-content/60 font-medium uppercase tracking-wide">
+            {{ stat.label }}
+          </p>
+          <p class="text-3xl font-bold mt-1" [class]="stat.color">{{ stat.value }}</p>
+          @if (stat.sub) {
+            <p class="text-xs text-base-content/50 mt-0.5">{{ stat.sub }}</p>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Engineer performance table -->
+  <div class="card bg-white border border-base-300 shadow-sm overflow-hidden">
+    <div class="card-body p-0">
+      <div class="px-5 py-4 border-b border-base-200 flex items-center justify-between">
+        <h2 class="font-bold">Engineer Performance</h2>
+        <a routerLink="/review" class="btn btn-ghost btn-sm">
+          View All Reports →
+        </a>
+      </div>
+
+      @if (loading()) {
+        <div class="flex justify-center py-12">
+          <span class="loading loading-spinner loading-md text-primary"></span>
+        </div>
+      } @else if (stats().length === 0) {
+        <div class="text-center py-12 text-base-content/50">
+          <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <p class="text-sm">No engineers assigned yet.</p>
+          <p class="text-xs mt-1">Contact your administrator to assign engineers to your team.</p>
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/50">
+            <tr>
+              <th>Engineer</th>
+              <th class="text-center">Total</th>
+              <th class="text-center">Pending</th>
+              <th class="text-center">Resubmission</th>
+              <th class="text-center">Approved</th>
+              <th class="text-center">Rejected</th>
+              <th class="text-center" title="Average time from vendor upload to engineer review">
+                Avg Review
+              </th>
+              <th class="text-center" title="Days the oldest pending report has been waiting">
+                Oldest Pending
+              </th>
+              <th class="text-center">Status</th>
+            </tr>
+            </thead>
+            <tbody>
+              @for (e of stats(); track e.engineerId) {
+                <tr class="hover:bg-base-50"
+                    [class.bg-error]="e.longestPendingDays !== null && e.longestPendingDays > 7">
+                <td>
+                  <div>
+                    <p class="font-medium text-sm">{{ e.engineerName }}</p>
+                    <p class="text-xs text-base-content/50">{{ e.companyName }}</p>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <span class="font-mono font-bold">{{ e.totalReports }}</span>
+                </td>
+                <td class="text-center">
+                  @if (e.pendingReview > 0) {
+                    <span class="badge badge-info badge-sm">{{ e.pendingReview }}</span>
+                  } @else {
+                    <span class="text-base-content/30 text-xs">—</span>
+                  }
+                </td>
+                <td class="text-center">
+                  @if (e.resubmissionRequired > 0) {
+                    <span class="badge badge-warning badge-sm badge-outline">
+                            {{ e.resubmissionRequired }}
+                          </span>
+                  } @else {
+                    <span class="text-base-content/30 text-xs">—</span>
+                  }
+                </td>
+                <td class="text-center">
+                  @if (e.totalApproved > 0) {
+                    <div class="flex flex-col items-center">
+                      <span class="badge badge-success badge-sm">{{ e.totalApproved }}</span>
+                      @if (e.conditionallyApproved > 0) {
+                        <span class="text-xs text-base-content/50 mt-0.5">
+                                ({{ e.conditionallyApproved }} cond.)
+                              </span>
+                      }
+                    </div>
+                  } @else {
+                    <span class="text-base-content/30 text-xs">—</span>
+                  }
+                </td>
+                <td class="text-center">
+                  @if (e.rejected > 0) {
+                    <span class="badge badge-error badge-sm badge-outline">{{ e.rejected }}</span>
+                  } @else {
+                    <span class="text-base-content/30 text-xs">—</span>
+                  }
+                </td>
+                <td class="text-center">
+                  @if (e.avgReviewHours !== null) {
+                    <span class="text-sm font-mono"
+                          [class.text-success]="e.avgReviewHours < 24"
+                          [class.text-warning]="e.avgReviewHours >= 24 && e.avgReviewHours < 72"
+                          [class.text-error]="e.avgReviewHours >= 72">
+                            {{ formatHours(e.avgReviewHours) }}
+                          </span>
+                  } @else {
+                    <span class="text-base-content/30 text-xs">—</span>
+                  }
+                </td>
+                <td class="text-center">
+                  @if (e.longestPendingDays !== null) {
+                    <div class="flex flex-col items-center">
+                            <span class="font-mono text-sm font-bold"
+                                  [class.text-error]="e.longestPendingDays > 7"
+                                  [class.text-warning]="e.longestPendingDays >= 3 && e.longestPendingDays <= 7"
+                                  [class.text-success]="e.longestPendingDays < 3">
+                              {{ e.longestPendingDays }}d
+                            </span>
+                      @if (e.longestPendingReport) {
+                        <span class="text-xs text-base-content/40 font-mono truncate max-w-24"
+                              [title]="e.longestPendingReport">
+                                {{ e.longestPendingReport }}
+                              </span>
+                      }
+                    </div>
+                  } @else {
+                    <span class="text-base-content/30 text-xs">—</span>
+                  }
+                </td>
+                <td class="text-center">
+                  {{ performanceLabel(e) }}
+                </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Team totals footer -->
+        <div class="px-4 py-2 border-t border-base-200 bg-base-50 flex gap-6 text-xs text-base-content/60">
+          <span>{{ stats().length }} engineer{{ stats().length !== 1 ? 's' : '' }}</span>
+          <span>{{ teamTotal() }} total reports</span>
+          <span class="text-info">{{ teamPending() }} pending</span>
+          <span class="text-success">{{ teamApproved() }} approved</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>

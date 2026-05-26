@@ -371,6 +371,15 @@ public class DocumentService {
         );
     }
 
+    public Page<Report> search(String siteId, String project, String rat,
+                               ReportStatus status, List<UUID> engineerIds,
+                               UUID vendorId, UUID vendorCompanyId, Pageable pageable) {
+        return reportRepository.findAll(
+                ReportSpecification.filter(siteId, project, rat, status, engineerIds, vendorId, vendorCompanyId),
+                pageable
+        );
+    }
+
     public List<Report> searchAll(String siteId, String project, String rat,
                                   ReportStatus status, UUID engineerId,
                                   UUID vendorId, UUID vendorCompanyId) {

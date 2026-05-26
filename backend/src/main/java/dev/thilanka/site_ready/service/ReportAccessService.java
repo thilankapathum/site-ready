@@ -24,14 +24,14 @@ public class ReportAccessService {
     private final ReportVersionRepository versionRepository;
 
     public void assertCanRead(UUID reportId, User user) {
-        if (user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.ENGINEER) return;
+        if (user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.MANAGER || user.getRole() == UserRole.ENGINEER) return;
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new AccessDeniedException("Report not found"));
         assertVendorOwnsReport(report, user);
     }
 
     public void assertCanRead(Report report, User user) {
-        if (user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.ENGINEER) return;
+        if (user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.MANAGER || user.getRole() == UserRole.ENGINEER) return;
         assertVendorOwnsReport(report, user);
     }
 

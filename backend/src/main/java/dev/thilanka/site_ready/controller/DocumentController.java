@@ -44,6 +44,7 @@ public class DocumentController {
     private final StorageService storageService;
     private final AuditService auditService;
     private final ReportAccessService reportAccessService;
+    private final ManagerService managerService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('VENDOR')")
@@ -292,6 +293,38 @@ public class DocumentController {
                                 + "_V" + rv.getVersionNumber() + "_reviewed.pdf\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(data);
+    }
+
+    @GetMapping("/queue/search")
+    public ResponseEntity<Page<ReportResponse>> searchReviewQueue(
+            @RequestParam(required = false) ReportStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        List<UUID> targetEngineerIds = null;
+
+        // Isolate scope natively based on who is logged in
+        if (currentUser.getRole() == UserRole.ENGINEER) {
+            targetEngineerIds = List.of(currentUser.getId());
+        } else if (currentUser.getRole() == UserRole.MANAGER || currentUser.getRole() == UserRole.ADMIN) {
+            targetEngineerIds = managerService.getEngineerIdsForManager(currentUser.getId());
+            if (targetEngineerIds.isEmpty()) {
+                return ResponseEntity.ok(Page.empty(PageRequest.of(page, size)));
+            }
+        }
+
+        UUID vendorCompanyId = null;
+        if (currentUser.getRole() == UserRole.VENDOR) {
+            vendorCompanyId = currentUser.getCompany().getId();
+        }
+
+        // Call documentService using the collection-based engineer criteria
+        Page<Report> reports = documentService.search(
+                null, null, null, status, targetEngineerIds, null, vendorCompanyId,
+                PageRequest.of(page, size, Sort.by("updatedAt").descending()));
+
+        return ResponseEntity.ok(reports.map(r -> ReportResponse.from(r, null)));
     }
 
     private String getIp(HttpServletRequest request) {

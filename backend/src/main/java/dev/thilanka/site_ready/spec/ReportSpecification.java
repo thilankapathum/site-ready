@@ -35,4 +35,36 @@ public class ReportSpecification {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
+
+    // For multiple engineerIds
+    public static Specification<Report> filter(
+            String siteId, String project, String rat,
+            ReportStatus status, List<UUID> engineerIds, // ← List here
+            UUID vendorId, UUID vendorCompanyId
+    ) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (siteId != null && !siteId.isBlank())
+                predicates.add(cb.like(cb.lower(root.get("siteId")), "%" + siteId.toLowerCase() + "%"));
+            if (project != null && !project.isBlank())
+                predicates.add(cb.like(cb.lower(root.get("project")), "%" + project.toLowerCase() + "%"));
+            if (rat != null && !rat.isBlank())
+                predicates.add(cb.like(cb.lower(root.get("rat")), "%" + rat.toLowerCase() + "%"));
+            if (status != null)
+                predicates.add(cb.equal(root.get("currentStatus"), status));
+
+            // Use IN clause for the list of engineer IDs
+            if (engineerIds != null && !engineerIds.isEmpty()) {
+                predicates.add(root.get("assignedEngineer").get("id").in(engineerIds));
+            }
+
+            if (vendorId != null)
+                predicates.add(cb.equal(root.get("createdByVendor").get("id"), vendorId));
+            if (vendorCompanyId != null)
+                predicates.add(cb.equal(root.get("vendorCompany").get("id"), vendorCompanyId));
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
 }

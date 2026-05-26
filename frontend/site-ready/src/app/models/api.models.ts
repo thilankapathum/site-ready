@@ -1,4 +1,4 @@
-export type UserRole = 'VENDOR' | 'ENGINEER' | 'ADMIN';
+export type UserRole = 'VENDOR' | 'ENGINEER' | 'MANAGER' | 'ADMIN';
 
 export type ReportStatus =
   | 'PENDING_REVIEW'
@@ -164,4 +164,21 @@ export interface PageDiff {
   hasDeletions: boolean;
   hasModifications: boolean;
   summary: string;
+}
+
+export interface EngineerStatsResponse {
+  engineerId: string;
+  engineerName: string;
+  engineerEmail: string;
+  companyName: string;
+  totalReports: number;
+  pendingReview: number;
+  resubmissionRequired: number;
+  approved: number;
+  conditionallyApproved: number;
+  totalApproved: number;
+  rejected: number;
+  avgReviewHours: number | null;
+  longestPendingDays: number | null;
+  longestPendingReport: string | null;
 }

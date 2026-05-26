@@ -41,6 +41,12 @@ export class DashboardComponent implements OnInit {
   constructor(private auth: AuthService, private reportService: ReportService, private router: Router) {}
 
   ngOnInit(): void {
+
+    if (this.role() === 'MANAGER') {
+      this.router.navigate(['/manager']);
+      return;
+    }
+
     const user = this.user();
 
     console.log('Dashboard user:', user);

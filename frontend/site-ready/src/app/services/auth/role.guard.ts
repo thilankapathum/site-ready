@@ -6,6 +6,11 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const auth   = inject(AuthService);
   const router = inject(Router);
 
+  const map: Record<string, string> = {
+    VENDOR: 'ROLE_VENDOR', ENGINEER: 'ROLE_ENGINEER',
+    MANAGER: 'ROLE_MANAGER', ADMIN: 'ROLE_ADMIN'
+  };
+
   const requiredRoles: string[] = route.data['roles'] ?? [];
   const userRole = auth.role();
 

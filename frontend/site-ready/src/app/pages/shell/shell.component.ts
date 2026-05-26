@@ -19,6 +19,7 @@ export class ShellComponent {
   isVendor   = computed(() => this.role() === 'VENDOR');
   isEngineer = computed(() => this.role() === 'ENGINEER');
   isAdmin    = computed(() => this.role() === 'ADMIN');
+  isManager  = computed(() => this.role() === 'MANAGER');
 
   initials = computed(() => {
     const name = this.user()?.fullName ?? '';
@@ -27,7 +28,7 @@ export class ShellComponent {
 
   roleBadge = computed(() => {
     const map: Record<string, string> = {
-      VENDOR: 'Vendor', ENGINEER: 'Engineer', ADMIN: 'Administrator'
+      VENDOR: 'Vendor', ENGINEER: 'Engineer', ADMIN: 'Administrator', MANAGER: 'Manager'
     };
     return map[this.role() ?? ''] ?? '';
   });

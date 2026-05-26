@@ -157,6 +157,7 @@ export class ReportDetailComponent implements OnInit {
   isAdmin = computed(() => this.role() === 'ADMIN');
   isVendor = computed(() => this.role() === 'VENDOR');
   isEngineer = computed(() => this.role() === 'ENGINEER');
+  isManager = computed(() => this.role() === 'MANAGER');
 
   // isOwnerVendor = computed(() => {
   //   const r = this.report();

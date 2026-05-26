@@ -3,6 +3,7 @@ import {AuthResponse, CompanyRequest, CompanyResponse, CompanyType, UserRole} fr
 import {AdminService} from '../../../../services/admin.service';
 import {FormsModule} from '@angular/forms';
 import {CompanyService} from '../../../../services/company.service';
+import {ManagerService} from '../../../../services/manager.service';
 
 @Component({
   selector: 'app-admin',
@@ -13,7 +14,7 @@ import {CompanyService} from '../../../../services/company.service';
   styleUrl: './admin.component.css'
 })
 export class AdminComponent implements OnInit {
-  activeTab = signal<'users' | 'companies'>('users');
+  activeTab = signal<'users' | 'companies' | 'assignments'>('users');
 
   // Users
   users   = signal<AuthResponse[]>([]);
@@ -29,18 +30,26 @@ export class AdminComponent implements OnInit {
   saving         = signal(false);
   formError      = signal('');
 
+  managers      = signal<AuthResponse[]>([]);
+  allEngineers  = signal<AuthResponse[]>([]);
+// Map of managerId → Set of assigned engineerIds
+  assignmentMap = signal<Map<string, Set<string>>>(new Map());
+  savingAssignment = signal(false);
+
   form: CompanyRequest & { country: string; contactEmail: string; notes: string } = {
     name: '', shortName: '', type: 'VENDOR', country: '', contactEmail: '', notes: ''
   };
 
   constructor(
     private adminService: AdminService,
-    private companyService: CompanyService
+    private companyService: CompanyService,
+    private managerService: ManagerService
   ) {}
 
   ngOnInit(): void {
     this.loadUsers();
     this.loadCompanies();
+    this.loadManagerData();
   }
 
   loadUsers(): void {
@@ -134,5 +143,52 @@ export class AdminComponent implements OnInit {
 
   initials(name: string): string {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+  }
+
+
+  loadManagerData(): void {
+    this.managerService.getManagers().subscribe(mgrs => {
+      this.managers.set(mgrs);
+      // Load assignments for each manager
+      const map = new Map<string, Set<string>>();
+      let pending = mgrs.length;
+      if (pending === 0) { this.assignmentMap.set(map); return; }
+      for (const mgr of mgrs) {
+        this.managerService.getEngineersForManager(mgr.userId).subscribe(engs => {
+          map.set(mgr.userId, new Set(engs.map(e => e.userId)));
+          pending--;
+          if (pending === 0) this.assignmentMap.set(new Map(map));
+        });
+      }
+    });
+    // Load all active engineers for the checkboxes
+    this.adminService.listUsers().subscribe(users => {
+      this.allEngineers.set(
+        users.filter(u => u.role === 'ENGINEER' && u.active)
+          .map(u => ({ ...u, companyName: u.message ?? '' }))
+      );
+    });
+  }
+
+  isAssigned(managerId: string, engineerId: string): boolean {
+    return this.assignmentMap().get(managerId)?.has(engineerId) ?? false;
+  }
+
+  toggleAssignment(managerId: string, engineerId: string, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    const map = new Map(this.assignmentMap());
+    const set = new Set(map.get(managerId) ?? []);
+    if (checked) set.add(engineerId); else set.delete(engineerId);
+    map.set(managerId, set);
+    this.assignmentMap.set(map);
+  }
+
+  saveAssignments(managerId: string): void {
+    const engineerIds = [...(this.assignmentMap().get(managerId) ?? [])];
+    this.savingAssignment.set(true);
+    this.managerService.setEngineersForManager(managerId, engineerIds).subscribe({
+      next: () => this.savingAssignment.set(false),
+      error: () => this.savingAssignment.set(false),
+    });
   }
 }

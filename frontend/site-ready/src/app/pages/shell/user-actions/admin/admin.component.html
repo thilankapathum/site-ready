@@ -10,6 +10,8 @@
             (click)="activeTab.set('users')">User Management</button>
     <button class="tab" [class.tab-active]="activeTab() === 'companies'"
             (click)="activeTab.set('companies')">Company Management</button>
+    <button class="tab" [class.tab-active]="activeTab() === 'assignments'"
+            (click)="activeTab.set('assignments')">Engineer Assignments</button>
   </div>
 
   <!-- ══ USER MANAGEMENT ══ -->
@@ -55,6 +57,7 @@
                           (ngModelChange)="changeRole(u, $event)">
                     <option value="VENDOR">Vendor</option>
                     <option value="ENGINEER">Engineer</option>
+                    <option value="MANAGER">Manager</option>
                     <option value="ADMIN">Admin</option>
                   </select>
                 </td>
@@ -222,6 +225,60 @@
           </table>
         </div>
       </div>
+    </div>
+  }
+
+  @if (activeTab() === 'assignments') {
+    <div class="space-y-4">
+      <p class="text-sm text-base-content/60">
+        Assign engineers to managers and admins. Each engineer can be assigned to one or more managers.
+      </p>
+
+      @for (mgr of managers(); track mgr.userId) {
+        <div class="card bg-white border border-base-300 shadow-sm">
+          <div class="card-body p-5">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <p class="font-bold text-sm">{{ mgr.fullName }}</p>
+                <span class="badge badge-xs"
+                      [class]="mgr.role === 'ADMIN' ? 'badge-primary' : 'badge-warning badge-outline'">
+                {{ mgr.role }}
+              </span>
+              </div>
+              <button class="btn btn-primary btn-sm"
+                      (click)="saveAssignments(mgr.userId)"
+                      [disabled]="savingAssignment()">
+                @if (savingAssignment()) {
+                  <span class="loading loading-spinner loading-xs"></span>
+                }
+                Save
+              </button>
+            </div>
+
+            <!-- Engineer checkboxes -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              @for (eng of allEngineers(); track eng.userId) {
+                <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg
+                hover:bg-base-100 border border-base-200">
+                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
+                         [checked]="isAssigned(mgr.userId, eng.userId)"
+                         (change)="toggleAssignment(mgr.userId, eng.userId, $event)" />
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium truncate">{{ eng.fullName }}</p>
+                    <p class="text-xs text-base-content/50 truncate">{{ eng.companyName }}</p>
+                  </div>
+                </label>
+              }
+            </div>
+
+            @if (allEngineers().length === 0) {
+              <p class="text-sm text-base-content/50 text-center py-4">
+                No active engineers found.
+              </p>
+            }
+          </div>
+        </div>
+      }
     </div>
   }
 </div>

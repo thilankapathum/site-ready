@@ -56,6 +56,21 @@ export class ReportService {
     return this.http.get<PageResponse<ReportResponse>>(`${this.BASE}/search`, { params });
   }
 
+  searchQueue(filters: {
+    status?: ReportStatus | '';
+    page?: number;
+    size?: number;
+  }): Observable<PageResponse<ReportResponse>> {
+    let params = new HttpParams();
+
+    if (filters.status) {
+      params = params.set('status', filters.status);
+    }
+    params = params.set('page', filters.page ?? 0).set('size', filters.size ?? 5);
+
+    return this.http.get<PageResponse<ReportResponse>>(`${this.BASE}/queue/search`, { params });
+  }
+
   exportExcel(filters: Record<string, string>): void {
     const params = new HttpParams({fromObject: filters});
     window.open(`${this.BASE}/export/excel?${params.toString()}`, '_blank');

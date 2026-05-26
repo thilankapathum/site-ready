@@ -67,17 +67,6 @@
         </div>
 
         <div class="flex flex-col items-start sm:items-end gap-1.5">
-<!--          @if (isAdmin()) {-->
-<!--            <button class="btn btn-ghost btn-xs text-primary bg-primary/5 hover:bg-primary/10 gap-1"-->
-<!--                    (click)="toggleAssign()">-->
-<!--              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
-<!--                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"-->
-<!--                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>-->
-<!--              </svg>-->
-<!--              {{ showAssign() ? 'Cancel Assignment' : 'Reassign Engineer' }}-->
-<!--            </button>-->
-<!--          }-->
-
           @if (report()!.padesSignatureId) {
             <div
               class="flex items-center gap-1.5 px-2 py-1 bg-success/5 border border-success/20 rounded-md text-success"
@@ -132,17 +121,6 @@
               </svg>
 
               <div>
-                <!--                <div>-->
-                <!--                  <p class="text-xs text-base-content/50 mb-0.5">Assigned Engineer</p>-->
-                <!--                  <div class="flex items-center gap-1.5">-->
-                <!--                    &lt;!&ndash;                <div class="w-1.5 h-1.5 rounded-full" [class]="report()!.assignedEngineerName ? 'bg-success' : 'bg-base-content/30'"></div>&ndash;&gt;-->
-                <!--                    <p class="font-semibold text-sm flex flex-row gap-1 items-center">-->
-                <!--                      @if (isCurrentUser(report()?.assignedEngineerId!)) {-->
-                <!--                        <div class="w-1.5 h-1.5 rounded-full bg-success"></div>-->
-                <!--                      }-->
-                <!--                      {{ report()!.assignedEngineerName ?? 'Unassigned' }}</p>-->
-                <!--                  </div>-->
-                <!--                </div>-->
                 <!-- Engineer assignment info + action -->
                 <div class="sm:col-span-1">
                   <p class="text-xs text-base-content/60">Assigned Engineer</p>
@@ -222,28 +200,6 @@
           </div>
 
         </div>
-
-        <!-- Engineer reassignment panel (admin) -->
-        <!--        @if (showAssign() && isAdmin()) {-->
-        <!--          <div class="pt-4 border-t border-base-200 bg-base-200/10 p-4 rounded-xl flex items-end gap-3 page-enter">-->
-        <!--            <div class="form-control flex-1">-->
-        <!--              <label class="label pt-0"><span-->
-        <!--                class="label-text text-xs font-semibold tracking-wide text-base-content/60 uppercase">Assign Infrastructure Reviewer</span></label>-->
-        <!--              <select class="select select-bordered select-sm w-full bg-white" [(ngModel)]="selectedEngineerId">-->
-        <!--                <option value="">— Clear Current Assignment —</option>-->
-        <!--                @for (e of engineers(); track e.userId) {-->
-        <!--                  <option [value]="e.userId">{{ e.fullName }} ({{ e.companyName }})</option>-->
-        <!--                }-->
-        <!--              </select>-->
-        <!--            </div>-->
-        <!--            <button class="btn btn-secondary btn-sm px-5" (click)="assignEngineer()" [disabled]="assigningEngineer()">-->
-        <!--              @if (assigningEngineer()) {-->
-        <!--                <span class="loading loading-spinner loading-xs"></span>-->
-        <!--              }-->
-        <!--              Commit Route-->
-        <!--            </button>-->
-        <!--          </div>-->
-        <!--        }-->
 
         <!-- Raw Signature Hash details (Shown small below if it exists) -->
         @if (report()!.padesSignatureId) {

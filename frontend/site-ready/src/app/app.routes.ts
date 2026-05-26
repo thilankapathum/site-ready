@@ -41,7 +41,7 @@ export const routes: Routes =  [
         loadComponent: () =>
           import('./pages/features/review-list/review-list.component').then(m => m.ReviewListComponent),
         canActivate: [roleGuard],
-        data: { roles: ['ROLE_ENGINEER', 'ROLE_ADMIN'] },
+        data: { roles: ['ROLE_ENGINEER', 'ROLE_ADMIN', 'ROLE_MANAGER'] },
       },
       {
         path: 'review/:id',
@@ -67,6 +67,14 @@ export const routes: Routes =  [
           import('./pages/shell/user-actions/admin/admin.component').then(m => m.AdminComponent),
         canActivate: [roleGuard],
         data: { roles: ['ROLE_ADMIN'] },
+      },
+      {
+        path: 'manager',
+        loadComponent: () =>
+          import('./pages/features/manager-dashboard/manager-dashboard.component')
+            .then(m => m.ManagerDashboardComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['ROLE_MANAGER', 'ROLE_ADMIN'] },
       },
       {
         path: 'profile',

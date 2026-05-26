@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="007-add-manager-role" author="ssv-dms">
+        <!-- Add MANAGER to the user_role enum -->
+        <sql>ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'MANAGER';</sql>
+    </changeSet>
+
+    <!-- Junction table: manager (or admin) → engineers assigned to them -->
+    <changeSet id="007-manager-engineer-assignments" author="ssv-dms">
+        <createTable tableName="manager_engineer_assignments">
+            <column name="manager_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_assignment_manager"
+                             references="users(id)"/>
+            </column>
+            <column name="engineer_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_assignment_engineer"
+                             references="users(id)"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="manager_engineer_assignments"
+                       columnNames="manager_id,engineer_id"
+                       constraintName="pk_manager_engineer"/>
+        <createIndex tableName="manager_engineer_assignments"
+                     indexName="idx_mea_manager">
+            <column name="manager_id"/>
+        </createIndex>
+        <createIndex tableName="manager_engineer_assignments"
+                     indexName="idx_mea_engineer">
+            <column name="engineer_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

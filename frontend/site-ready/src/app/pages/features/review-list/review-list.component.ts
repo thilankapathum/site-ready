@@ -4,6 +4,7 @@ import {ReportService} from '../../../services/report.service';
 import {RouterLink} from '@angular/router';
 import {forkJoin} from 'rxjs';
 import {AuthService} from '../../../services/auth/auth.service';
+import {ManagerService} from '../../../services/manager.service';
 
 @Component({
   selector: 'app-review-list',
@@ -39,7 +40,7 @@ export class ReviewListComponent implements OnInit {
     return pages;
   });
 
-  constructor(private reportService: ReportService , private auth: AuthService) {}
+  constructor(private reportService: ReportService , private auth: AuthService, private managerService:ManagerService) {}
 
   ngOnInit(): void {
     this.load();
@@ -53,22 +54,25 @@ export class ReviewListComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
-
+    const role = this.auth.role();
     const filter = this.filter();
-    const currentUserId = this.user()?.userId; // Extract the logged-in user's UUID
+
+    // The designated 'All' tab fallbacks
+    const source$ = (role === 'MANAGER' || role === 'ADMIN')
+      ? this.managerService.getQueue(this.page(), this.pageSize)
+      : this.reportService.getMyReports(this.page(), this.pageSize);
 
     if (filter === 'APPROVED') {
-      const approved$ = this.reportService.search({
+      // Queries the contextual queue search endpoint
+      const approved$ = this.reportService.searchQueue({
         status: 'APPROVED',
-        engineerId: currentUserId, // Correctly mapped to your service payload
         page: this.page(),
         size: this.pageSize
       });
-      const conditional$ = this.reportService.search({
+      const conditional$ = this.reportService.searchQueue({
         status: 'CONDITIONALLY_APPROVED',
-        engineerId: currentUserId, // Correctly mapped to your service payload
         page: 0,
-        size: 200 // Fetching all conditional approvals
+        size: 200 // Fetch all conditional items to merge
       });
 
       forkJoin({ approved: approved$, conditional: conditional$ }).subscribe({
@@ -91,11 +95,11 @@ export class ReviewListComponent implements OnInit {
       });
 
     } else {
+      // Use the 'All' stream or hit our scoped filter endpoint
       const request$ = filter === 'all'
-        ? this.reportService.getMyReports(this.page(), this.pageSize)
-        : this.reportService.search({
-          status: filter as any, // Cast to match ReportStatus enum/type expected by your service
-          engineerId: currentUserId, // Correctly mapped to your service payload
+        ? source$
+        : this.reportService.searchQueue({
+          status: filter as any,
           page: this.page(),
           size: this.pageSize
         });

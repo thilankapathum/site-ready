@@ -69,7 +69,7 @@
                 <span [class]="badge(r.currentStatus) + ' badge-sm'">{{ label(r.currentStatus) }}</span>
                 <a [routerLink]="['/reports', r.id]"
                    [class]="r.currentStatus === 'PENDING_REVIEW' ? 'btn btn-outline border-primary/20 btn-xs' : 'btn border-primary/5 btn-xs'">
-                  {{ r.currentStatus === 'PENDING_REVIEW' ? 'Review' : 'View' }}
+                  {{ r.currentStatus === 'PENDING_REVIEW' && r.assignedEngineerId === user()?.userId ? 'Review' : 'View' }}
                 </a>
               </div>
             </div>

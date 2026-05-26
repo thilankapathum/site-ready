@@ -6,6 +6,7 @@ import dev.thilanka.site_ready.entity.User;
 import dev.thilanka.site_ready.entity.enums.UserRole;
 import dev.thilanka.site_ready.repository.CompanyRepository;
 import dev.thilanka.site_ready.repository.UserRepository;
+import dev.thilanka.site_ready.service.ManagerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +25,7 @@ public class AdminController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final CompanyRepository companyRepository;
+    private final ManagerService managerService;
 
     @GetMapping("/users")
     public ResponseEntity<List<AuthResponse>> listUsers() {
@@ -104,6 +106,34 @@ public class AdminController {
                 u.getCompany().getId().toString(),
                 u.getCompany().getName(),
                 u.getCompany().getType().name()
+        );
+    }
+
+    @GetMapping("/managers")
+    public ResponseEntity<List<AuthResponse>> listManagers() {
+        return ResponseEntity.ok(
+                userRepository.findAll().stream()
+                        .filter(u -> u.getRole() == UserRole.MANAGER || u.getRole() == UserRole.ADMIN)
+                        .map(this::toResponse).toList()
+        );
+    }
+
+    @PutMapping("/managers/{managerId}/engineers")
+    public ResponseEntity<Void> setEngineersForManager(
+            @PathVariable UUID managerId,
+            @RequestBody List<UUID> engineerIds
+    ) {
+        managerService.setEngineersForManager(managerId, engineerIds);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/managers/{managerId}/engineers")
+    public ResponseEntity<List<AuthResponse>> getEngineersForManager(
+            @PathVariable UUID managerId
+    ) {
+        return ResponseEntity.ok(
+                managerService.getEngineersForManager(managerId).stream()
+                        .map(this::toResponse).toList()
         );
     }
 }

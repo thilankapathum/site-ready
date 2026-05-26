@@ -25,6 +25,12 @@ public interface ReportRepository extends JpaRepository<Report, UUID> , JpaSpeci
 
     Page<Report> findByAssignedEngineerId(UUID engineerId, Pageable pageable);
 
+    // list version for stats computation
+    List<Report> findByAssignedEngineerId(UUID engineerId);
+
+    // For manager queue across multiple engineers
+    Page<Report> findByAssignedEngineerIdIn(List<UUID> engineerIds, Pageable pageable);
+
     // Vendor dashboard — reports I created
     Page<Report> findByCreatedByVendorId(UUID vendorId, Pageable pageable);
 
