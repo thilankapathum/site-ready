@@ -183,3 +183,26 @@ export interface EngineerStatsResponse {
   longestPendingReport: string | null;
   longestPendingReportId: string | null;
 }
+
+export interface EngineerRankResponse {
+  rank: number | null;
+  totalRanked: number;
+  totalEngineers: number;
+  myAvgReviewHours: number | null;
+  engineerAboveName: string | null;
+  engineerAboveAvgHours: number | null;
+  engineerBelowName: string | null;
+  engineerBelowAvgHours: number | null;
+  percentile: number | null;
+}
+
+export interface Breakdown{
+  label: string,
+  count: number,
+}
+
+export interface PendingBreakdown{
+  versions: Breakdown[],
+  rats: Breakdown[],
+  vendors: Breakdown[]
+}

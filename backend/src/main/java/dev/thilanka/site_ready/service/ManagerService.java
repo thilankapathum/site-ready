@@ -1,6 +1,9 @@
 package dev.thilanka.site_ready.service;
 
+import dev.thilanka.site_ready.dto.Breakdown;
+import dev.thilanka.site_ready.dto.EngineerRankResponse;
 import dev.thilanka.site_ready.dto.EngineerStatsResponse;
+import dev.thilanka.site_ready.dto.PendingBreakdown;
 import dev.thilanka.site_ready.entity.ManagerEngineerAssignment;
 import dev.thilanka.site_ready.entity.Report;
 import dev.thilanka.site_ready.entity.ReportVersion;
@@ -18,8 +21,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -80,13 +87,13 @@ public class ManagerService {
         List<Report> reports =
                 reportRepository.findByAssignedEngineerId(eid);
 
-        long total           = reports.size();
-        long pending         = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.PENDING_REVIEW).count();
-        long resubmission    = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.RESUBMISSION_REQUIRED).count();
-        long approved        = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.APPROVED).count();
-        long condApproved    = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.CONDITIONALLY_APPROVED).count();
-        long rejected        = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.REJECTED).count();
-        long totalApproved   = approved + condApproved;
+        long total = reports.size();
+        long pending = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.PENDING_REVIEW).count();
+        long resubmission = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.RESUBMISSION_REQUIRED).count();
+        long approved = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.APPROVED).count();
+        long condApproved = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.CONDITIONALLY_APPROVED).count();
+        long rejected = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.REJECTED).count();
+        long totalApproved = approved + condApproved;
 
         // Average review time: time between vendor upload and engineer's review upload
         // Computed across all reviewed versions assigned to this engineer
@@ -101,6 +108,14 @@ public class ManagerService {
                 if (v.getReviewedAt() != null && v.getUploadedAt() != null) {
                     double hours = Duration.between(v.getUploadedAt(), v.getReviewedAt())
                             .toMinutes() / 60.0;
+                    if (hours >= 0) reviewHours.add(hours);
+                }
+                if (v.getReviewedAt() == null && v.getUploadedAt() != null) {
+                    double hours = Duration
+                            .between(
+                                    v.getUploadedAt().truncatedTo(ChronoUnit.HOURS),
+                                    OffsetDateTime.now().truncatedTo(ChronoUnit.HOURS))
+                            .toHours();
                     if (hours >= 0) reviewHours.add(hours);
                 }
             }
@@ -132,7 +147,7 @@ public class ManagerService {
                 total, pending, resubmission,
                 approved, condApproved, totalApproved,
                 rejected, avgReviewHours,
-                longestPendingDays, longestPendingReport,longestPendingReportId
+                longestPendingDays, longestPendingReport, longestPendingReportId
         );
     }
 
@@ -149,5 +164,84 @@ public class ManagerService {
             return Page.empty(pageable);
         }
         return reportRepository.findByAssignedEngineerIdIn(engineerIds, pageable);
+    }
+
+    public List<EngineerStatsResponse> getAllEngineerRankings() {
+        // Get all active engineers across the system
+        List<User> allEngineers = userRepository.findByRoleAndActiveTrue(UserRole.ENGINEER);
+        return allEngineers.stream()
+                .map(this::buildEngineerStats)
+                // Rank by avg review time ascending (null = no reviews yet, goes to bottom)
+                .sorted(Comparator.comparing(
+                        EngineerStatsResponse::avgReviewHours,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ))
+                .toList();
+    }
+
+    public EngineerRankResponse getEngineerRank(User engineer) {
+        List<EngineerStatsResponse> ranked = getAllEngineerRankings();
+        int totalRanked = (int) ranked.stream()
+                .filter(e -> e.avgReviewHours() != null).count();
+        int rank = -1;
+        for (int i = 0; i < ranked.size(); i++) {
+            if (ranked.get(i).engineerId().equals(engineer.getId())) {
+                rank = i + 1;
+                break;
+            }
+        }
+        EngineerStatsResponse myStats = buildEngineerStats(engineer);
+        // Top and bottom neighbouring engineers for context
+        EngineerStatsResponse rankAbove = (rank > 1 && rank <= ranked.size())
+                ? ranked.get(rank - 2) : null;
+        EngineerStatsResponse rankBelow = (rank > 0 && rank < ranked.size())
+                ? ranked.get(rank) : null;
+
+        return new EngineerRankResponse(
+                rank < 0 ? null : rank,
+                totalRanked,
+                ranked.size(),
+                myStats.avgReviewHours(),
+                rankAbove != null ? rankAbove.engineerName() : null,
+                rankAbove != null ? rankAbove.avgReviewHours() : null,
+                rankBelow != null ? rankBelow.engineerName() : null,
+                rankBelow != null ? rankBelow.avgReviewHours() : null,
+                computePercentile(rank, totalRanked)
+        );
+    }
+
+    public PendingBreakdown engineerPendingBreakdown(User engineer) {
+        // All reports assigned to this engineer
+        List<Report> reports =
+                reportRepository.findByAssignedEngineerId(engineer.getId());
+
+        List<Report> pending = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.PENDING_REVIEW).toList();
+
+        List<Breakdown> versions = pending.stream()
+                .collect(Collectors.groupingBy(Report::getCurrentVersion, Collectors.counting()))
+                .entrySet().stream()
+                .map(entry -> new Breakdown("V" + entry.getKey(), entry.getValue()))
+                .toList();
+
+        List<Breakdown> rats = pending.stream()
+                .collect(Collectors.groupingBy(Report::getRat, Collectors.counting()))
+                .entrySet().stream()
+                .map(entry -> new Breakdown(entry.getKey(), entry.getValue()))
+                .toList();
+
+        List<Breakdown> vendors = pending.stream()
+                .collect(Collectors.groupingBy(
+                        r -> r.getVendorCompany() != null ? r.getVendorCompany().getShortName() : "Unknown Vendor", Collectors.counting()
+                ))
+                .entrySet().stream()
+                .map(entry -> new Breakdown(entry.getKey(), entry.getValue()))
+                .toList();
+        return new PendingBreakdown(versions, rats, vendors);
+    }
+
+    private Integer computePercentile(int rank, int total) {
+        if (rank <= 0 || total <= 0) return null;
+        // Percentile = % of engineers this engineer is faster than
+        return (int) Math.round(((double) (total - rank) / total) * 100);
     }
 }

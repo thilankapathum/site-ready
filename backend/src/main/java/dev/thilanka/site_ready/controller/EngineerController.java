@@ -1,6 +1,8 @@
 package dev.thilanka.site_ready.controller;
 
+import dev.thilanka.site_ready.dto.EngineerRankResponse;
 import dev.thilanka.site_ready.dto.EngineerStatsResponse;
+import dev.thilanka.site_ready.dto.PendingBreakdown;
 import dev.thilanka.site_ready.entity.User;
 import dev.thilanka.site_ready.service.ManagerService;
 import lombok.RequiredArgsConstructor;
@@ -23,5 +25,20 @@ public class EngineerController {
             @AuthenticationPrincipal User user
     ) {
         return ResponseEntity.ok(managerService.getEngineerStats(user));
+    }
+
+
+    @GetMapping("/rank")
+    public ResponseEntity<EngineerRankResponse> getEngineerRank(
+            @AuthenticationPrincipal User user
+    ) {
+        return ResponseEntity.ok(managerService.getEngineerRank(user));
+    }
+
+    @GetMapping("/breakdowns")
+    public ResponseEntity<PendingBreakdown> getBreakdowns(
+            @AuthenticationPrincipal User user
+    ) {
+        return ResponseEntity.ok(managerService.engineerPendingBreakdown(user));
     }
 }

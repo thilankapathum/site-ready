@@ -1,5 +1,11 @@
 import {Component, computed, OnInit, signal} from '@angular/core';
-import {EngineerStatsResponse, ReportResponse, STATUS_BADGE_CLASS, STATUS_LABELS} from '../../../models/api.models';
+import {
+  EngineerRankResponse,
+  EngineerStatsResponse, PendingBreakdown,
+  ReportResponse,
+  STATUS_BADGE_CLASS,
+  STATUS_LABELS
+} from '../../../models/api.models';
 import {AuthService} from '../../../services/auth/auth.service';
 import {ReportService} from '../../../services/report.service';
 import {Router, RouterLink} from '@angular/router';
@@ -26,6 +32,8 @@ export class DashboardComponent implements OnInit {
   loading = signal(true);
 
   engineerStats   = signal<EngineerStatsResponse | null>(null);
+  engineerRank = signal<EngineerRankResponse | null>(null);
+  engineerBreakdowns = signal<PendingBreakdown | null>(null)
 
   pendingCount    = signal(0);
   approvedCount   = signal(0);
@@ -50,13 +58,20 @@ export class DashboardComponent implements OnInit {
     }
 
     if (this.role() === 'ENGINEER') {
-      this.loading.set(true)
-      this.engineerService.getEngineerStats().subscribe({
+      this.loading.set(true);
+      forkJoin({
+        stats: this.engineerService.getEngineerStats(),
+        rank:  this.engineerService.getRank(),
+        breakdowns: this.engineerService.getBreakdowns(),
+      }).subscribe({
         next: data => {
-          this.engineerStats.set(data);
+          this.engineerStats.set(data.stats);
+          this.engineerRank.set(data.rank);
+          this.engineerBreakdowns.set(data.breakdowns);
           this.loading.set(false);
-        }, error: () => this.loading.set(false),
-      })
+        },
+        error: () => this.loading.set(false),
+      });
     }
 
     const user = this.user();
@@ -67,7 +82,7 @@ export class DashboardComponent implements OnInit {
     const userId = user.userId;
 
     // Recent reports + total
-    const recent$ = this.reportService.getMyReports(0, 5);
+    const recent$ = this.reportService.getMyReports(0, 6);
 
     // Status counts via search endpoint
     const pending$   = this.reportService.getReportCountByStatus('PENDING_REVIEW',         role, userId);
@@ -101,5 +116,41 @@ export class DashboardComponent implements OnInit {
   navigateToReport(reportId:string): void {
     console.log('reportId', reportId)
     this.router.navigate(['/reports', reportId]);
+  }
+
+  formatHours(hours: number): string {
+    if (hours === null || hours === undefined) return '—';
+    if (hours < 1) return `${Math.round(hours * 60)} m`;
+    if (hours < 24) return `${hours.toFixed(1)} h`;
+    return `${(hours / 24).toFixed(1)} d`;
+  }
+
+  getGroupTotal(breakdowns: { label: string, count: number }[] | undefined): number {
+    if (!breakdowns) return 0;
+    return breakdowns.reduce((sum, item) => sum + item.count, 0);
+  }
+
+  getVersionColor(index: number): string {
+    const colors = [
+      '#4ea0ff','#135bf9', '#193ab7', '#162455',
+      '#eff6ff', '#bddafe', '#0082ce', '#005889'
+    ];
+    return colors[index % colors.length];
+  }
+
+  getRatColor(index: number): string {
+    const colors = [
+      '#7af1a7', '#00c850', '#008033', '#0c532b',
+      '#b9f14e', '#7acc00', '#487d00', '#33520c'
+    ];
+    return colors[index % colors.length];
+  }
+
+  getVendorColor(index: number): string {
+    const colors = [
+      '#fdcf2b', '#fa9700', '#b94b00', '#793205',
+      '#ffb667', '#ff6700', '#c93400', '#7c2808'
+    ];
+    return colors[index % colors.length];
   }
 }
