@@ -17,7 +17,7 @@ export class ManagerService {
     return this.http.get<AuthResponse[]>(`${this.BASE}/engineers`);
   }
 
-  getEngineerStats(): Observable<EngineerStatsResponse[]> {
+  getEngineersStats(): Observable<EngineerStatsResponse[]> {
     return this.http.get<EngineerStatsResponse[]>(`${this.BASE}/stats`);
   }
 

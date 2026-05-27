@@ -23,7 +23,8 @@
         <button routerLink="/review" class="btn btn-sm btn-primary ">
           Review Reports
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round"/>
           </svg>
 
         </button>
@@ -39,6 +40,9 @@
         <div class="card-body p-4">
           <p class="text-xs text-base-content/60 font-medium uppercase tracking-wide">{{ stat.label }}</p>
           <p class="text-3xl font-bold mt-1" [class]="stat.color">{{ stat.value }}</p>
+          @if (stat.sub) {
+            <p [hidden]="loading()" class="text-xs text-base-content/50 mt-0.5">{{ stat.sub }}</p>
+          }
         </div>
       </div>
     }
@@ -54,11 +58,12 @@
           <!--          <div class="text-center pt-2 border-t border-base-200">-->
           <a routerLink="/search" class="btn border  btn-xs text-sm text-neutral">
             View all {{ totalCount() }} reports
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5 12H19M13 18L19 12L13 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12H19M13 18L19 12L13 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"/>
+            </svg>
 
-        </a>
+          </a>
           <!--          </div>-->
         }
       </div>
@@ -132,5 +137,24 @@
         </div>
       }
     </div>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
+    @if (isEngineer()) {
+      <div class="card bg-base-100 border border-base-300">
+        <div class="card-body p-4 gap-0">
+          <p class="flex items-center">
+            <span class="text-xs text-base-content/60 font-medium uppercase tracking-wide">LONGEST PENDING REPORT</span>
+            <button class="btn btn-xs btn-ghost border-neutral/15 ml-auto" (click)="navigateToReport(engineerStats()?.longestPendingReportId!)">Review</button>
+          <p class="mt-1 flex items-end"
+             [class.text-error]="engineerStats()?.longestPendingDays! > 28"
+             [class.text-warning]="engineerStats()?.longestPendingDays! >= 7 && engineerStats()?.longestPendingDays! <= 28"
+             [class.text-success]="engineerStats()?.longestPendingDays! < 7">
+            <span class="text-xl font-bold">{{ engineerStats()?.longestPendingDays }} days</span>
+            <span class="text-neutral text-sm ml-auto">{{ engineerStats()?.longestPendingReport }}</span>
+          </p>
+        </div>
+      </div>
+    }
   </div>
 </div>

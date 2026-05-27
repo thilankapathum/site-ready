@@ -41,7 +41,7 @@ export class ManagerDashboardComponent implements OnInit {
   constructor(private managerService: ManagerService, private auth: AuthService,) {}
 
   ngOnInit(): void {
-    this.managerService.getEngineerStats().subscribe({
+    this.managerService.getEngineersStats().subscribe({
       next: s => { this.stats.set(s); this.loading.set(false); },
       error: () => this.loading.set(false),
     });

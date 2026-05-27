@@ -47,7 +47,7 @@ public class ManagerController {
     public ResponseEntity<List<EngineerStatsResponse>> getEngineerStats(
             @AuthenticationPrincipal User user
     ) {
-        return ResponseEntity.ok(managerService.getEngineerStats(user.getId()));
+        return ResponseEntity.ok(managerService.getEngineersStats(user.getId()));
     }
 
     @GetMapping("/queue")

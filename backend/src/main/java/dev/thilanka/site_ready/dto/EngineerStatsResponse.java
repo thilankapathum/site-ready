@@ -16,6 +16,7 @@ public record EngineerStatsResponse(
         long rejected,
         Double avgReviewHours,       // average hours from vendor upload to engineer review
         Long longestPendingDays,     // days the oldest currently-pending report has been waiting
-        String longestPendingReport  // namingKey of the longest-pending report
+        String longestPendingReport,  // namingKey of the longest-pending report
+        UUID longestPendingReportId
 ) {
 }

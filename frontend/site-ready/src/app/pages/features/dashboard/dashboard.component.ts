@@ -1,9 +1,10 @@
 import {Component, computed, OnInit, signal} from '@angular/core';
-import {ReportResponse, STATUS_BADGE_CLASS, STATUS_LABELS} from '../../../models/api.models';
+import {EngineerStatsResponse, ReportResponse, STATUS_BADGE_CLASS, STATUS_LABELS} from '../../../models/api.models';
 import {AuthService} from '../../../services/auth/auth.service';
 import {ReportService} from '../../../services/report.service';
 import {Router, RouterLink} from '@angular/router';
 import {forkJoin} from 'rxjs';
+import {EngineerService} from '../../../services/engineer.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -16,8 +17,6 @@ import {forkJoin} from 'rxjs';
 export class DashboardComponent implements OnInit {
   user = this.auth.currentUser;
 
-
-
   role = this.auth.role;
   isVendor   = computed(() => this.role() === 'VENDOR');
   isEngineer = computed(() => this.role() === 'ENGINEER');
@@ -26,19 +25,22 @@ export class DashboardComponent implements OnInit {
   reports = signal<ReportResponse[]>([]);
   loading = signal(true);
 
+  engineerStats   = signal<EngineerStatsResponse | null>(null);
+
   pendingCount    = signal(0);
   approvedCount   = signal(0);
+  conditionallyApprovedCount   = signal(0);
   actionCount     = signal(0);
   totalCount = signal(0);
 
   stats = computed(() => [
     { label: 'Total Reports',  value: this.totalCount(),    color: 'text-base-content' },
-    { label: 'Pending Review', value: this.pendingCount(),  color: 'text-info' },
+    { label: 'Pending Review', value: this.pendingCount(),  color: 'text-info', sub: `Average Review time: ${this.engineerStats()?.avgReviewHours?.toFixed(1)} h` },
     { label: 'Pending Resubmission',  value: this.actionCount(),   color: 'text-warning' },
-    { label: 'Approved',       value: this.approvedCount(), color: 'text-success' }
+    { label: 'Approved',       value: this.approvedCount(), color: 'text-success' , sub: `Includes ${this.conditionallyApprovedCount()} Approved Conditionally`}
   ]);
 
-  constructor(private auth: AuthService, private reportService: ReportService, private router: Router) {}
+  constructor(private auth: AuthService, private reportService: ReportService, private router: Router, private engineerService: EngineerService) {}
 
   ngOnInit(): void {
 
@@ -47,11 +49,17 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    const user = this.user();
+    if (this.role() === 'ENGINEER') {
+      this.loading.set(true)
+      this.engineerService.getEngineerStats().subscribe({
+        next: data => {
+          this.engineerStats.set(data);
+          this.loading.set(false);
+        }, error: () => this.loading.set(false),
+      })
+    }
 
-    console.log('Dashboard user:', user);
-    console.log('userId:', user?.userId);
-    console.log('role:', user?.role);
+    const user = this.user();
 
     if (!user) return;
 
@@ -74,6 +82,7 @@ export class DashboardComponent implements OnInit {
           this.totalCount.set(results.recent.totalElements ?? results.recent.page?.totalElements ?? 0);
           this.pendingCount.set(results.pending);
           this.approvedCount.set(results.approved + results.condApp);
+          this.conditionallyApprovedCount.set(results.condApp);
           this.actionCount.set(results.action);
           this.loading.set(false);
         },
@@ -87,5 +96,10 @@ export class DashboardComponent implements OnInit {
 
   openReport(r: ReportResponse): void {
     this.router.navigate(['/reports', r.id]);
+  }
+
+  navigateToReport(reportId:string): void {
+    console.log('reportId', reportId)
+    this.router.navigate(['/reports', reportId]);
   }
 }

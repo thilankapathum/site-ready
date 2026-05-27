@@ -12,6 +12,8 @@ import dev.thilanka.site_ready.repository.ReportRepository;
 import dev.thilanka.site_ready.repository.ReportVersionRepository;
 import dev.thilanka.site_ready.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,7 +65,7 @@ public class ManagerService {
 
     // ── Dashboard stats ──
 
-    public List<EngineerStatsResponse> getEngineerStats(UUID managerId) {
+    public List<EngineerStatsResponse> getEngineersStats(UUID managerId) {
         List<User> engineers = getEngineersForManager(managerId);
         return engineers.stream()
                 .map(this::buildEngineerStats)
@@ -109,6 +111,7 @@ public class ManagerService {
         // Longest currently-pending report
         Long longestPendingDays = null;
         String longestPendingReport = null;
+        UUID longestPendingReportId = null;
         Optional<Report> longestPending = reports.stream()
                 .filter(r -> r.getCurrentStatus() == ReportStatus.PENDING_REVIEW)
                 .min(Comparator.comparing(Report::getUpdatedAt));
@@ -118,6 +121,7 @@ public class ManagerService {
             longestPendingDays = Duration.between(
                     lp.getUpdatedAt(), OffsetDateTime.now()).toDays();
             longestPendingReport = lp.getNamingKey();
+            longestPendingReportId = lp.getId();
         }
 
         return new EngineerStatsResponse(
@@ -128,17 +132,21 @@ public class ManagerService {
                 total, pending, resubmission,
                 approved, condApproved, totalApproved,
                 rejected, avgReviewHours,
-                longestPendingDays, longestPendingReport
+                longestPendingDays, longestPendingReport,longestPendingReportId
         );
+    }
+
+    public EngineerStatsResponse getEngineerStats(User engineer) {
+        return buildEngineerStats(engineer);
     }
 
     // ── Manager's combined review queue ──
 
-    public org.springframework.data.domain.Page<Report>
-    getManagerQueue(UUID managerId, org.springframework.data.domain.Pageable pageable) {
+    public Page<Report>
+    getManagerQueue(UUID managerId, Pageable pageable) {
         List<UUID> engineerIds = getEngineerIdsForManager(managerId);
         if (engineerIds.isEmpty()) {
-            return org.springframework.data.domain.Page.empty(pageable);
+            return Page.empty(pageable);
         }
         return reportRepository.findByAssignedEngineerIdIn(engineerIds, pageable);
     }

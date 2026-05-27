@@ -181,4 +181,5 @@ export interface EngineerStatsResponse {
   avgReviewHours: number | null;
   longestPendingDays: number | null;
   longestPendingReport: string | null;
+  longestPendingReportId: string | null;
 }
