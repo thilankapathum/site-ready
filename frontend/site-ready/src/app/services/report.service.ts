@@ -71,14 +71,20 @@ export class ReportService {
     return this.http.get<PageResponse<ReportResponse>>(`${this.BASE}/queue/search`, { params });
   }
 
-  exportExcel(filters: Record<string, string>): void {
-    const params = new HttpParams({fromObject: filters});
-    window.open(`${this.BASE}/export/excel?${params.toString()}`, '_blank');
+  exportExcel(filters: Record<string, string>): Observable<Blob> {
+    const params = new HttpParams({ fromObject: filters });
+    return this.http.get(`${this.BASE}/export/excel`, {
+      params,
+      responseType: 'blob'
+    });
   }
 
-  exportCsv(filters: Record<string, string>): void {
-    const params = new HttpParams({fromObject: filters});
-    window.open(`${this.BASE}/export/csv?${params.toString()}`, '_blank');
+  exportCsv(filters: Record<string, string>): Observable<Blob> {
+    const params = new HttpParams({ fromObject: filters });
+    return this.http.get(`${this.BASE}/export/csv`, {
+      params,
+      responseType: 'blob'
+    });
   }
 
   getActiveEngineers(): Observable<AuthResponse[]> {

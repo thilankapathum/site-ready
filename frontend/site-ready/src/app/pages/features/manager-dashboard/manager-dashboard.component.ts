@@ -1,19 +1,21 @@
-import {Component, computed, signal} from '@angular/core';
+import {Component, computed, OnInit, signal} from '@angular/core';
 import {EngineerStatsResponse} from '../../../models/api.models';
 import {ManagerService} from '../../../services/manager.service';
 import {RouterLink} from '@angular/router';
 import {NgClass} from '@angular/common';
+import {AuthService} from '../../../services/auth/auth.service';
 
 @Component({
   selector: 'app-manager-dashboard',
   imports: [
     RouterLink,
-    NgClass
   ],
   templateUrl: './manager-dashboard.component.html',
   styleUrl: './manager-dashboard.component.css'
 })
-export class ManagerDashboardComponent {
+export class ManagerDashboardComponent implements OnInit {
+  user = this.auth.currentUser;
+
   stats   = signal<EngineerStatsResponse[]>([]);
   loading = signal(true);
 
@@ -36,7 +38,7 @@ export class ManagerDashboardComponent {
   teamPending = computed(() => this.stats().reduce((a, e) => a + e.pendingReview, 0));
   teamApproved = computed(() => this.stats().reduce((a, e) => a + e.totalApproved, 0));
 
-  constructor(private managerService: ManagerService) {}
+  constructor(private managerService: ManagerService, private auth: AuthService,) {}
 
   ngOnInit(): void {
     this.managerService.getEngineerStats().subscribe({

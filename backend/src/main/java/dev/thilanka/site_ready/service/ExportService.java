@@ -49,7 +49,7 @@ public class ExportService {
             // Column headers
             String[] headers = {
                     "Site ID", "Project", "RAT", "Version", "Status", "Responsibility",
-                    "Assigned Engineer", "Vendor", "Created At", "Last Updated", "Naming Key"
+                    "Assigned Engineer", "Uploader","Vendor", "Created At", "Last Updated", "Naming Key"
             };
             Row headerRow = sheet.createRow(2);
             for (int i = 0; i < headers.length; i++) {
@@ -76,10 +76,11 @@ public class ExportService {
                 setCellValue(row, 4, r.getCurrentStatus().name());
                 setCellValue(row, 5, r.getCurrentResponsibility().name());
                 setCellValue(row, 6, r.getAssignedEngineer() != null ? r.getAssignedEngineer().getFullName() : "Unassigned");
-                setCellValue(row, 7, r.getCreatedByVendor().getFullName() + " (" + r.getCreatedByVendor().getCompany() + ")");
-                setCellValue(row, 8, r.getCreatedAt() != null ? r.getCreatedAt().format(FMT) : "");
-                setCellValue(row, 9, r.getUpdatedAt() != null ? r.getUpdatedAt().format(FMT) : "");
-                setCellValue(row, 10, r.getNamingKey());
+                setCellValue(row, 7, r.getCreatedByVendor().getFullName());
+                setCellValue(row, 8, r.getCreatedByVendor().getCompany().getName());
+                setCellValue(row, 9, r.getCreatedAt() != null ? r.getCreatedAt().format(FMT) : "");
+                setCellValue(row, 10, r.getUpdatedAt() != null ? r.getUpdatedAt().format(FMT) : "");
+                setCellValue(row, 11, r.getNamingKey());
             }
 
             // Auto-size columns
@@ -93,7 +94,7 @@ public class ExportService {
 
     public byte[] exportCsv(List<Report> reports) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Site ID,Project,RAT,Version,Status,Responsibility,Assigned Engineer,Vendor,Created At,Last Updated,Naming Key\n");
+        sb.append("Site ID,Project,RAT,Version,Status,Responsibility,Assigned Engineer,Uploader,Vendor,Created At,Last Updated,Naming Key\n");
         for (Report r : reports) {
             sb.append(csv(r.getSiteId())).append(",")
                     .append(csv(r.getProject())).append(",")
@@ -103,6 +104,7 @@ public class ExportService {
                     .append(r.getCurrentResponsibility()).append(",")
                     .append(csv(r.getAssignedEngineer() != null ? r.getAssignedEngineer().getFullName() : "Unassigned")).append(",")
                     .append(csv(r.getCreatedByVendor().getFullName())).append(",")
+                    .append(csv(r.getVendorCompany().getName())).append(",")
                     .append(r.getCreatedAt() != null ? r.getCreatedAt().format(FMT) : "").append(",")
                     .append(r.getUpdatedAt() != null ? r.getUpdatedAt().format(FMT) : "").append(",")
                     .append(csv(r.getNamingKey())).append("\n");

@@ -29,6 +29,9 @@ export class SearchComponent implements OnInit {
   engineers = signal<AuthResponse[]>([]);
   user = this.auth.currentUser;
 
+  exportingExcel: boolean = false;
+  exportingCsv: boolean = false;
+
   pageNumbers = computed<number[]>(() => {
     const total = this.totalPages();
     const current = this.page();
@@ -131,21 +134,43 @@ export class SearchComponent implements OnInit {
   }
 
   exportExcel(): void {
-    this.reportService.exportExcel({
-      ...(this.filters.siteId && {siteId: this.filters.siteId}),
-      ...(this.filters.project && {project: this.filters.project}),
-      ...(this.filters.status && {status: this.filters.status}),
-      ...(this.filters.engineerId && {engineerId: this.filters.engineerId}),
+    const filters = this.buildExportFilters();
+    this.exportingExcel = true;
+    this.reportService.exportExcel(filters).subscribe(blob => {
+      this.triggerDownload(blob, 'ssv-reports.xlsx',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      this.exportingExcel = false;
     });
   }
 
   exportCsv(): void {
-    this.reportService.exportCsv({
+    const filters = this.buildExportFilters();
+    this.reportService.exportCsv(filters).subscribe(blob => {
+      this.exportingCsv = true
+      this.triggerDownload(blob, 'ssv-reports.csv', 'text/csv');
+      this.exportingCsv = false;
+    });
+  }
+
+  private buildExportFilters(): Record<string, string> {
+    return {
       ...(this.filters.siteId && {siteId: this.filters.siteId}),
       ...(this.filters.project && {project: this.filters.project}),
+      ...(this.filters.rat && {rat: this.filters.rat}),
       ...(this.filters.status && {status: this.filters.status}),
       ...(this.filters.engineerId && {engineerId: this.filters.engineerId}),
-    });
+    };
+  }
+
+  private triggerDownload(blob: Blob, filename: string, mimeType: string): void {
+    const url = URL.createObjectURL(new Blob([blob], {type: mimeType}));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   badge(s: string): string {
