@@ -236,7 +236,34 @@ public class ManagerService {
                 .entrySet().stream()
                 .map(entry -> new Breakdown(entry.getKey(), entry.getValue()))
                 .toList();
-        return new PendingBreakdown(versions, rats, vendors);
+        return new PendingBreakdown(versions, rats, vendors,null);
+    }
+
+    public PendingBreakdown vendorPendingBreakdown(User vendor){
+        List<Report> reports = reportRepository.findByCreatedByVendorId(vendor.getId());
+
+        List<Report> pending = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.RESUBMISSION_REQUIRED).toList();
+
+        List<Breakdown> versions = pending.stream()
+                .collect(Collectors.groupingBy(Report::getCurrentVersion, Collectors.counting()))
+                .entrySet().stream()
+                .map(entry -> new Breakdown("V" + entry.getKey(), entry.getValue()))
+                .toList();
+
+        List<Breakdown> rats = pending.stream()
+                .collect(Collectors.groupingBy(Report::getRat, Collectors.counting()))
+                .entrySet().stream()
+                .map(entry -> new Breakdown(entry.getKey(), entry.getValue()))
+                .toList();
+
+        List<Breakdown> engineers = pending.stream()
+                .collect(Collectors.groupingBy(
+                        r -> r.getAssignedEngineer() != null ? r.getAssignedEngineer().getFullName() : "Engineer Unassigned", Collectors.counting()
+                ))
+                .entrySet().stream()
+                .map(entry -> new Breakdown(entry.getKey(), entry.getValue()))
+                .toList();
+        return new PendingBreakdown(versions, rats, null,engineers);
     }
 
     private Integer computePercentile(int rank, int total) {

@@ -17,10 +17,11 @@ services:
       - ssv-net-public
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost/health" ]
-      interval: 30s
+      test: [ "CMD-SHELL", "curl -fs http://localhost:80/health || exit 1" ]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 10s
 
   frontend:
     build:
@@ -31,10 +32,11 @@ services:
       - ssv-net-public
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost" ]
-      interval: 30s
+      test: [ "CMD-SHELL", "curl -f http://localhost/ || exit 1" ]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 5s
 
   api:
     build:
@@ -67,11 +69,10 @@ services:
       - ssv-net
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
-      interval: 30s
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/actuator/health" ]
+      interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 40s
 
   postgres:
     image: postgres:17-alpine
@@ -119,7 +120,7 @@ services:
       - pgadmin:/var/lib/pgadmin
     healthcheck:
       test: [ "CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost/misc/ping').read()" ]
-      interval: 30s
+      interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s

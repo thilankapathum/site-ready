@@ -204,5 +204,6 @@ export interface Breakdown{
 export interface PendingBreakdown{
   versions: Breakdown[],
   rats: Breakdown[],
-  vendors: Breakdown[]
+  vendors?: Breakdown[],
+  engineers?: Breakdown[]
 }

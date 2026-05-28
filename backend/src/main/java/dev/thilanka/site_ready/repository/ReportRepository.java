@@ -33,6 +33,7 @@ public interface ReportRepository extends JpaRepository<Report, UUID> , JpaSpeci
 
     // Vendor dashboard — reports I created
     Page<Report> findByCreatedByVendorId(UUID vendorId, Pageable pageable);
+    List<Report> findByCreatedByVendorId(UUID vendorId);
 
     // Search / export — flexible filters
     @Query("""

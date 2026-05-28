@@ -41,13 +41,15 @@ management:
         include: health,info
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: never   # don’t leak DB status, etc.
+  server:
+    port: 9090
 
 # App-specific config
 app:
   jwt:
     secret: ${JWT_SECRET:S27Dq7XiSMWkQgjlBNiuBt1lI2chlhkklugAweVwWik}
-    expiry-ms: ${JWT_EXPIRY_MS:86400000}
+    expiry-ms: ${JWT_EXPIRY_MS:7200000}
 
   minio:
     endpoint: ${MINIO_ENDPOINT:http://localhost:9000}

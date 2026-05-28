@@ -347,6 +347,99 @@
           </div>
         </div>
       }
+
+      @if (isVendor() && vendorBreakdowns()) {
+        <div class="card bg-base-100 border border-base-300">
+          <div class="card-body p-4 gap-2">
+
+            <div>
+              <h3 class="text-xs text-base-content/60 font-medium uppercase tracking-wide">
+                Pending Resubmission Breakdown
+              </h3>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-semibold mb-1">
+                <span>VERSIONS</span>
+                <span class="text-base-content/50">{{ getGroupTotal(vendorBreakdowns()?.versions) }} Total</span>
+              </div>
+              <div class="w-full h-2.5 bg-base-200 rounded-full flex overflow-hidden mb-2">
+                @for (v of vendorBreakdowns()?.versions; track v.label; let i = $index) {
+                  <div
+                    [style.width.%]="(v.count / getGroupTotal(vendorBreakdowns()?.versions)) * 100"
+                    [style.background-color]="getVersionColor(i)"
+                    class="h-full transition-all duration-500">
+                  </div>
+                }
+              </div>
+              <div class="flex flex-wrap gap-x-4 gap-y-1">
+                @for (v of vendorBreakdowns()?.versions; track v.label; let i = $index) {
+                  <div class="flex items-center gap-1 text-xs">
+                    <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="getVersionColor(i)"></span>
+                    <span class="text-base-content/70 font-medium">{{ v.label }}</span>
+                    <span class="text-base-content/40">({{ v.count }})</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="border-t border-base-200/60 my-0.5"></div>
+
+            <div>
+              <div class="flex justify-between text-xs font-semibold mb-1">
+                <span>RAT TYPES</span>
+                <span class="text-base-content/50">{{ getGroupTotal(vendorBreakdowns()?.rats) }} Total</span>
+              </div>
+              <div class="w-full h-2.5 bg-base-200 rounded-full flex overflow-hidden mb-2">
+                @for (r of vendorBreakdowns()?.rats; track r.label; let i = $index) {
+                  <div
+                    [style.width.%]="(r.count / getGroupTotal(vendorBreakdowns()?.rats)) * 100"
+                    [style.background-color]="getRatColor(i)"
+                    class="h-full transition-all duration-500">
+                  </div>
+                }
+              </div>
+              <div class="flex flex-wrap gap-x-4 gap-y-1">
+                @for (r of vendorBreakdowns()?.rats; track r.label; let i = $index) {
+                  <div class="flex items-center gap-1 text-xs">
+                    <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="getRatColor(i)"></span>
+                    <span class="text-base-content/70 font-medium">{{ r.label }}</span>
+                    <span class="text-base-content/40">({{ r.count }})</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="border-t border-base-200/60 my-0.5"></div>
+
+            <div>
+              <div class="flex justify-between text-xs font-semibold mb-1">
+                <span>ENGINEERS</span>
+                <span class="text-base-content/50">{{ getGroupTotal(vendorBreakdowns()?.engineers) }} Total</span>
+              </div>
+              <div class="w-full h-2.5 bg-base-200 rounded-full flex overflow-hidden mb-2">
+                @for (eng of vendorBreakdowns()?.engineers; track eng.label; let i = $index) {
+                  <div
+                    [style.width.%]="(eng.count / getGroupTotal(vendorBreakdowns()?.engineers)) * 100"
+                    [style.background-color]="getVendorColor(i)"
+                    class="h-full transition-all duration-500">
+                  </div>
+                }
+              </div>
+              <div class="flex flex-wrap gap-x-4 gap-y-1">
+                @for (eng of vendorBreakdowns()?.engineers; track eng.label; let i = $index) {
+                  <div class="flex items-center gap-1 text-xs min-w-[45%] max-w-full">
+                    <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="getVendorColor(i)"></span>
+                    <span class="text-base-content/70 font-medium truncate" [title]="eng.label">{{ eng.label }}</span>
+                    <span class="text-base-content/40 shrink-0">({{ eng.count }})</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+          </div>
+        </div>
+      }
     </div>
   </div>
 </div>
