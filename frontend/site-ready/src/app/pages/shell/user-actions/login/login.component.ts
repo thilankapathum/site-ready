@@ -1,6 +1,6 @@
 import {Component, signal} from '@angular/core';
 import {AuthService} from '../../../../services/auth/auth.service';
-import {Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {FormsModule} from '@angular/forms';
 
 @Component({
@@ -13,14 +13,19 @@ import {FormsModule} from '@angular/forms';
   styleUrl: './login.component.css'
 })
 export class LoginComponent {
-  email    = '';
+  private returnUrl = '/dashboard';
+  email = '';
   password = '';
-  loading  = signal(false);
-  error    = signal('');
+  loading = signal(false);
+  error = signal('');
   showPassword = signal(false);
 
-  constructor(private auth: AuthService, private router: Router) {
+  constructor(private auth: AuthService,
+              private router: Router,
+              private route: ActivatedRoute) {
     if (this.auth.isLoggedIn()) this.router.navigate(['/dashboard']);
+    // Capture return URL from query params set by the session expired modal
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
   }
 
   login(): void {
@@ -31,15 +36,15 @@ export class LoginComponent {
     }
     this.loading.set(true);
     this.auth.login(this.email, this.password).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => this.router.navigateByUrl(this.returnUrl),  // ← land back where they were
       error: err => {
-        if (err.status === 403) {
-          this.error.set(err.error?.detail ?? 'Your account is not activated. Contact the system administrator.');
-        } else if (err.status === 401) {
-          this.error.set('Invalid email or password.');
-        } else {
-          this.error.set(err.error?.detail ?? 'Login failed. Please try again.');
-        }
+        this.error.set(
+          err.status === 403
+            ? err.error?.detail ?? 'Account not activated. Contact administrator.'
+            : err.status === 401
+              ? 'Invalid email or password.'
+              : err.error?.detail ?? 'Login failed. Please try again.'
+        );
         this.loading.set(false);
       },
     });

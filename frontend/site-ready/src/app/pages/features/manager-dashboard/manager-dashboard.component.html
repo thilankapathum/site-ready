@@ -77,7 +77,7 @@
             </thead>
             <tbody>
               @for (e of stats(); track e.engineerId) {
-                <tr class="hover:bg-base-50"
+                <tr class="bg-opacity-5 hover:bg-base-200/80"
                     [class.bg-error]="e.longestPendingDays !== null && e.longestPendingDays > 7">
                 <td>
                   <div>

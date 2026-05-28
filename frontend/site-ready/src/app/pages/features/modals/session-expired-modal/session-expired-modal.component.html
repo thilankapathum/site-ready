@@ -1,0 +1,55 @@
+@if (sessionExpired.isExpired()) {
+  <!-- Backdrop -->
+  <div class="fixed inset-0 z-50 flex items-center justify-center">
+    <!-- Semi-transparent blur overlay -->
+    <div class="absolute inset-0 bg-base-content/40 backdrop-blur-sm"></div>
+
+    <!-- Modal -->
+    <div class="relative z-10 bg-base-100 rounded-2xl shadow-2xl
+                    border border-base-300 w-full max-w-sm mx-4 p-8
+                    flex flex-col items-center text-center gap-4
+                    animate-[fadeInScale_0.2s_ease-out]">
+
+      <!-- Icon -->
+      <div class="w-16 h-16 rounded-full bg-warning/10
+                      flex items-center justify-center">
+        <svg class="w-8 h-8 text-warning" fill="none"
+             stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 15v2m0 0v2m0-2h2m-2 0H10m2-11a7 7 0 00-7 7
+                       h2a5 5 0 0110 0h2a7 7 0 00-7-7z"/>
+        </svg>
+      </div>
+
+      <!-- Text -->
+      <div>
+        <h2 class="text-lg font-bold mb-1">Session Expired</h2>
+        <p class="text-sm text-base-content/60">
+          Your session has timed out.
+          Please log in again to continue.
+        </p>
+      </div>
+
+      <!-- Countdown bar -->
+      <div class="w-full">
+        <div class="flex items-center justify-between text-xs
+                        text-base-content/50 mb-1.5">
+          <span>Redirecting to login…</span>
+          <span class="font-mono font-semibold">{{ countdown() }}s</span>
+        </div>
+        <div class="w-full bg-base-300 rounded-full h-1.5">
+          <div class="bg-warning h-1.5 rounded-full transition-all duration-1000"
+               [style.width.%]="(countdown() / totalSeconds) * 100">
+          </div>
+        </div>
+      </div>
+
+      <!-- Button -->
+      <button class="btn btn-primary w-full" (click)="goToLogin()">
+        Log In Now
+      </button>
+
+    </div>
+  </div>
+}
