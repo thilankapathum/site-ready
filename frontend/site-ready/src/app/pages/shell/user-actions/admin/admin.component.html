@@ -194,7 +194,7 @@
                       <p class="text-xs text-base-content/50 truncate max-w-xs">{{ c.notes }}</p>
                     }
                   </td>
-                  <td><span class="badge badge-ghost font-mono">{{ c.shortName }}</span></td>
+                  <td><span class="badge badge-ghost ">{{ c.shortName }}</span></td>
                   <td>
                     <span [class]="typeBadge(c.type)">{{ c.type }}</span>
                   </td>
@@ -229,56 +229,155 @@
   }
 
   @if (activeTab() === 'assignments') {
-    <div class="space-y-4">
+    <div class="space-y-2">
       <p class="text-sm text-base-content/60">
-        Assign engineers to managers and admins. Each engineer can be assigned to one or more managers.
+        Select a supervisor from the left column to configure their assigned engineering team mapping.
       </p>
 
-      @for (mgr of managers(); track mgr.userId) {
-        <div class="card bg-white border border-base-300 shadow-sm">
-          <div class="card-body p-5">
-            <div class="flex items-center justify-between mb-3">
-              <div>
-                <p class="font-bold text-sm">{{ mgr.fullName }}</p>
-                <span class="badge badge-xs"
-                      [class]="mgr.role === 'ADMIN' ? 'badge-primary' : 'badge-warning badge-outline'">
-                {{ mgr.role }}
-              </span>
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-start pt-2">
+
+        <div class="md:col-span-4 card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+          <div class="bg-base-200/50 px-4 py-3 border-b border-base-300">
+            <span class="text-xs uppercase tracking-wider font-bold text-base-content/60">Supervisors & Managers</span>
+          </div>
+          <div class="divide-y divide-base-200 max-h-[550px] overflow-y-auto">
+            @for (mgr of managers(); track mgr.userId) {
+              <button type="button"
+                      class="w-full text-left px-4 py-3 flex items-center justify-between transition-colors hover:bg-base-50 bg-opacity-10"
+                      [class.bg-primary]="selectedManagerId() === mgr.userId"
+                [class.border-l-4]="selectedManagerId() === mgr.userId"
+                [class.border-primary]="selectedManagerId() === mgr.userId"
+                (click)="selectedManagerId.set(mgr.userId)">
+              <div class="min-w-0 pr-2">
+                <p class="font-semibold text-sm truncate" [class.text-primary]="selectedManagerId() === mgr.userId">
+                  {{ mgr.fullName }}
+                </p>
+                <p class="text-xs text-base-content/50 truncate">{{ mgr.email }}</p>
               </div>
-              <button class="btn btn-primary btn-sm"
-                      (click)="saveAssignments(mgr.userId)"
-                      [disabled]="savingAssignment()">
-                @if (savingAssignment()) {
-                  <span class="loading loading-spinner loading-xs"></span>
-                }
-                Save
+              <div class="flex items-center gap-2 shrink-0">
+                  <span class="badge badge-xs px-2 py-1.5 font-semibold "
+                        [class]="mgr.role === 'ADMIN' ? 'badge-primary text-white' : 'badge-neutral badge-outline'">
+                    {{ mgr.role }}
+                  </span>
+                <span class="badge badge-ghost badge-sm font-semibold rounded-full min-w-[20px]">
+                    {{ assignmentMap().get(mgr.userId)?.size ?? 0 }}
+                  </span>
+              </div>
               </button>
-            </div>
-
-            <!-- Engineer checkboxes -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              @for (eng of allEngineers(); track eng.userId) {
-                <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg
-                hover:bg-base-100 border border-base-200">
-                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
-                         [checked]="isAssigned(mgr.userId, eng.userId)"
-                         (change)="toggleAssignment(mgr.userId, eng.userId, $event)" />
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium truncate">{{ eng.fullName }}</p>
-                    <p class="text-xs text-base-content/50 truncate">{{ eng.companyName }}</p>
-                  </div>
-                </label>
-              }
-            </div>
-
-            @if (allEngineers().length === 0) {
-              <p class="text-sm text-base-content/50 text-center py-4">
-                No active engineers found.
-              </p>
+            }
+            @if (managers().length === 0) {
+              <div class="p-6 text-center text-sm text-base-content/40">No managers found.</div>
             }
           </div>
         </div>
-      }
+
+        <div class="md:col-span-8 space-y-4">
+          @if (selectedManager()) {
+            <div class="card bg-base-100 border border-base-300 shadow-sm">
+              <div class="card-body p-4 border-b border-base-200 bg-base-50/50 flex flex-row items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-base text-base-content">{{ selectedManager()?.fullName }}</h3>
+                    <span class="text-base-content/30">|</span>
+                    <span class="text-xs text-base-content/60 font-medium">Team Configuration Matrix</span>
+                  </div>
+                  <p class="text-xs text-base-content/50 mt-0.5">{{ selectedManager()?.email }}</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <input type="text"
+                         placeholder="Filter engineers..."
+                         class="input input-bordered input-xs w-40 sm:w-48"
+                         [ngModel]="engineerSearchQuery()"
+                         (ngModelChange)="engineerSearchQuery.set($event)"/>
+
+                  <button class="btn btn-primary btn-xs px-3 gap-1 shadow-sm text-white"
+                          (click)="saveAssignments(selectedManager()!.userId)"
+                          [disabled]="savingAssignment()">
+                    @if (savingAssignment()) { <span class="loading loading-spinner loading-xs"></span> }
+                    Apply Changes
+                  </button>
+                </div>
+              </div>
+
+              <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[480px] overflow-y-auto">
+
+                <div class="flex flex-col">
+                  <div class="flex items-center justify-between mb-2 px-1">
+                    <span class="text-xs font-bold text-success uppercase tracking-wider flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-success"></span>
+                      Assigned Team ({{ assignedEngineers().length }})
+                    </span>
+                  </div>
+
+                  <div class="bg-base-50 border border-base-200 rounded-xl p-2 flex-1 min-h-[150px] space-y-1.5 overflow-y-auto">
+                    @for (eng of assignedEngineers(); track eng.userId) {
+                      <div class="flex items-center justify-between p-2 bg-base-100 border border-success/20 shadow-sm rounded-lg hover:border-success/40 transition-all">
+                        <div class="min-w-0 pr-2">
+                          <p class="text-xs font-semibold text-base-content truncate">{{ eng.fullName }}</p>
+                          <p class="text-[10px] text-base-content/40 truncate">{{ eng.companyName }}</p>
+                        </div>
+                        <button type="button"
+                                class="btn btn-error btn-outline btn-square btn-xs rounded-md"
+                                title="Remove assignment"
+                                (click)="toggleAssignment(selectedManager()!.userId, eng.userId, false)">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    }
+                    @if (assignedEngineers().length === 0) {
+                      <div class="text-center py-8 text-xs text-base-content/40 border border-dashed border-base-300 rounded-lg bg-base-100/50">
+                        No team members linked.
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <div class="flex flex-col">
+                  <div class="flex items-center justify-between mb-2 px-1">
+                    <span class="text-xs font-bold text-base-content/60 uppercase tracking-wider flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-base-content/30"></span>
+                      Available Pool ({{ unassignedEngineers().length }})
+                    </span>
+                  </div>
+
+                  <div class="bg-base-50 border border-base-200 rounded-xl p-2 flex-1 min-h-[150px] space-y-1.5 overflow-y-auto">
+                    @for (eng of unassignedEngineers(); track eng.userId) {
+                      <div class="flex items-center justify-between p-2 bg-base-100 border border-base-200 shadow-sm rounded-lg hover:border-primary/30 transition-all">
+                        <div class="min-w-0 pr-2">
+                          <p class="text-xs font-semibold text-base-content/80 truncate">{{ eng.fullName }}</p>
+                          <p class="text-[10px] text-base-content/40 truncate">{{ eng.companyName }}</p>
+                        </div>
+                        <button type="button"
+                                class="btn btn-primary btn-square btn-xs rounded-md text-white"
+                                title="Add to team"
+                                (click)="toggleAssignment(selectedManager()!.userId, eng.userId, true)">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                          </svg>
+                        </button>
+                      </div>
+                    }
+                    @if (unassignedEngineers().length === 0) {
+                      <div class="text-center py-8 text-xs text-base-content/40 border border-dashed border-base-300 rounded-lg bg-base-100/50">
+                        All engineers are assigned.
+                      </div>
+                    }
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          } @else {
+            <div class="card bg-base-100 border border-base-300 p-12 text-center text-sm text-base-content/40 shadow-sm">
+              Please select a supervisor from the list on the left to review team assignments.
+            </div>
+          }
+        </div>
+
+      </div>
     </div>
   }
 </div>

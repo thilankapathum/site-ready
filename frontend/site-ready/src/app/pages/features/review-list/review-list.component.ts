@@ -63,37 +63,42 @@ export class ReviewListComponent implements OnInit {
       : this.reportService.getMyReports(this.page(), this.pageSize);
 
     if (filter === 'APPROVED') {
-      // Queries the contextual queue search endpoint
+      // 1. Fetch EVERYTHING (large size) to handle merging and pagination on the client-side
       const approved$ = this.reportService.searchQueue({
         status: 'APPROVED',
-        page: this.page(),
-        size: this.pageSize
+        page: 0,
+        size: 1000
       });
       const conditional$ = this.reportService.searchQueue({
         status: 'CONDITIONALLY_APPROVED',
         page: 0,
-        size: 200 // Fetch all conditional items to merge
+        size: 1000
       });
 
       forkJoin({ approved: approved$, conditional: conditional$ }).subscribe({
         next: results => {
-          const approvedItems   = results.approved.content;
-          const conditionalItems = results.conditional.content;
+          const approvedItems = results.approved.content || [];
+          const conditionalItems = results.conditional.content || [];
 
-          const merged = [...approvedItems, ...conditionalItems]
+          // 2. Combine and Sort the entire dataset
+          const allMerged = [...approvedItems, ...conditionalItems]
             .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
-          const total = (results.approved.totalElements ?? results.approved.page?.totalElements ?? 0)
-            + (results.conditional.totalElements ?? results.conditional.page?.totalElements ?? 0);
+          const totalItems = allMerged.length;
+          this.total.set(totalItems);
 
-          this.reports.set(merged);
-          this.total.set(total);
-          this.totalPages.set(results.approved.totalPages ?? results.approved.page?.totalPages ?? 1);
+          // 3. Compute accurate total pages client-side
+          this.totalPages.set(Math.ceil(totalItems / this.pageSize));
+
+          // 4. Extract ONLY the items matching the current page slice
+          const startIndex = this.page() * this.pageSize;
+          const paginatedSlice = allMerged.slice(startIndex, startIndex + this.pageSize);
+
+          this.reports.set(paginatedSlice);
           this.loading.set(false);
         },
         error: () => this.loading.set(false),
       });
-
     } else {
       // Use the 'All' stream or hit our scoped filter endpoint
       const request$ = filter === 'all'

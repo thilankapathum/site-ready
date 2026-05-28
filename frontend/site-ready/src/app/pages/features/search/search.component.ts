@@ -189,13 +189,6 @@ export class SearchComponent implements OnInit {
     this.router.navigate(['/reports', r.id]);
   }
 
-  // isAssignedEngineer = computed(() => {
-  //   const r = this.report();
-  //   const u = this.user();
-  //   return u !== null && r !== null && this.isEngineer() &&
-  //     r.assignedEngineerId === u.userId;
-  // });
-
   isCurrentUser(userId: string) {
     const u = this.user();
     return u !== null && userId === u.userId;

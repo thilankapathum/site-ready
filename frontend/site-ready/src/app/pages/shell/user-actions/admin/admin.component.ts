@@ -17,24 +17,57 @@ export class AdminComponent implements OnInit {
   activeTab = signal<'users' | 'companies' | 'assignments'>('users');
 
   // Users
-  users   = signal<AuthResponse[]>([]);
+  users = signal<AuthResponse[]>([]);
 
   get pendingUsers(): number {
     return this.users().filter(u => !u.active).length;
   }
 
   // Companies
-  companies      = signal<CompanyResponse[]>([]);
-  showForm       = signal(false);
+  companies = signal<CompanyResponse[]>([]);
+  showForm = signal(false);
   editingCompany = signal<CompanyResponse | null>(null);
-  saving         = signal(false);
-  formError      = signal('');
+  saving = signal(false);
+  formError = signal('');
 
-  managers      = signal<AuthResponse[]>([]);
-  allEngineers  = signal<AuthResponse[]>([]);
-// Map of managerId → Set of assigned engineerIds
+  // Assignments State Variables
+  managers = signal<AuthResponse[]>([]);
+  allEngineers = signal<AuthResponse[]>([]);
   assignmentMap = signal<Map<string, Set<string>>>(new Map());
   savingAssignment = signal(false);
+
+  // UX Optimization: Tracks the manager currently selected in the master list
+  selectedManagerId = signal<string | null>(null);
+  engineerSearchQuery = signal<string>('');
+
+  // Computed properties to find the currently active manager context
+  selectedManager = computed(() => {
+    const id = this.selectedManagerId();
+    return this.managers().find(m => m.userId === id) || null;
+  });
+
+  // Dynamic filter splitting engineers into two lists: Assigned vs Unassigned
+  assignedEngineers = computed(() => {
+    const managerId = this.selectedManagerId();
+    if (!managerId) return [];
+    const assignedSet = this.assignmentMap().get(managerId);
+
+    return this.allEngineers().filter(eng =>
+      assignedSet?.has(eng.userId) &&
+      eng.fullName.toLowerCase().includes(this.engineerSearchQuery().toLowerCase())
+    );
+  });
+
+  unassignedEngineers = computed(() => {
+    const managerId = this.selectedManagerId();
+    if (!managerId) return [];
+    const assignedSet = this.assignmentMap().get(managerId);
+
+    return this.allEngineers().filter(eng =>
+      (!assignedSet || !assignedSet.has(eng.userId)) &&
+      eng.fullName.toLowerCase().includes(this.engineerSearchQuery().toLowerCase())
+    );
+  });
 
   form: CompanyRequest & { country: string; contactEmail: string; notes: string } = {
     name: '', shortName: '', type: 'VENDOR', country: '', contactEmail: '', notes: ''
@@ -60,12 +93,12 @@ export class AdminComponent implements OnInit {
     this.companyService.listAll().subscribe(c => this.companies.set(c));
   }
 
-  // ── User actions ──
+  // ... [Keep existing User and Company actions unchanged] ...
 
   changeRole(user: AuthResponse, role: UserRole): void {
     this.adminService.setRole(user.userId, role).subscribe({
       next: updated => this.users.update(list =>
-        list.map(u => u.userId === updated.userId ? { ...u, role: updated.role } : u)
+        list.map(u => u.userId === updated.userId ? {...u, role: updated.role} : u)
       ),
     });
   }
@@ -81,16 +114,14 @@ export class AdminComponent implements OnInit {
   toggleActive(user: AuthResponse, active: boolean): void {
     this.adminService.setActive(user.userId, active).subscribe({
       next: updated => this.users.update(list =>
-        list.map(u => u.userId === updated.userId ? { ...u, active: updated.active } : u)
+        list.map(u => u.userId === updated.userId ? {...u, active: updated.active} : u)
       ),
     });
   }
 
-  // ── Company actions ──
-
   openCreateForm(): void {
     this.editingCompany.set(null);
-    this.form = { name: '', shortName: '', type: 'VENDOR', country: '', contactEmail: '', notes: '' };
+    this.form = {name: '', shortName: '', type: 'VENDOR', country: '', contactEmail: '', notes: ''};
     this.formError.set('');
     this.showForm.set(true);
   }
@@ -149,10 +180,18 @@ export class AdminComponent implements OnInit {
   loadManagerData(): void {
     this.managerService.getManagers().subscribe(mgrs => {
       this.managers.set(mgrs);
-      // Load assignments for each manager
+
+      // Auto-select the first manager to establish immediate context
+      if (mgrs.length > 0 && !this.selectedManagerId()) {
+        this.selectedManagerId.set(mgrs[0].userId);
+      }
+
       const map = new Map<string, Set<string>>();
       let pending = mgrs.length;
-      if (pending === 0) { this.assignmentMap.set(map); return; }
+      if (pending === 0) {
+        this.assignmentMap.set(map);
+        return;
+      }
       for (const mgr of mgrs) {
         this.managerService.getEngineersForManager(mgr.userId).subscribe(engs => {
           map.set(mgr.userId, new Set(engs.map(e => e.userId)));
@@ -161,11 +200,11 @@ export class AdminComponent implements OnInit {
         });
       }
     });
-    // Load all active engineers for the checkboxes
+
     this.adminService.listUsers().subscribe(users => {
       this.allEngineers.set(
         users.filter(u => u.role === 'ENGINEER' && u.active)
-          .map(u => ({ ...u, companyName: u.message ?? '' }))
+          .map(u => ({...u, companyName: u.companyName || u.message || 'Independent'}))
       );
     });
   }
@@ -174,11 +213,10 @@ export class AdminComponent implements OnInit {
     return this.assignmentMap().get(managerId)?.has(engineerId) ?? false;
   }
 
-  toggleAssignment(managerId: string, engineerId: string, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+  toggleAssignment(managerId: string, engineerId: string, isChecked: boolean): void {
     const map = new Map(this.assignmentMap());
     const set = new Set(map.get(managerId) ?? []);
-    if (checked) set.add(engineerId); else set.delete(engineerId);
+    if (isChecked) set.add(engineerId); else set.delete(engineerId);
     map.set(managerId, set);
     this.assignmentMap.set(map);
   }
