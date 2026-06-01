@@ -109,3 +109,7 @@ a.text-primary {
 .title-font {
   font-family: Oswald,sans-serif;
 }
+
+.animate-fade-in {
+  animation: pageFadeIn 0.2s ease-in-out;
+}
