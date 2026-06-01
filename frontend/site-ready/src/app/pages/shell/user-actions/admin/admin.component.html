@@ -1,11 +1,11 @@
-<div class="space-y-6">
-  <div>
+<div class="flex flex-col h-[calc(100vh-10rem)] lg:h-[calc(100vh-7rem)] overflow-hidden">
+
+  <div class="shrink-0 pb-4">
     <h1 class="text-2xl font-bold">Administration</h1>
     <p class="text-base-content/60 text-sm mt-1">Manage companies and user accounts.</p>
   </div>
 
-  <!-- Tab switcher -->
-  <div class="tabs tabs-boxed bg-base-200 w-fit">
+  <div class="tabs tabs-boxed bg-base-200 w-fit shrink-0 mb-4">
     <button class="tab" [class.tab-active]="activeTab() === 'users'"
             (click)="activeTab.set('users')">User Management</button>
     <button class="tab" [class.tab-active]="activeTab() === 'companies'"
@@ -14,12 +14,11 @@
             (click)="activeTab.set('assignments')">Engineer Assignments</button>
   </div>
 
-  <!-- ══ USER MANAGEMENT ══ -->
   @if (activeTab() === 'users') {
-    <div class="card bg-white border border-base-300 shadow-sm overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="table">
-          <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/60">
+    <div class="flex-1 min-h-0 card bg-white border border-base-300 overflow-hidden flex flex-col">
+      <div class="flex-1 overflow-y-auto overflow-x-auto">
+        <table class="table table-pin-rows">
+          <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/60 z-10">
           <tr>
             <th>User</th>
             <th>Company</th>
@@ -70,7 +69,6 @@
                 </td>
                 <td>
                   <div class="flex items-center gap-2">
-                    <!-- Company assignment -->
                     <select class="select select-bordered select-xs"
                             [ngModel]="u.companyId"
                             (ngModelChange)="changeCompany(u, $event)"
@@ -93,18 +91,16 @@
           </tbody>
         </table>
       </div>
-      <div class="px-4 py-2 border-t border-base-200 text-xs text-base-content/40">
+      <div class="px-4 py-2 border-t border-base-200 text-xs text-base-content/40 shrink-0 bg-base-50">
         {{ users().length }} user{{ users().length !== 1 ? 's' : '' }} ·
         {{ pendingUsers }} pending activation
       </div>
     </div>
   }
 
-  <!-- ══ COMPANY MANAGEMENT ══ -->
   @if (activeTab() === 'companies') {
-    <div class="space-y-4">
-      <!-- Add company button -->
-      <div class="flex justify-end">
+    <div class="flex-1 min-h-0 flex flex-col space-y-4">
+      <div class="flex justify-end shrink-0">
         <button class="btn btn-primary btn-sm gap-2" (click)="openCreateForm()">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -113,26 +109,21 @@
         </button>
       </div>
 
-      <!-- Create / Edit form -->
       @if (showForm()) {
-        <div class="card bg-white border border-primary/30 shadow-sm">
+        <div class="card bg-white border border-primary/30 shrink-0">
           <div class="card-body p-5 gap-4">
             <h3 class="font-bold">{{ editingCompany() ? 'Edit Company' : 'New Company' }}</h3>
-
             @if (formError()) {
               <div class="alert alert-error text-sm py-2">{{ formError() }}</div>
             }
-
             <div class="grid grid-cols-2 gap-4">
               <div class="form-control">
                 <label class="label"><span class="label-text text-sm font-medium">Company Name <span class="text-error">*</span></span></label>
-                <input type="text" class="input input-bordered input-sm"
-                       placeholder="e.g. ZTE Corporation" [(ngModel)]="form.name" />
+                <input type="text" class="input input-bordered input-sm" placeholder="e.g. ZTE Corporation" [(ngModel)]="form.name" />
               </div>
               <div class="form-control">
                 <label class="label"><span class="label-text text-sm font-medium">Short Name <span class="text-error">*</span></span></label>
-                <input type="text" class="input input-bordered input-sm"
-                       placeholder="e.g. ZTE" [(ngModel)]="form.shortName" />
+                <input type="text" class="input input-bordered input-sm" placeholder="e.g. ZTE" [(ngModel)]="form.shortName" />
               </div>
               <div class="form-control">
                 <label class="label"><span class="label-text text-sm font-medium">Type <span class="text-error">*</span></span></label>
@@ -144,21 +135,17 @@
               </div>
               <div class="form-control">
                 <label class="label"><span class="label-text text-sm font-medium">Country</span></label>
-                <input type="text" class="input input-bordered input-sm"
-                       placeholder="e.g. China" [(ngModel)]="form.country" />
+                <input type="text" class="input input-bordered input-sm" placeholder="e.g. China" [(ngModel)]="form.country" />
               </div>
               <div class="form-control">
                 <label class="label"><span class="label-text text-sm font-medium">Contact Email</span></label>
-                <input type="email" class="input input-bordered input-sm"
-                       placeholder="contact@company.com" [(ngModel)]="form.contactEmail" />
+                <input type="email" class="input input-bordered input-sm" placeholder="contact@company.com" [(ngModel)]="form.contactEmail" />
               </div>
               <div class="form-control col-span-2">
                 <label class="label"><span class="label-text text-sm font-medium">Notes</span></label>
-                <textarea class="textarea textarea-bordered textarea-sm"
-                          placeholder="Optional notes…" [(ngModel)]="form.notes"></textarea>
+                <textarea class="textarea textarea-bordered textarea-sm" placeholder="Optional notes…" [(ngModel)]="form.notes"></textarea>
               </div>
             </div>
-
             <div class="flex gap-2 pt-2">
               <button class="btn btn-primary btn-sm" (click)="saveCompany()" [disabled]="saving()">
                 @if (saving()) { <span class="loading loading-spinner loading-xs"></span> }
@@ -170,11 +157,10 @@
         </div>
       }
 
-      <!-- Companies table -->
-      <div class="card bg-white border border-base-300 shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="table">
-            <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/60">
+      <div class="flex-1 min-h-0 card bg-white border border-base-300 overflow-hidden flex flex-col">
+        <div class="flex-1 overflow-y-auto overflow-x-auto">
+          <table class="table table-pin-rows">
+            <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/60 z-10">
             <tr>
               <th>Company</th>
               <th>Short Name</th>
@@ -194,10 +180,8 @@
                       <p class="text-xs text-base-content/50 truncate max-w-xs">{{ c.notes }}</p>
                     }
                   </td>
-                  <td><span class="badge badge-ghost ">{{ c.shortName }}</span></td>
-                  <td>
-                    <span [class]="typeBadge(c.type)">{{ c.type }}</span>
-                  </td>
+                  <td><span class="badge badge-ghost">{{ c.shortName }}</span></td>
+                  <td><span [class]="typeBadge(c.type)">{{ c.type }}</span></td>
                   <td class="text-sm">{{ c.country ?? '—' }}</td>
                   <td class="text-xs text-base-content/70">{{ c.contactEmail ?? '—' }}</td>
                   <td>
@@ -211,11 +195,9 @@
                     <div class="flex gap-1">
                       <button class="btn btn-ghost btn-xs" (click)="openEditForm(c)">Edit</button>
                       @if (c.active) {
-                        <button class="btn btn-error btn-xs btn-outline"
-                                (click)="toggleCompanyActive(c, false)">Deactivate</button>
+                        <button class="btn btn-error btn-xs btn-outline" (click)="toggleCompanyActive(c, false)">Deactivate</button>
                       } @else {
-                        <button class="btn btn-success btn-xs text-white"
-                                (click)="toggleCompanyActive(c, true)">Activate</button>
+                        <button class="btn btn-success btn-xs text-white" (click)="toggleCompanyActive(c, true)">Activate</button>
                       }
                     </div>
                   </td>
@@ -229,40 +211,40 @@
   }
 
   @if (activeTab() === 'assignments') {
-    <div class="space-y-2">
-      <p class="text-sm text-base-content/60">
+    <div class="flex-1 min-h-0 flex flex-col space-y-2">
+      <p class="text-sm text-base-content/60 shrink-0">
         Select a supervisor from the left column to configure their assigned engineering team mapping.
       </p>
 
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-start pt-2">
+      <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-5 pt-2">
 
-        <div class="md:col-span-4 card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
-          <div class="bg-base-200/50 px-4 py-3 border-b border-base-300">
+        <div class="md:col-span-4 h-full flex flex-col card bg-base-100 border border-base-300 overflow-hidden">
+          <div class="bg-base-200/50 px-4 py-3 border-b border-base-300 shrink-0">
             <span class="text-xs uppercase tracking-wider font-bold text-base-content/60">Supervisors & Managers</span>
           </div>
-          <div class="divide-y divide-base-200 max-h-[550px] overflow-y-auto">
+          <div class="flex-1 overflow-y-auto divide-y divide-base-200">
             @for (mgr of managers(); track mgr.userId) {
               <button type="button"
                       class="w-full text-left px-4 py-3 flex items-center justify-between transition-colors hover:bg-base-50 bg-opacity-10"
                       [class.bg-primary]="selectedManagerId() === mgr.userId"
-                [class.border-l-4]="selectedManagerId() === mgr.userId"
-                [class.border-primary]="selectedManagerId() === mgr.userId"
-                (click)="selectedManagerId.set(mgr.userId)">
-              <div class="min-w-0 pr-2">
-                <p class="font-semibold text-sm truncate" [class.text-primary]="selectedManagerId() === mgr.userId">
-                  {{ mgr.fullName }}
-                </p>
-                <p class="text-xs text-base-content/50 truncate">{{ mgr.email }}</p>
-              </div>
-              <div class="flex items-center gap-2 shrink-0">
-                  <span class="badge badge-xs px-2 py-1.5 font-semibold "
+                      [class.border-l-4]="selectedManagerId() === mgr.userId"
+                      [class.border-primary]="selectedManagerId() === mgr.userId"
+                      (click)="selectedManagerId.set(mgr.userId)">
+                <div class="min-w-0 pr-2">
+                  <p class="font-semibold text-sm truncate" [class.text-primary]="selectedManagerId() === mgr.userId">
+                    {{ mgr.fullName }}
+                  </p>
+                  <p class="text-xs text-base-content/50 truncate">{{ mgr.email }}</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="badge badge-xs px-2 py-1.5 font-semibold"
                         [class]="mgr.role === 'ADMIN' ? 'badge-primary text-white' : 'badge-neutral badge-outline'">
                     {{ mgr.role }}
                   </span>
-                <span class="badge badge-ghost badge-sm font-semibold rounded-full min-w-[20px]">
+                  <span class="badge badge-ghost badge-sm font-semibold rounded-full min-w-[20px]">
                     {{ assignmentMap().get(mgr.userId)?.size ?? 0 }}
                   </span>
-              </div>
+                </div>
               </button>
             }
             @if (managers().length === 0) {
@@ -273,7 +255,7 @@
 
         <div class="md:col-span-8 space-y-4">
           @if (selectedManager()) {
-            <div class="card bg-base-100 border border-base-300 shadow-sm">
+            <div class="card bg-base-100 border border-base-300 ">
               <div class="card-body p-4 border-b border-base-200 bg-base-50/50 flex flex-row items-center justify-between gap-4 flex-wrap">
                 <div>
                   <div class="flex items-center gap-2">
@@ -291,7 +273,7 @@
                          [ngModel]="engineerSearchQuery()"
                          (ngModelChange)="engineerSearchQuery.set($event)"/>
 
-                  <button class="btn btn-primary btn-xs px-3 gap-1 shadow-sm text-white"
+                  <button class="btn btn-primary btn-xs px-3 gap-1  text-white"
                           (click)="saveAssignments(selectedManager()!.userId)"
                           [disabled]="savingAssignment()">
                     @if (savingAssignment()) { <span class="loading loading-spinner loading-xs"></span> }
@@ -300,7 +282,7 @@
                 </div>
               </div>
 
-              <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[480px] overflow-y-auto">
+              <div class="flex-1 min-h-0 p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 <div class="flex flex-col">
                   <div class="flex items-center justify-between mb-2 px-1">
@@ -312,7 +294,7 @@
 
                   <div class="bg-base-50 border border-base-200 rounded-xl p-2 flex-1 min-h-[150px] space-y-1.5 overflow-y-auto">
                     @for (eng of assignedEngineers(); track eng.userId) {
-                      <div class="flex items-center justify-between p-2 bg-base-100 border border-success/20 shadow-sm rounded-lg hover:border-success/40 transition-all">
+                      <div class="flex items-center justify-between p-2 bg-base-100 border border-success/20  rounded-lg hover:border-success/40 transition-all">
                         <div class="min-w-0 pr-2">
                           <p class="text-xs font-semibold text-base-content truncate">{{ eng.fullName }}</p>
                           <p class="text-[10px] text-base-content/40 truncate">{{ eng.companyName }}</p>
@@ -345,7 +327,7 @@
 
                   <div class="bg-base-50 border border-base-200 rounded-xl p-2 flex-1 min-h-[150px] space-y-1.5 overflow-y-auto">
                     @for (eng of unassignedEngineers(); track eng.userId) {
-                      <div class="flex items-center justify-between p-2 bg-base-100 border border-base-200 shadow-sm rounded-lg hover:border-primary/30 transition-all">
+                      <div class="flex items-center justify-between p-2 bg-base-100 border border-base-200  rounded-lg hover:border-primary/30 transition-all">
                         <div class="min-w-0 pr-2">
                           <p class="text-xs font-semibold text-base-content/80 truncate">{{ eng.fullName }}</p>
                           <p class="text-[10px] text-base-content/40 truncate">{{ eng.companyName }}</p>
@@ -371,7 +353,7 @@
               </div>
             </div>
           } @else {
-            <div class="card bg-base-100 border border-base-300 p-12 text-center text-sm text-base-content/40 shadow-sm">
+            <div class="card bg-base-100 border border-base-300 p-12 text-center text-sm text-base-content/40 ">
               Please select a supervisor from the list on the left to review team assignments.
             </div>
           }

@@ -1,126 +1,327 @@
+<!--<div class="flex h-screen overflow-hidden bg-base-100">-->
+
+<!--  &lt;!&ndash; Sidebar &ndash;&gt;-->
+<!--  <aside-->
+<!--    class="flex flex-col w-60 bg-base-200 border-r border-base-300 shrink-0"-->
+<!--    [class.hidden]="!sidebarOpen()"-->
+<!--  >-->
+<!--    &lt;!&ndash; Logo &ndash;&gt;-->
+<!--    <div class="flex items-center gap-3 px-5 py-5 border-b border-base-300">-->
+<!--      <div class="w-7 h-7 rounded-lg flex items-center justify-center">-->
+<!--        <svg class="text-secondary" width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">-->
+<!--          <path d="M9 15H15M9 12H15M3 6V16.8C3 17.9201 3 18.4796 3.21799 18.9074C3.40973 19.2837 3.71547 19.5905 4.0918 19.7822C4.5192 20 5.07899 20 6.19691 20H17.8037C18.9216 20 19.4806 20 19.908 19.7822C20.2843 19.5905 20.5905 19.2841 20.7822 18.9078C21.0002 18.48 21.0002 17.9199 21.0002 16.7998L21.0002 9.19978C21.0002 8.07967 21.0002 7.51962 20.7822 7.0918C20.5905 6.71547 20.2837 6.40973 19.9074 6.21799C19.4796 6 18.9201 6 17.8 6H12M3 6H12M3 6C3 4.89543 3.89543 4 5 4H8.67452C9.1637 4 9.40915 4 9.63933 4.05526C9.8434 4.10425 10.0379 4.18526 10.2168 4.29492C10.4186 4.41856 10.5918 4.59183 10.9375 4.9375L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>-->
+<!--        </svg>-->
+<!--      </div>-->
+<!--      <div>-->
+<!--        <p class="text-sm font-semibold text-secondary">SLTMobitel <span class="title-font font-normal text-accent">SiteReady</span></p>-->
+<!--        <p class="text-xs text-base-content/50">SSV Management System</p>-->
+<!--      </div>-->
+<!--    </div>-->
+
+<!--    &lt;!&ndash; Nav &ndash;&gt;-->
+<!--    <nav class="flex-1 overflow-y-auto p-3 space-y-1">-->
+
+<!--      @if (isEngineer() || isAdmin() || isVendor()) {-->
+<!--        <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">-->
+<!--          <svg class="w-4 h-4 " fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
+<!--            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"-->
+<!--                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>-->
+<!--          </svg>-->
+<!--          Dashboard-->
+<!--        </a>-->
+<!--      }-->
+<!--      @if (isVendor()) {-->
+<!--        <a routerLink="/upload" routerLinkActive="active" class="nav-link">-->
+<!--          <svg class="w-4 h-4 " fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
+<!--            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"-->
+<!--                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>-->
+<!--          </svg>-->
+<!--          Upload Report-->
+<!--        </a>-->
+<!--      }-->
+
+<!--      @if (isManager() || isAdmin()) {-->
+<!--        <a routerLink="/manager" routerLinkActive="active" class="nav-link">-->
+<!--          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">-->
+<!--            <path d="M17 20C17 18.3431 14.7614 17 12 17C9.23858 17 7 18.3431 7 20M21 17.0004C21 15.7702 19.7659 14.7129 18 14.25M3 17.0004C3 15.7702 4.2341 14.7129 6 14.25M18 10.2361C18.6137 9.68679 19 8.8885 19 8C19 6.34315 17.6569 5 16 5C15.2316 5 14.5308 5.28885 14 5.76389M6 10.2361C5.38625 9.68679 5 8.8885 5 8C5 6.34315 6.34315 5 8 5C8.76835 5 9.46924 5.28885 10 5.76389M12 14C10.3431 14 9 12.6569 9 11C9 9.34315 10.3431 8 12 8C13.6569 8 15 9.34315 15 11C15 12.6569 13.6569 14 12 14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>-->
+<!--          </svg>-->
+
+<!--          Team Overview-->
+<!--        </a>-->
+<!--      }-->
+
+<!--      @if (isEngineer() || isAdmin() || isManager()) {-->
+<!--        <a routerLink="/review" routerLinkActive="active" class="nav-link">-->
+<!--          <svg class="w-4 h-4 " fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
+<!--            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"-->
+<!--                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>-->
+<!--          </svg>-->
+<!--          Review Queue-->
+<!--        </a>-->
+<!--      }-->
+
+<!--      <a routerLink="/search" routerLinkActive="active" class="nav-link">-->
+<!--        <svg class="w-4 h-4 " fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
+<!--          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"-->
+<!--                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>-->
+<!--        </svg>-->
+<!--        Search-->
+<!--      </a>-->
+
+<!--      @if (isAdmin()) {-->
+<!--        <div class="divider text-xs text-base-content/40 my-1">Admin</div>-->
+<!--        <a routerLink="/admin" routerLinkActive="active" class="nav-link">-->
+<!--          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">-->
+<!--            <path d="M20.3499 8.92293L19.9837 8.7192C19.9269 8.68756 19.8989 8.67169 19.8714 8.65524C19.5983 8.49165 19.3682 8.26564 19.2002 7.99523C19.1833 7.96802 19.1674 7.93949 19.1348 7.8831C19.1023 7.82677 19.0858 7.79823 19.0706 7.76998C18.92 7.48866 18.8385 7.17515 18.8336 6.85606C18.8331 6.82398 18.8332 6.79121 18.8343 6.72604L18.8415 6.30078C18.8529 5.62025 18.8587 5.27894 18.763 4.97262C18.6781 4.70053 18.536 4.44993 18.3462 4.23725C18.1317 3.99685 17.8347 3.82534 17.2402 3.48276L16.7464 3.1982C16.1536 2.85658 15.8571 2.68571 15.5423 2.62057C15.2639 2.56294 14.9765 2.56561 14.6991 2.62789C14.3859 2.69819 14.0931 2.87351 13.5079 3.22396L13.5045 3.22555L13.1507 3.43741C13.0948 3.47091 13.0665 3.48779 13.0384 3.50338C12.7601 3.6581 12.4495 3.74365 12.1312 3.75387C12.0992 3.7549 12.0665 3.7549 12.0013 3.7549C11.9365 3.7549 11.9024 3.7549 11.8704 3.75387C11.5515 3.74361 11.2402 3.65759 10.9615 3.50224C10.9334 3.48658 10.9056 3.46956 10.8496 3.4359L10.4935 3.22213C9.90422 2.86836 9.60915 2.69121 9.29427 2.62057C9.0157 2.55807 8.72737 2.55634 8.44791 2.61471C8.13236 2.68062 7.83577 2.85276 7.24258 3.19703L7.23994 3.1982L6.75228 3.48124L6.74688 3.48454C6.15904 3.82572 5.86441 3.99672 5.6517 4.23614C5.46294 4.4486 5.32185 4.69881 5.2374 4.97018C5.14194 5.27691 5.14703 5.61896 5.15853 6.3027L5.16568 6.72736C5.16676 6.79166 5.16864 6.82362 5.16817 6.85525C5.16343 7.17499 5.08086 7.48914 4.92974 7.77096C4.9148 7.79883 4.8987 7.8267 4.86654 7.88237C4.83436 7.93809 4.81877 7.96579 4.80209 7.99268C4.63336 8.26452 4.40214 8.49186 4.12733 8.65572C4.10015 8.67193 4.0715 8.68752 4.01521 8.71871L3.65365 8.91908C3.05208 9.25245 2.75137 9.41928 2.53256 9.65669C2.33898 9.86672 2.19275 10.1158 2.10349 10.3872C2.00259 10.6939 2.00267 11.0378 2.00424 11.7255L2.00551 12.2877C2.00706 12.9708 2.00919 13.3122 2.11032 13.6168C2.19979 13.8863 2.34495 14.134 2.53744 14.3427C2.75502 14.5787 3.05274 14.7445 3.64974 15.0766L4.00808 15.276C4.06907 15.3099 4.09976 15.3266 4.12917 15.3444C4.40148 15.5083 4.63089 15.735 4.79818 16.0053C4.81625 16.0345 4.8336 16.0648 4.8683 16.1255C4.90256 16.1853 4.92009 16.2152 4.93594 16.2452C5.08261 16.5229 5.16114 16.8315 5.16649 17.1455C5.16707 17.1794 5.16658 17.2137 5.16541 17.2827L5.15853 17.6902C5.14695 18.3763 5.1419 18.7197 5.23792 19.0273C5.32287 19.2994 5.46484 19.55 5.65463 19.7627C5.86915 20.0031 6.16655 20.1745 6.76107 20.5171L7.25478 20.8015C7.84763 21.1432 8.14395 21.3138 8.45869 21.379C8.73714 21.4366 9.02464 21.4344 9.30209 21.3721C9.61567 21.3017 9.90948 21.1258 10.4964 20.7743L10.8502 20.5625C10.9062 20.5289 10.9346 20.5121 10.9626 20.4965C11.2409 20.3418 11.5512 20.2558 11.8695 20.2456C11.9015 20.2446 11.9342 20.2446 11.9994 20.2446C12.0648 20.2446 12.0974 20.2446 12.1295 20.2456C12.4484 20.2559 12.7607 20.3422 13.0394 20.4975C13.0639 20.5112 13.0885 20.526 13.1316 20.5519L13.5078 20.7777C14.0971 21.1315 14.3916 21.3081 14.7065 21.3788C14.985 21.4413 15.2736 21.4438 15.5531 21.3855C15.8685 21.3196 16.1657 21.1471 16.7586 20.803L17.2536 20.5157C17.8418 20.1743 18.1367 20.0031 18.3495 19.7636C18.5383 19.5512 18.6796 19.3011 18.764 19.0297C18.8588 18.7252 18.8531 18.3858 18.8417 17.7119L18.8343 17.2724C18.8332 17.2081 18.8331 17.1761 18.8336 17.1445C18.8383 16.8247 18.9195 16.5104 19.0706 16.2286C19.0856 16.2007 19.1018 16.1726 19.1338 16.1171C19.166 16.0615 19.1827 16.0337 19.1994 16.0068C19.3681 15.7349 19.5995 15.5074 19.8744 15.3435C19.9012 15.3275 19.9289 15.3122 19.9838 15.2818L19.9857 15.2809L20.3472 15.0805C20.9488 14.7472 21.2501 14.5801 21.4689 14.3427C21.6625 14.1327 21.8085 13.8839 21.8978 13.6126C21.9981 13.3077 21.9973 12.9658 21.9958 12.2861L21.9945 11.7119C21.9929 11.0287 21.9921 10.6874 21.891 10.3828C21.8015 10.1133 21.6555 9.86561 21.463 9.65685C21.2457 9.42111 20.9475 9.25526 20.3517 8.92378L20.3499 8.92293Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>-->
+<!--            <path d="M8.00033 12C8.00033 14.2091 9.79119 16 12.0003 16C14.2095 16 16.0003 14.2091 16.0003 12C16.0003 9.79082 14.2095 7.99996 12.0003 7.99996C9.79119 7.99996 8.00033 9.79082 8.00033 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>-->
+<!--          </svg>-->
+
+<!--          Administration-->
+<!--        </a>-->
+<!--      }-->
+<!--    </nav>-->
+
+<!--    &lt;!&ndash; User footer &ndash;&gt;-->
+<!--    <div class="p-3 border-t border-base-300">-->
+<!--      <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-base-300 transition-colors">-->
+<!--        <div class="avatar placeholder">-->
+<!--          <div class="bg-primary text-primary-content rounded-full w-8 h-8">-->
+<!--            <span class="text-xs font-bold">{{ initials() }}</span>-->
+<!--          </div>-->
+<!--        </div>-->
+<!--        <div class="flex-1 min-w-0">-->
+<!--          <p class="text-sm font-medium truncate">{{ user()?.fullName }}</p>-->
+<!--          <p class="text-xs text-base-content/60 truncate">{{ roleBadge() }}</p>-->
+<!--        </div>-->
+<!--      </div>-->
+<!--      <div class="flex gap-1 mt-2">-->
+<!--        <a routerLink="/profile" class="btn btn-ghost btn-xs border border-base-300 flex-1">-->
+<!--          <svg class="text-base-content/50" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">-->
+<!--            <path d="M17 21C17 18.2386 14.7614 16 12 16C9.23858 16 7 18.2386 7 21M17 21H17.8031C18.921 21 19.48 21 19.9074 20.7822C20.2837 20.5905 20.5905 20.2837 20.7822 19.9074C21 19.48 21 18.921 21 17.8031V6.19691C21 5.07899 21 4.5192 20.7822 4.0918C20.5905 3.71547 20.2837 3.40973 19.9074 3.21799C19.4796 3 18.9203 3 17.8002 3H6.2002C5.08009 3 4.51962 3 4.0918 3.21799C3.71547 3.40973 3.40973 3.71547 3.21799 4.0918C3 4.51962 3 5.08009 3 6.2002V17.8002C3 18.9203 3 19.4796 3.21799 19.9074C3.40973 20.2837 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H7M17 21H7M12 13C10.3431 13 9 11.6569 9 10C9 8.34315 10.3431 7 12 7C13.6569 7 15 8.34315 15 10C15 11.6569 13.6569 13 12 13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>-->
+<!--          </svg>-->
+<!--          Profile</a>-->
+<!--        <button (click)="auth.logout()" class="btn btn-ghost btn-xs border border-error/10 flex-1 text-error">-->
+<!--          <svg class="text-error/80" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">-->
+<!--            <path d="M12 9L15 12L12 15M15 12H4M9 7.24859V7.2002C9 6.08009 9 5.51962 9.21799 5.0918C9.40973 4.71547 9.71547 4.40973 10.0918 4.21799C10.5196 4 11.0801 4 12.2002 4H16.8002C17.9203 4 18.4796 4 18.9074 4.21799C19.2837 4.40973 19.5905 4.71547 19.7822 5.0918C20 5.5192 20 6.07899 20 7.19691V16.8036C20 17.9215 20 18.4805 19.7822 18.9079C19.5905 19.2842 19.2837 19.5905 18.9074 19.7822C18.48 20 17.921 20 16.8031 20H12.1969C11.079 20 10.5192 20 10.0918 19.7822C9.71547 19.5905 9.40973 19.2839 9.21799 18.9076C9 18.4798 9 17.9201 9 16.8V16.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>-->
+<!--          </svg>-->
+
+<!--          Logout</button>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </aside>-->
+
+<!--  &lt;!&ndash; Main content &ndash;&gt;-->
+<!--  <div class="flex-1 flex flex-col overflow-hidden">-->
+<!--    &lt;!&ndash; Top bar (mobile) &ndash;&gt;-->
+<!--    <header class="flex items-center gap-3 px-4 py-3 bg-base-100 border-b border-base-300 lg:hidden">-->
+<!--      <button class="btn btn-ghost btn-sm btn-square" (click)="toggleSidebar()">-->
+<!--        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
+<!--          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>-->
+<!--        </svg>-->
+<!--      </button>-->
+<!--      <span class="font-bold">SSV DMS</span>-->
+<!--    </header>-->
+
+<!--    <main class="flex-1 overflow-y-auto p-6">-->
+<!--      <div class="page-enter">-->
+<!--        <router-outlet />-->
+<!--      </div>-->
+<!--    </main>-->
+<!--  </div>-->
+<!--</div>-->
+
+
+
 <div class="flex h-screen overflow-hidden bg-base-100">
 
-  <!-- Sidebar -->
   <aside
-    class="flex flex-col w-60 bg-base-200 border-r border-base-300 shrink-0"
-    [class.hidden]="!sidebarOpen()"
-  >
-    <!-- Logo -->
-    <div class="flex items-center gap-3 px-5 py-5 border-b border-base-300">
-      <div class="w-7 h-7 rounded-lg flex items-center justify-center">
-        <svg class="text-secondary" width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M9 15H15M9 12H15M3 6V16.8C3 17.9201 3 18.4796 3.21799 18.9074C3.40973 19.2837 3.71547 19.5905 4.0918 19.7822C4.5192 20 5.07899 20 6.19691 20H17.8037C18.9216 20 19.4806 20 19.908 19.7822C20.2843 19.5905 20.5905 19.2841 20.7822 18.9078C21.0002 18.48 21.0002 17.9199 21.0002 16.7998L21.0002 9.19978C21.0002 8.07967 21.0002 7.51962 20.7822 7.0918C20.5905 6.71547 20.2837 6.40973 19.9074 6.21799C19.4796 6 18.9201 6 17.8 6H12M3 6H12M3 6C3 4.89543 3.89543 4 5 4H8.67452C9.1637 4 9.40915 4 9.63933 4.05526C9.8434 4.10425 10.0379 4.18526 10.2168 4.29492C10.4186 4.41856 10.5918 4.59183 10.9375 4.9375L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    class="flex flex-col bg-base-200 border-r border-base-300 shrink-0
+         transition-all duration-200 ease-in-out z-30
+         lg:relative fixed inset-y-0 left-0"
+    [class]="sidebarOpen() ? 'w-60' : 'w-16'"
+    [class.hidden]="mobileHidden()">
+
+    <div class="flex items-center border-b border-base-300 h-16 px-4 shrink-0 relative">
+      <div class="flex items-center gap-3 transition-all duration-200 w-full overflow-hidden">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0">
+          <svg class="text-secondary" width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 15H15M9 12H15M3 6V16.8C3 17.9201 3 18.4796 3.21799 18.9074C3.40973 19.2837 3.71547 19.5905 4.0918 19.7822C4.5192 20 5.07899 20 6.19691 20H17.8037C18.9216 20 19.4806 20 19.908 19.7822C20.2843 19.5905 20.5905 19.2841 20.7822 18.9078C21.0002 18.48 21.0002 17.9199 21.0002 16.7998L21.0002 9.19978C21.0002 8.07967 21.0002 7.51962 20.7822 7.0918C20.5905 6.71547 20.2837 6.40973 19.9074 6.21799C19.4796 6 18.9203 6 17.8 6H12M3 6H12M3 6C3 4.89543 3.89543 4 5 4H8.67452C9.1637 4 9.40915 4 9.63933 4.05526C9.8434 4.10425 10.0379 4.18526 10.2168 4.29492C10.4186 4.41856 10.5918 4.59183 10.9375 4.9375L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        @if (sidebarOpen()) {
+          <div class="truncate min-w-0 animate-fade-in">
+            <p class="text-sm font-semibold text-secondary whitespace-nowrap">SLTMobitel <span class="title-font font-normal text-accent">SiteReady</span></p>
+            <p class="text-xs text-base-content/50 whitespace-nowrap">SSV Management System</p>
+          </div>
+        }
+      </div>
+
+      <button
+        class="hidden lg:flex items-center justify-center absolute z-30 transition-all duration-150 rounded-full border border-base-300 shadow-sm bg-base-100 text-base-content/60 hover:text-base-content hover:bg-base-200"
+        [class]="sidebarOpen()
+          ? 'right-2 top-1/2 -translate-y-1/2 w-6 h-6'
+          : 'left-full top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6'"
+        (click)="toggleSidebar()"
+        [title]="sidebarOpen() ? 'Collapse sidebar' : 'Expand sidebar'"
+      >
+        <svg class="w-3.5 h-3.5 transition-transform duration-200 block" [class.rotate-180]="!sidebarOpen()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
         </svg>
-      </div>
-      <div>
-        <p class="text-sm font-semibold text-secondary">SLTMobitel <span class="title-font font-normal text-accent">SiteReady</span></p>
-        <p class="text-xs text-base-content/50">SSV Management System</p>
-      </div>
+      </button>
     </div>
 
-    <!-- Nav -->
-    <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1">
 
       @if (isEngineer() || isAdmin() || isVendor()) {
-        <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">
-          <svg class="w-4 h-4 " fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-          </svg>
-          Dashboard
-        </a>
+        <ng-container *ngTemplateOutlet="navLink; context: {
+          route: '/dashboard',
+          label: 'Dashboard',
+          svgPath: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'
+        }"/>
       }
+
       @if (isVendor()) {
-        <a routerLink="/upload" routerLinkActive="active" class="nav-link">
-          <svg class="w-4 h-4 " fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-          </svg>
-          Upload Report
-        </a>
+        <ng-container *ngTemplateOutlet="navLink; context: {
+          route: '/upload',
+          label: 'Upload Report',
+          svgPath: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12'
+        }"/>
       }
 
       @if (isManager() || isAdmin()) {
-        <a routerLink="/manager" routerLinkActive="active" class="nav-link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17 20C17 18.3431 14.7614 17 12 17C9.23858 17 7 18.3431 7 20M21 17.0004C21 15.7702 19.7659 14.7129 18 14.25M3 17.0004C3 15.7702 4.2341 14.7129 6 14.25M18 10.2361C18.6137 9.68679 19 8.8885 19 8C19 6.34315 17.6569 5 16 5C15.2316 5 14.5308 5.28885 14 5.76389M6 10.2361C5.38625 9.68679 5 8.8885 5 8C5 6.34315 6.34315 5 8 5C8.76835 5 9.46924 5.28885 10 5.76389M12 14C10.3431 14 9 12.6569 9 11C9 9.34315 10.3431 8 12 8C13.6569 8 15 9.34315 15 11C15 12.6569 13.6569 14 12 14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-
-          Team Overview
-        </a>
+        <ng-container *ngTemplateOutlet="navLink; context: {
+          route: '/manager',
+          label: 'Team Overview',
+          svgPath: 'M17 20C17 18.3431 14.7614 17 12 17C9.23858 17 7 18.3431 7 20M21 17.0004C21 15.7702 19.7659 14.7129 18 14.25M3 17.0004C3 15.7702 4.2341 14.7129 6 14.25M18 10.2361C18.6137 9.68679 19 8.8885 19 8C19 6.34315 17.6569 5 16 5C15.2316 5 14.5308 5.28885 14 5.76389M6 10.2361C5.38625 9.68679 5 8.8885 5 8C5 6.34315 6.34315 5 8 5C8.76835 5 9.46924 5.28885 10 5.76389M12 14C10.3431 14 9 12.6569 9 11C9 9.34315 10.3431 8 12 8C13.6569 8 15 9.34315 15 11C15 12.6569 13.6569 14 12 14Z'
+        }"/>
       }
 
       @if (isEngineer() || isAdmin() || isManager()) {
-        <a routerLink="/review" routerLinkActive="active" class="nav-link">
-          <svg class="w-4 h-4 " fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-          </svg>
-          Review Queue
-        </a>
+        <ng-container *ngTemplateOutlet="navLink; context: {
+          route: '/review',
+          label: 'Review Queue',
+          svgPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'
+        }"/>
       }
 
-      <a routerLink="/search" routerLinkActive="active" class="nav-link">
-        <svg class="w-4 h-4 " fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-        </svg>
-        Search
-      </a>
+      <ng-container *ngTemplateOutlet="navLink; context: {
+        route: '/search',
+        label: 'Search',
+        svgPath: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
+      }"/>
 
       @if (isAdmin()) {
-        <div class="divider text-xs text-base-content/40 my-1">Admin</div>
-        <a routerLink="/admin" routerLinkActive="active" class="nav-link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20.3499 8.92293L19.9837 8.7192C19.9269 8.68756 19.8989 8.67169 19.8714 8.65524C19.5983 8.49165 19.3682 8.26564 19.2002 7.99523C19.1833 7.96802 19.1674 7.93949 19.1348 7.8831C19.1023 7.82677 19.0858 7.79823 19.0706 7.76998C18.92 7.48866 18.8385 7.17515 18.8336 6.85606C18.8331 6.82398 18.8332 6.79121 18.8343 6.72604L18.8415 6.30078C18.8529 5.62025 18.8587 5.27894 18.763 4.97262C18.6781 4.70053 18.536 4.44993 18.3462 4.23725C18.1317 3.99685 17.8347 3.82534 17.2402 3.48276L16.7464 3.1982C16.1536 2.85658 15.8571 2.68571 15.5423 2.62057C15.2639 2.56294 14.9765 2.56561 14.6991 2.62789C14.3859 2.69819 14.0931 2.87351 13.5079 3.22396L13.5045 3.22555L13.1507 3.43741C13.0948 3.47091 13.0665 3.48779 13.0384 3.50338C12.7601 3.6581 12.4495 3.74365 12.1312 3.75387C12.0992 3.7549 12.0665 3.7549 12.0013 3.7549C11.9365 3.7549 11.9024 3.7549 11.8704 3.75387C11.5515 3.74361 11.2402 3.65759 10.9615 3.50224C10.9334 3.48658 10.9056 3.46956 10.8496 3.4359L10.4935 3.22213C9.90422 2.86836 9.60915 2.69121 9.29427 2.62057C9.0157 2.55807 8.72737 2.55634 8.44791 2.61471C8.13236 2.68062 7.83577 2.85276 7.24258 3.19703L7.23994 3.1982L6.75228 3.48124L6.74688 3.48454C6.15904 3.82572 5.86441 3.99672 5.6517 4.23614C5.46294 4.4486 5.32185 4.69881 5.2374 4.97018C5.14194 5.27691 5.14703 5.61896 5.15853 6.3027L5.16568 6.72736C5.16676 6.79166 5.16864 6.82362 5.16817 6.85525C5.16343 7.17499 5.08086 7.48914 4.92974 7.77096C4.9148 7.79883 4.8987 7.8267 4.86654 7.88237C4.83436 7.93809 4.81877 7.96579 4.80209 7.99268C4.63336 8.26452 4.40214 8.49186 4.12733 8.65572C4.10015 8.67193 4.0715 8.68752 4.01521 8.71871L3.65365 8.91908C3.05208 9.25245 2.75137 9.41928 2.53256 9.65669C2.33898 9.86672 2.19275 10.1158 2.10349 10.3872C2.00259 10.6939 2.00267 11.0378 2.00424 11.7255L2.00551 12.2877C2.00706 12.9708 2.00919 13.3122 2.11032 13.6168C2.19979 13.8863 2.34495 14.134 2.53744 14.3427C2.75502 14.5787 3.05274 14.7445 3.64974 15.0766L4.00808 15.276C4.06907 15.3099 4.09976 15.3266 4.12917 15.3444C4.40148 15.5083 4.63089 15.735 4.79818 16.0053C4.81625 16.0345 4.8336 16.0648 4.8683 16.1255C4.90256 16.1853 4.92009 16.2152 4.93594 16.2452C5.08261 16.5229 5.16114 16.8315 5.16649 17.1455C5.16707 17.1794 5.16658 17.2137 5.16541 17.2827L5.15853 17.6902C5.14695 18.3763 5.1419 18.7197 5.23792 19.0273C5.32287 19.2994 5.46484 19.55 5.65463 19.7627C5.86915 20.0031 6.16655 20.1745 6.76107 20.5171L7.25478 20.8015C7.84763 21.1432 8.14395 21.3138 8.45869 21.379C8.73714 21.4366 9.02464 21.4344 9.30209 21.3721C9.61567 21.3017 9.90948 21.1258 10.4964 20.7743L10.8502 20.5625C10.9062 20.5289 10.9346 20.5121 10.9626 20.4965C11.2409 20.3418 11.5512 20.2558 11.8695 20.2456C11.9015 20.2446 11.9342 20.2446 11.9994 20.2446C12.0648 20.2446 12.0974 20.2446 12.1295 20.2456C12.4484 20.2559 12.7607 20.3422 13.0394 20.4975C13.0639 20.5112 13.0885 20.526 13.1316 20.5519L13.5078 20.7777C14.0971 21.1315 14.3916 21.3081 14.7065 21.3788C14.985 21.4413 15.2736 21.4438 15.5531 21.3855C15.8685 21.3196 16.1657 21.1471 16.7586 20.803L17.2536 20.5157C17.8418 20.1743 18.1367 20.0031 18.3495 19.7636C18.5383 19.5512 18.6796 19.3011 18.764 19.0297C18.8588 18.7252 18.8531 18.3858 18.8417 17.7119L18.8343 17.2724C18.8332 17.2081 18.8331 17.1761 18.8336 17.1445C18.8383 16.8247 18.9195 16.5104 19.0706 16.2286C19.0856 16.2007 19.1018 16.1726 19.1338 16.1171C19.166 16.0615 19.1827 16.0337 19.1994 16.0068C19.3681 15.7349 19.5995 15.5074 19.8744 15.3435C19.9012 15.3275 19.9289 15.3122 19.9838 15.2818L19.9857 15.2809L20.3472 15.0805C20.9488 14.7472 21.2501 14.5801 21.4689 14.3427C21.6625 14.1327 21.8085 13.8839 21.8978 13.6126C21.9981 13.3077 21.9973 12.9658 21.9958 12.2861L21.9945 11.7119C21.9929 11.0287 21.9921 10.6874 21.891 10.3828C21.8015 10.1133 21.6555 9.86561 21.463 9.65685C21.2457 9.42111 20.9475 9.25526 20.3517 8.92378L20.3499 8.92293Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M8.00033 12C8.00033 14.2091 9.79119 16 12.0003 16C14.2095 16 16.0003 14.2091 16.0003 12C16.0003 9.79082 14.2095 7.99996 12.0003 7.99996C9.79119 7.99996 8.00033 9.79082 8.00033 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-
-          Administration
-        </a>
+        <div class="relative py-2 w-full flex items-center justify-center">
+          @if (sidebarOpen()) {
+            <div class="divider text-xs text-base-content/40 my-0 px-2 uppercase tracking-wider font-semibold w-full">Admin</div>
+          } @else {
+            <div class="border-t border-base-300 w-6 mx-auto my-1"></div>
+          }
+        </div>
+        <ng-container *ngTemplateOutlet="navLink; context: {
+          route: '/admin',
+          label: 'Administration',
+          svgPath: 'M20.3499 8.92293L19.9837 8.7192C19.9269 8.68756 19.8989 8.67169 19.8714 8.65524C19.5983 8.49165 19.3682 8.26564 19.2002 7.99523C19.1833 7.96802 19.1674 7.93949 19.1348 7.8831C19.1023 7.82677 19.0858 7.79823 19.0706 7.76998C18.92 7.48866 18.8385 7.17515 18.8336 6.85606C18.8331 6.82398 18.8332 6.79121 18.8343 6.72604L18.8415 6.30078C18.8529 5.62025 18.8587 5.27894 18.763 4.97262C18.6781 4.70053 18.536 4.44993 18.3462 4.23725C18.1317 3.99685 17.8347 3.82534 17.2402 3.48276L16.7464 3.1982C16.1536 2.85658 15.8571 2.68571 15.5423 2.62057C15.2639 2.56294 14.9765 2.56561 14.6991 2.62789C14.3859 2.69819 14.0931 2.87351 13.5079 3.22396L13.5045 3.22555L13.1507 3.43741C13.0948 3.47091 13.0665 3.48779 13.0384 3.50338C12.7601 3.6581 12.4495 3.74365 12.1312 3.75387C12.0992 3.7549 12.0665 3.7549 12.0013 3.7549C11.9365 3.7549 11.9024 3.7549 11.8704 3.75387C11.5515 3.74361 11.2402 3.65759 10.9615 3.50224C10.9334 3.48658 10.9056 3.46956 10.8496 3.4359L10.4935 3.22213C9.90422 2.86836 9.60915 2.69121 9.29427 2.62057C9.0157 2.55807 8.72737 2.55634 8.44791 2.61471C8.13236 2.68062 7.83577 2.85276 7.24258 3.19703L7.23994 3.1982L6.75228 3.48124L6.74688 3.48454C6.15904 3.82572 5.86441 3.99672 5.6517 4.23614C5.46294 4.4486 5.32185 4.69881 5.2374 4.97018C5.14194 5.27691 5.14703 5.61896 5.15853 6.3027L5.16568 6.72736C5.16676 6.79166 5.16864 6.82362 5.16817 6.85525C5.16343 7.17499 5.08086 7.48914 4.92974 7.77096C4.9148 7.79883 4.8987 7.8267 4.86654 7.88237C4.83436 7.93809 4.81877 7.96579 4.80209 7.99268C4.63336 8.26452 4.40214 8.49186 4.12733 8.65572C4.10015 8.67193 4.0715 8.68752 4.01521 8.71871L3.65365 8.91908C3.05208 9.25245 2.75137 9.41928 2.53256 9.65669C2.33898 9.86672 2.19275 10.1158 2.10349 10.3872C2.00259 10.6939 2.00267 11.0378 2.00424 11.7255L2.00551 12.2877C2.00706 12.9708 2.00919 13.3122 2.11032 13.6168C2.19979 13.8863 2.34495 14.134 2.53744 14.3427C2.75502 14.5787 3.05274 14.7445 3.64974 15.0766L4.00808 15.276C4.06907 15.3099 4.09976 15.3266 4.12917 15.3444C4.40148 15.5083 4.63089 15.735 4.79818 16.0053C4.81625 16.0345 4.8336 16.0648 4.8683 16.1255C4.90256 16.1853 4.92009 16.2152 4.93594 16.2452C5.08261 16.5229 5.16114 16.8315 5.16649 17.1455C5.16707 17.1794 5.16658 17.2137 5.16541 17.2827L5.15853 17.6902C5.14695 18.3763 5.1419 18.7197 5.23792 19.0273C5.32287 19.2994 5.46484 19.55 5.65463 19.7627C5.86915 20.0031 6.16655 20.1745 6.76107 20.5171L7.25478 20.8015C7.84763 21.1432 8.14395 21.3138 8.45869 21.379C8.73714 21.4366 9.02464 21.4344 9.30209 21.3721C9.61567 21.3017 9.90948 21.1258 10.4964 20.7743L10.8502 20.5625C10.9062 20.5289 10.9346 20.5121 10.9626 20.4965C11.2409 20.3418 11.5512 20.2558 11.8695 20.2456C11.9015 20.2446 11.9342 20.2446 11.9994 20.2446C12.0648 20.2446 12.0974 20.2446 12.1295 20.2456C12.4484 20.2559 12.7607 20.3422 13.0394 20.4975C13.0639 20.5112 13.0885 20.526 13.1316 20.5519L13.5078 20.7777C14.0971 21.1315 14.3916 21.3081 14.7065 21.3788C14.985 21.4413 15.2736 21.4438 15.5531 21.3855C15.8685 21.3196 16.1657 21.1471 16.7586 20.803L17.2536 20.5157C17.8418 20.1743 18.1367 20.0031 18.3495 19.7636C18.5383 19.5512 18.6796 19.3011 18.764 19.0297C18.8588 18.7252 18.8531 18.3858 18.8417 17.7119L18.8413 17.2724C18.8332 17.2081 18.8331 17.1761 18.8336 17.1445C18.8383 16.8247 18.9195 16.5104 19.0706 16.2286C19.0856 16.2007 19.1018 16.1726 19.1338 16.1171C19.166 16.0615 19.1827 16.0337 19.1994 16.0068C19.3681 15.7349 19.5995 15.5074 19.8744 15.3435C19.9012 15.3275 19.9289 15.3122 19.9838 15.2818L19.9857 15.2809L20.3472 15.0805C20.9488 14.7472 21.2501 14.5801 21.4689 14.3427C21.6625 14.1327 21.8085 13.8839 21.8978 13.6126C21.9981 13.3077 21.9973 12.9658 21.9958 12.2861L21.9945 11.7119C21.9929 11.0287 21.9921 10.6874 21.891 10.3828C21.8015 10.1133 21.6555 9.86561 21.463 9.65685C21.2457 9.42111 20.9475 9.25526 20.3517 8.92378L20.3499 8.92293ZM8.00033 12C8.00033 14.2091 9.79119 16 12.0003 16C14.2095 16 16.0003 14.2091 16.0003 12C16.0003 9.79082 14.2095 7.99996 12.0003 7.99996C9.79119 7.99996 8.00033 9.79082 8.00033 12Z'
+        }"/>
       }
     </nav>
 
-    <!-- User footer -->
-    <div class="p-3 border-t border-base-300">
-      <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-base-300 transition-colors">
-        <div class="avatar placeholder">
-          <div class="bg-primary text-primary-content rounded-full w-8 h-8">
+    <div class="p-3 border-t border-base-300 bg-base-200/50 shrink-0 overflow-hidden">
+      <a
+        routerLink="/profile"
+        class="flex items-center px-2 py-2 rounded-lg hover:bg-base-300 transition-all duration-150 group cursor-pointer"
+        [class.justify-center]="!sidebarOpen()"
+        [class.gap-3]="sidebarOpen()"
+        [title]="!sidebarOpen() ? 'View Profile' : ''"
+      >
+        <div class="avatar placeholder shrink-0 transition-transform duration-150 group-hover:scale-105">
+          <div class="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center">
             <span class="text-xs font-bold">{{ initials() }}</span>
           </div>
         </div>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium truncate">{{ user()?.fullName }}</p>
-          <p class="text-xs text-base-content/60 truncate">{{ roleBadge() }}</p>
-        </div>
-      </div>
-      <div class="flex gap-1 mt-2">
-        <a routerLink="/profile" class="btn btn-ghost btn-xs border border-base-300 flex-1">
-          <svg class="text-base-content/50" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17 21C17 18.2386 14.7614 16 12 16C9.23858 16 7 18.2386 7 21M17 21H17.8031C18.921 21 19.48 21 19.9074 20.7822C20.2837 20.5905 20.5905 20.2837 20.7822 19.9074C21 19.48 21 18.921 21 17.8031V6.19691C21 5.07899 21 4.5192 20.7822 4.0918C20.5905 3.71547 20.2837 3.40973 19.9074 3.21799C19.4796 3 18.9203 3 17.8002 3H6.2002C5.08009 3 4.51962 3 4.0918 3.21799C3.71547 3.40973 3.40973 3.71547 3.21799 4.0918C3 4.51962 3 5.08009 3 6.2002V17.8002C3 18.9203 3 19.4796 3.21799 19.9074C3.40973 20.2837 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H7M17 21H7M12 13C10.3431 13 9 11.6569 9 10C9 8.34315 10.3431 7 12 7C13.6569 7 15 8.34315 15 10C15 11.6569 13.6569 13 12 13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Profile</a>
-        <button (click)="auth.logout()" class="btn btn-ghost btn-xs border border-error/10 flex-1 text-error">
-          <svg class="text-error/80" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 9L15 12L12 15M15 12H4M9 7.24859V7.2002C9 6.08009 9 5.51962 9.21799 5.0918C9.40973 4.71547 9.71547 4.40973 10.0918 4.21799C10.5196 4 11.0801 4 12.2002 4H16.8002C17.9203 4 18.4796 4 18.9074 4.21799C19.2837 4.40973 19.5905 4.71547 19.7822 5.0918C20 5.5192 20 6.07899 20 7.19691V16.8036C20 17.9215 20 18.4805 19.7822 18.9079C19.5905 19.2842 19.2837 19.5905 18.9074 19.7822C18.48 20 17.921 20 16.8031 20H12.1969C11.079 20 10.5192 20 10.0918 19.7822C9.71547 19.5905 9.40973 19.2839 9.21799 18.9076C9 18.4798 9 17.9201 9 16.8V16.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+        @if (sidebarOpen()) {
+          <div class="flex-1 min-w-0 animate-fade-in">
+            <p class="text-sm font-medium truncate group-hover:text-secondary transition-colors">{{ user()?.fullName }}</p>
+            <p class="text-xs text-base-content/60 truncate">{{ roleBadge() }}</p>
+          </div>
+        }
+      </a>
 
-          Logout</button>
+      <div class="mt-2" [class.px-1]="sidebarOpen()">
+        <button
+          (click)="auth.logout()"
+          class="w-full flex items-center transition-all duration-150 h-10 text-error rounded-lg hover:bg-error/5 group relative"
+          [class.justify-center]="!sidebarOpen()"
+          [class.px-3]="sidebarOpen()"
+          [class.gap-3]="sidebarOpen()"
+          [title]="!sidebarOpen() ? 'Logout' : ''"
+        >
+          <div class="w-5 h-5 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-current block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9L15 12L12 15M15 12H4M9 7.24859V7.2002C9 6.08009 9 5.51962 9.21799 5.0918C9.40973 4.71547 9.71547 4.40973 10.0918 4.21799C10.5196 4 11.0801 4 12.2002 4H16.8002C17.9203 4 18.4796 4 18.9074 4.21799C19.2837 4.40973 19.5905 4.71547 19.7822 5.0918C20 5.5192 20 6.07899 20 7.19691V16.8036C20 17.9215 20 18.4805 19.7822 18.9079C19.5905 19.2842 19.2837 19.5905 18.9074 19.7822C18.48 20 17.921 20 16.8031 20H12.1969C11.079 20 10.5192 20 10.0918 19.7822C9.71547 19.5905 9.40973 19.2839 9.21799 18.9076C9 18.4798 9 17.9201 9 16.8V16.75"/>
+            </svg>
+          </div>
+
+          <span class="truncate transition-all duration-150 text-sm font-medium" [class.opacity-0]="!sidebarOpen()" [class.w-0]="!sidebarOpen()">
+      Logout
+    </span>
+
+          @if (!sidebarOpen()) {
+            <span class="absolute left-full ml-4 px-2.5 py-1.5 bg-neutral text-neutral-content
+                   text-xs rounded-md whitespace-nowrap opacity-0 pointer-events-none
+                   group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-xl font-normal">
+        Logout
+      </span>
+          }
+        </button>
       </div>
     </div>
   </aside>
 
-  <!-- Main content -->
+  <ng-template #navLink let-route="route" let-label="label" let-svgPath="svgPath">
+    <a [routerLink]="route" routerLinkActive="active"
+       (click)="onNavClick()"
+       class="nav-link group relative flex items-center transition-all duration-150 h-10"
+       [class.justify-center]="!sidebarOpen()"
+       [class.!px-0]="!sidebarOpen()"
+       [class.!gap-0]="!sidebarOpen()"
+       [title]="!sidebarOpen() ? label : ''">
+
+      <div class="w-5 h-5 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-current block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="svgPath"/>
+        </svg>
+      </div>
+
+      <span class="truncate transition-all duration-150 text-sm" [class.opacity-0]="!sidebarOpen()" [class.w-0]="!sidebarOpen()">
+        {{ label }}
+      </span>
+
+      @if (!sidebarOpen()) {
+        <span class="absolute left-full ml-4 px-2.5 py-1.5 bg-neutral text-neutral-content
+                     text-xs rounded-md whitespace-nowrap opacity-0 pointer-events-none
+                     group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-xl font-normal">
+          {{ label }}
+        </span>
+      }
+    </a>
+  </ng-template>
+
   <div class="flex-1 flex flex-col overflow-hidden">
-    <!-- Top bar (mobile) -->
-    <header class="flex items-center gap-3 px-4 py-3 bg-base-100 border-b border-base-300 lg:hidden">
-      <button class="btn btn-ghost btn-sm btn-square" (click)="toggleSidebar()">
+    <header class="flex items-center gap-3 px-4 py-3 bg-base-100 border-b border-base-300 lg:hidden shrink-0">
+      <button class="btn btn-ghost btn-sm btn-square" (click)="toggleMobile()">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
       </button>
       <span class="font-bold">SSV DMS</span>
     </header>
+
+    @if (!mobileHidden() && isMobile()) {
+      <div class="fixed inset-0 bg-base-content/20 z-20 lg:hidden"
+           (click)="toggleMobile()">
+      </div>
+    }
 
     <main class="flex-1 overflow-y-auto p-6">
       <div class="page-enter">
