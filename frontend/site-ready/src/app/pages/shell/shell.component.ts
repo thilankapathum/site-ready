@@ -67,4 +67,11 @@ export class ShellComponent {
   private loadSidebarState(): boolean {
     return localStorage.getItem('ssv_sidebar') !== '0';
   }
+
+  onNavClick(): void {
+    // On mobile, close the sidebar after clicking a link
+    if (this.isMobile()) {
+      this.mobileHidden.set(true);
+    }
+  }
 }

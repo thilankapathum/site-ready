@@ -234,7 +234,7 @@
                 <option value="">— Unassigned —</option>
                 @for (e of engineers(); track e.userId) {
                   <option [value]="e.userId">
-                    {{ e.fullName }} ({{ e.companyName ?? e.companyName }})
+                    {{ e.fullName }} ({{ e.companyName}})
                   </option>
                 }
               </select>
