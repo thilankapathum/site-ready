@@ -1,5 +1,6 @@
 import {Component, OnInit, signal} from '@angular/core';
 import {AuthResponse} from '../../../models/api.models';
+import {isAcceptedReportFile, labelOf} from '../../../models/file-types';
 import {ReportService} from '../../../services/report.service';
 import {FormsModule} from '@angular/forms';
 
@@ -45,8 +46,8 @@ export class UploadComponent implements OnInit {
     event.preventDefault();
     this.dragging.set(false);
     const file = event.dataTransfer?.files[0];
-    if (file?.type === 'application/pdf') this.setFile(file);
-    else this.error.set('Only PDF files are accepted.');
+    if (file && isAcceptedReportFile(file)) this.setFile(file);
+    else this.error.set('Only PDF or Excel (.xlsx) files are accepted.');
   }
 
   setFile(file: File): void {
@@ -63,7 +64,7 @@ export class UploadComponent implements OnInit {
   }
 
   parseFilename(name: string): void {
-    const match = name.replace(/\.pdf$/i, '').match(/^([^_]+)_(.+?)_([^_]+)_V\d+$/i);
+    const match = name.replace(/\.(pdf|xlsx)$/i, '').match(/^([^_]+)_(.+?)_([^_]+)_V\d+$/i);
     if (match) {
       this.parsedSiteId.set(match[1]);
       this.parsedProject.set(match[2]);
@@ -104,5 +105,9 @@ export class UploadComponent implements OnInit {
 
   formatSize(bytes: number): string {
     return bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+  }
+
+  fileLabel(): string {
+    return labelOf(this.selectedFile()?.type);
   }
 }

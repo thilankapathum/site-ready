@@ -1,5 +1,6 @@
 import {Component, input, OnInit, signal} from '@angular/core';
 import {ReportResponse, STATUS_BADGE_CLASS, STATUS_LABELS} from '../../../models/api.models';
+import {extensionOf, isAcceptedReportFile, labelOf} from '../../../models/file-types';
 import {Router} from '@angular/router';
 import {ReportService} from '../../../services/report.service';
 import {FormsModule} from '@angular/forms';
@@ -57,7 +58,7 @@ export class ReviewDetailComponent implements OnInit {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${r.namingKey}_V${r.currentVersion}_stamped.pdf`;
+      a.download = `${r.namingKey}_V${r.currentVersion}_stamped${extensionOf(r.contentType)}`;
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -71,7 +72,7 @@ export class ReviewDetailComponent implements OnInit {
   onDrop(event: DragEvent): void {
     event.preventDefault(); this.dragging.set(false);
     const f = event.dataTransfer?.files[0];
-    if (f?.type === 'application/pdf') this.reviewedFile.set(f);
+    if (f && isAcceptedReportFile(f)) this.reviewedFile.set(f);
   }
 
   submitReview(): void {
@@ -106,4 +107,5 @@ export class ReviewDetailComponent implements OnInit {
   label(s: string): string { return STATUS_LABELS[s as keyof typeof STATUS_LABELS] ?? s; }
   formatDate(d: string): string { return new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
   formatSize(bytes: number): string { return bytes > 1048576 ? `${(bytes/1048576).toFixed(1)} MB` : `${(bytes/1024).toFixed(0)} KB`; }
+  fileLabel(contentType: string | null | undefined): string { return labelOf(contentType); }
 }

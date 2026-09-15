@@ -39,6 +39,7 @@ export interface ReportResponse {
   updatedAt: string;
   // Latest version
   latestVersionId: string | null;
+  contentType: string | null;
   sha256Hash: string | null;
   padesSignatureId: string | null;
   uploadedAt: string | null;
@@ -99,6 +100,7 @@ export interface VersionResponse {
   id: string;
   versionNumber: number;
   originalFilename: string;
+  contentType: string;
   sha256Hash: string;
   padesSignatureId: string | null;
   uploaderName: string;

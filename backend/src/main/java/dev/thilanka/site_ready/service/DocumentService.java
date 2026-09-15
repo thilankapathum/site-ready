@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.security.MessageDigest;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
@@ -40,9 +41,54 @@ public class DocumentService {
     private final UserRepository userRepository;
     private final StorageService storageService;
     private final PdfStampService pdfStampService;
+    private final AuditWorksheetService auditWorksheetService;
     private final AuditService auditService;
     private final ReportAccessService reportAccessService;
     private final PdfDiffService pdfDiffService;
+
+    /** File types accepted for report uploads and reviews. */
+    private enum DocType {
+        PDF(".pdf", "application/pdf", new byte[]{'%', 'P', 'D', 'F'}),
+        XLSX(".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                new byte[]{0x50, 0x4B, 0x03, 0x04});
+
+        private final String extension;
+        private final String contentType;
+        private final byte[] magicBytes;
+
+        DocType(String extension, String contentType, byte[] magicBytes) {
+            this.extension = extension;
+            this.contentType = contentType;
+            this.magicBytes = magicBytes;
+        }
+
+        String extension() { return extension; }
+        String contentType() { return contentType; }
+    }
+
+    /**
+     * Validates the uploaded file's extension against the supported types and sniffs
+     * its magic bytes to catch a mismatched/spoofed extension — trusting the client-supplied
+     * extension alone would let a renamed file bypass the upload pipeline entirely.
+     */
+    private DocType detectAndValidate(String filename, byte[] bytes) {
+        if (filename == null) {
+            throw new IllegalArgumentException("File must be a PDF or Excel (.xlsx) file.");
+        }
+        String lower = filename.toLowerCase();
+        DocType type = Arrays.stream(DocType.values())
+                .filter(t -> lower.endsWith(t.extension()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "File must be a PDF or Excel (.xlsx) file."));
+        if (bytes.length < type.magicBytes.length
+                || !Arrays.equals(bytes, 0, type.magicBytes.length,
+                        type.magicBytes, 0, type.magicBytes.length)) {
+            throw new IllegalArgumentException(
+                    "File extension is " + type.extension() + " but its content does not match a valid file.");
+        }
+        return type;
+    }
 
     @Transactional
     public ReportResponse uploadReport(
@@ -57,19 +103,18 @@ public class DocumentService {
                 .orElseThrow(() -> new IllegalArgumentException("Uploader not found"));
 
 
-        // ── Filename validation ──
+        // ── File-type detection & validation ──
         String filename = file.getOriginalFilename();
-        if (filename == null || !filename.toLowerCase().endsWith(".pdf")) {
-            throw new IllegalArgumentException("File must be a PDF.");
-        }
+        byte[] originalBytes = file.getBytes();
+        DocType docType = detectAndValidate(filename, originalBytes);
 
-        // Updated filename validation — now expects SITEID_PROJECT_RAT_Vn.pdf
-        String nameWithoutExt = filename.replaceAll("(?i)\\.pdf$", "");
+        // Filename convention: SITEID_PROJECT_RAT_Vn.<ext>
+        String nameWithoutExt = filename.substring(0, filename.length() - docType.extension().length());
         String[] parts = nameWithoutExt.split("_");
         if (parts.length < 4) {
             throw new IllegalArgumentException(
-                    "Filename must follow the convention: SITEID_PROJECT_RAT_Vn.pdf " +
-                            "(e.g. KY0001_Project1_4G_V1.pdf)");
+                    "Filename must follow the convention: SITEID_PROJECT_RAT_Vn" + docType.extension() +
+                            " (e.g. KY0001_Project1_4G_V1" + docType.extension() + ")");
         }
 
         String versionPart = parts[parts.length - 1];
@@ -111,7 +156,6 @@ public class DocumentService {
             }
         }
 
-        byte[] originalBytes = file.getBytes();
         String sha256 = sha256Hex(originalBytes);
 
         // Determine or create report record
@@ -147,9 +191,9 @@ public class DocumentService {
         report.setCurrentResponsibility(Responsibility.ENGINEER);
         reportRepository.save(report);
 
-        // Store original PDF
-        String originalKey = storageService.buildKey(report.getId(), versionNumber, "original");
-        storageService.upload(originalKey, originalBytes, "application/pdf");
+        // Store original file
+        String originalKey = storageService.buildKey(report.getId(), versionNumber, "original", docType.extension());
+        storageService.upload(originalKey, originalBytes, docType.contentType());
 
         // Create version record (needed for stamp — references version.getId())
         ReportVersion version = ReportVersion.builder()
@@ -157,6 +201,7 @@ public class DocumentService {
                 .versionNumber(versionNumber)
                 .originalFilename(file.getOriginalFilename())
                 .originalStorageKey(originalKey)
+                .contentType(docType.contentType())
                 .sha256Hash(sha256)
                 .uploadedBy(managedUploader)
                 .statusAtUpload(ReportStatus.PENDING_REVIEW)
@@ -212,19 +257,27 @@ public class DocumentService {
         version.setPageDiff(pageDiff);
         versionRepository.save(version);
 
-// Stamp and sign
+// Stamp and sign (PDF) or append audit worksheet (xlsx — no cryptographic signature equivalent)
         try {
             List<ReportVersion> allVersions = versionRepository
                     .findByReportIdOrderByVersionNumberDesc(report.getId());
-            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
-                    originalBytes, managedUploader, version, sha256, allVersions, pageDiff);
-            String stampedKey = storageService.buildKey(report.getId(), versionNumber, "stamped");
-            storageService.upload(stampedKey, stamp.signedBytes(), "application/pdf");
-            version.setStampedStorageKey(stampedKey);
-            version.setPadesSignatureId(stamp.signatureId());
+            if (docType == DocType.PDF) {
+                PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
+                        originalBytes, managedUploader, version, sha256, allVersions, pageDiff);
+                String stampedKey = storageService.buildKey(report.getId(), versionNumber, "stamped", docType.extension());
+                storageService.upload(stampedKey, stamp.signedBytes(), docType.contentType());
+                version.setStampedStorageKey(stampedKey);
+                version.setPadesSignatureId(stamp.signatureId());
+            } else {
+                byte[] audited = auditWorksheetService.appendAuditSheet(
+                        originalBytes, managedUploader, version, sha256, allVersions);
+                String stampedKey = storageService.buildKey(report.getId(), versionNumber, "stamped", docType.extension());
+                storageService.upload(stampedKey, audited, docType.contentType());
+                version.setStampedStorageKey(stampedKey);
+            }
             versionRepository.save(version);
         } catch (Exception e) {
-            log.error("PDF stamping failed for version {}", version.getId(), e);
+            log.error("Audit stamping failed for version {}", version.getId(), e);
             // Don't fail the upload — log and continue without stamp; download will retry lazily
         }
 
@@ -259,18 +312,23 @@ public class DocumentService {
         ReportStatus newStatus = request.decision();
         validateTransition(newStatus);
 
-        // Store the engineer's reviewed PDF (with their markups) as original for this review
-        byte[] reviewBytes = reviewedFile.getBytes();
-        String sha256 = sha256Hex(reviewBytes);
-        int currentVer = report.getCurrentVersion();
-        String reviewKey = storageService.buildKey(report.getId(), currentVer, "reviewed-by-engineer");
-        storageService.upload(reviewKey, reviewBytes, "application/pdf");
-
-
         // Get the current version to update
+        int currentVer = report.getCurrentVersion();
         ReportVersion version = versionRepository
                 .findByReportIdAndVersionNumber(reportId, currentVer)
                 .orElseThrow();
+
+        // Store the engineer's reviewed file (with their markups) as original for this review.
+        // Must be the same file type as the vendor's upload for this version.
+        byte[] reviewBytes = reviewedFile.getBytes();
+        DocType docType = detectAndValidate(reviewedFile.getOriginalFilename(), reviewBytes);
+        if (!docType.contentType().equals(version.getContentType())) {
+            throw new IllegalArgumentException(
+                    "Reviewed file must be the same file type as the vendor's upload for this version.");
+        }
+        String sha256 = sha256Hex(reviewBytes);
+        String reviewKey = storageService.buildKey(report.getId(), currentVer, "reviewed-by-engineer", docType.extension());
+        storageService.upload(reviewKey, reviewBytes, docType.contentType());
 
         version.setReviewedStorageKey(reviewKey);
         version.setReviewStatus(newStatus);
@@ -302,18 +360,24 @@ public class DocumentService {
         }
         version.setReviewerPageDiff(engineerDiff);
 
-// Stamp reviewed PDF
+// Stamp reviewed file (PDF) or append audit worksheet (xlsx)
         try {
+            String stampedReviewKey = storageService.buildKey(
+                    report.getId(), currentVer, "reviewed-stamped", docType.extension());
             List<ReportVersion> allVersions = versionRepository
                     .findByReportIdOrderByVersionNumberDesc(report.getId());
-            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
-                    reviewBytes, managedEngineer, version, sha256, allVersions, engineerDiff);
-            String stampedReviewKey = storageService.buildKey(
-                    report.getId(), currentVer, "reviewed-stamped");
-            storageService.upload(stampedReviewKey, stamp.signedBytes(), "application/pdf");
+            if (docType == DocType.PDF) {
+                PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
+                        reviewBytes, managedEngineer, version, sha256, allVersions, engineerDiff);
+                storageService.upload(stampedReviewKey, stamp.signedBytes(), docType.contentType());
+            } else {
+                byte[] audited = auditWorksheetService.appendAuditSheet(
+                        reviewBytes, managedEngineer, version, sha256, allVersions);
+                storageService.upload(stampedReviewKey, audited, docType.contentType());
+            }
             version.setReviewedStorageKey(stampedReviewKey);
         } catch (Exception e) {
-            log.error("Stamping reviewed PDF failed for version {}", version.getId(), e);
+            log.error("Stamping reviewed file failed for version {}", version.getId(), e);
         }
 
         versionRepository.save(version);
@@ -377,11 +441,12 @@ public class DocumentService {
      * version so future downloads and the audit trail stay consistent.
      */
     private byte[] resolveStamped(ReportVersion rv, boolean review) {
+        DocType docType = DocType.PDF.contentType().equals(rv.getContentType()) ? DocType.PDF : DocType.XLSX;
         String key = review ? rv.getReviewedStorageKey() : rv.getStampedStorageKey();
         if (key == null && !review) {
             key = rv.getOriginalStorageKey();
         }
-        if (key != null && key.endsWith("stamped.pdf")) {
+        if (key != null && key.endsWith("stamped" + docType.extension())) {
             return storageService.download(key);
         }
 
@@ -391,19 +456,26 @@ public class DocumentService {
             PageDiff diff = review ? rv.getReviewerPageDiff() : rv.getPageDiff();
             List<ReportVersion> allVersions = versionRepository
                     .findByReportIdOrderByVersionNumberDesc(rv.getReport().getId());
-            PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
-                    source, actor, rv, rv.getSha256Hash(), allVersions, diff);
+            byte[] resultBytes;
+            if (docType == DocType.PDF) {
+                PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
+                        source, actor, rv, rv.getSha256Hash(), allVersions, diff);
+                resultBytes = stamp.signedBytes();
+            } else {
+                resultBytes = auditWorksheetService.appendAuditSheet(
+                        source, actor, rv, rv.getSha256Hash(), allVersions);
+            }
             String newKey = storageService.buildKey(
                     rv.getReport().getId(), rv.getVersionNumber(),
-                    review ? "reviewed-stamped" : "stamped");
-            storageService.upload(newKey, stamp.signedBytes(), "application/pdf");
+                    review ? "reviewed-stamped" : "stamped", docType.extension());
+            storageService.upload(newKey, resultBytes, docType.contentType());
             if (review) {
                 rv.setReviewedStorageKey(newKey);
             } else {
                 rv.setStampedStorageKey(newKey);
             }
             versionRepository.save(rv);
-            return stamp.signedBytes();
+            return resultBytes;
         } catch (Exception e) {
             log.warn("On-demand stamping failed for version {}, serving unstamped file", rv.getId(), e);
             return storageService.download(key);
