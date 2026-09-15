@@ -89,11 +89,13 @@ public class DocumentController {
             HttpServletRequest request
     ) {
         reportAccessService.assertCanRead(reportId, user);
+        ReportVersion rv = versionRepository.findByReportIdAndVersionNumber(reportId, version)
+                .orElseThrow(() -> new IllegalArgumentException("Version not found"));
         byte[] data = documentService.downloadStampedPdf(reportId, version, user, getIp(request));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"report-V" + version + ".pdf\"")
-                .contentType(MediaType.APPLICATION_PDF)
+                        "attachment; filename=\"report-V" + version + extensionOf(rv.getContentType()) + "\"")
+                .contentType(MediaType.parseMediaType(rv.getContentType()))
                 .body(data);
     }
 
@@ -221,8 +223,9 @@ public class DocumentController {
         byte[] data = documentService.downloadVersionStamped(versionId, user, getIp(request));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + rv.getReport().getNamingKey() + "_V" + rv.getVersionNumber() + "_stamped.pdf\"")
-                .contentType(MediaType.APPLICATION_PDF)
+                        "attachment; filename=\"" + rv.getReport().getNamingKey() + "_V" + rv.getVersionNumber()
+                                + "_stamped" + extensionOf(rv.getContentType()) + "\"")
+                .contentType(MediaType.parseMediaType(rv.getContentType()))
                 .body(data);
     }
 
@@ -286,8 +289,8 @@ public class DocumentController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + rv.getReport().getNamingKey()
-                                + "_V" + rv.getVersionNumber() + "_reviewed.pdf\"")
-                .contentType(MediaType.APPLICATION_PDF)
+                                + "_V" + rv.getVersionNumber() + "_reviewed" + extensionOf(rv.getContentType()) + "\"")
+                .contentType(MediaType.parseMediaType(rv.getContentType()))
                 .body(data);
     }
 
@@ -326,5 +329,10 @@ public class DocumentController {
     private String getIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         return (forwarded != null) ? forwarded.split(",")[0].trim() : request.getRemoteAddr();
+    }
+
+    private String extensionOf(String contentType) {
+        return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".equals(contentType)
+                ? ".xlsx" : ".pdf";
     }
 }

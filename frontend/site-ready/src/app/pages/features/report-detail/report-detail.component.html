@@ -85,6 +85,16 @@
               </svg>
               <span class="text-xs tracking-wider">PAdES Secured</span>
             </div>
+          } @else if (report()!.contentType?.includes('spreadsheet')) {
+            <div
+              class="flex items-center gap-1.5 px-2 py-1 bg-base-content/5 border border-base-300 rounded-md text-base-content/60"
+              title="Excel reports get an embedded audit trail worksheet, not a cryptographic signature">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span class="text-xs tracking-wider">Audit Trail Embedded</span>
+            </div>
           }
         </div>
       </div>
@@ -534,7 +544,7 @@
                  (dragleave)="dragging.set(false)"
                  (drop)="onDrop($event)"
                  (click)="fileInput.click()">
-              <input #fileInput type="file" accept=".pdf" class="hidden" (change)="onFileSelect($event)"/>
+              <input #fileInput type="file" accept=".pdf,.xlsx" class="hidden" (change)="onFileSelect($event)"/>
               @if (actionFile()) {
                 <div class="flex items-center gap-3 w-full max-w-xs">
                   <svg class="w-8 h-8 text-error/70 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

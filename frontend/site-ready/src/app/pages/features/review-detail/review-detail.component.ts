@@ -1,5 +1,6 @@
 import {Component, input, OnInit, signal} from '@angular/core';
 import {ReportResponse, STATUS_BADGE_CLASS, STATUS_LABELS} from '../../../models/api.models';
+import {extensionOf, isAcceptedReportFile} from '../../../models/file-types';
 import {Router} from '@angular/router';
 import {ReportService} from '../../../services/report.service';
 import {FormsModule} from '@angular/forms';
@@ -57,7 +58,7 @@ export class ReviewDetailComponent implements OnInit {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${r.namingKey}_V${r.currentVersion}_stamped.pdf`;
+      a.download = `${r.namingKey}_V${r.currentVersion}_stamped${extensionOf(r.contentType)}`;
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -71,7 +72,7 @@ export class ReviewDetailComponent implements OnInit {
   onDrop(event: DragEvent): void {
     event.preventDefault(); this.dragging.set(false);
     const f = event.dataTransfer?.files[0];
-    if (f?.type === 'application/pdf') this.reviewedFile.set(f);
+    if (f && isAcceptedReportFile(f)) this.reviewedFile.set(f);
   }
 
   submitReview(): void {

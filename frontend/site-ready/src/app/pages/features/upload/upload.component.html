@@ -3,7 +3,7 @@
     <h1 class="text-2xl font-bold">Upload SSV Report</h1>
     <p class="text-base-content/60 text-sm mt-1">
       Upload a Single Site Verification report for engineer review.
-      Filename convention: <code class="bg-base-300 px-1 rounded text-xs">SITE_PROJECT_RAT_Vn.pdf</code>
+      Filename convention: <code class="bg-base-300 px-1 rounded text-xs">SITE_PROJECT_RAT_Vn.pdf</code> or <code class="bg-base-300 px-1 rounded text-xs">.xlsx</code>
     </p>
   </div>
 
@@ -40,7 +40,7 @@
         (drop)="onDrop($event)"
         (click)="fileInput.click()"
       >
-        <input #fileInput type="file" accept=".pdf" class="hidden" (change)="onFileSelect($event)" />
+        <input #fileInput type="file" accept=".pdf,.xlsx" class="hidden" (change)="onFileSelect($event)" />
 
         @if (selectedFile()) {
           <div class="flex items-center gap-3 text-left w-full max-w-sm">

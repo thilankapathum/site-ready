@@ -37,6 +37,9 @@ public class ReportVersion {
     @Column(name = "original_storage_key", nullable = false)
     private String originalStorageKey;
 
+    @Column(name = "content_type", nullable = false)
+    private String contentType;
+
     @Column(name = "stamped_storage_key")
     private String stampedStorageKey;
 

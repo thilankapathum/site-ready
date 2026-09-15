@@ -69,11 +69,11 @@ public class StorageService {
 
     /**
      * Build a deterministic storage key for a report version.
-     * Pattern: reports/{reportId}/V{version}/{type}.pdf
+     * Pattern: reports/{reportId}/V{version}/{type}{extension}
      * Keyed by report id (not naming key) so a naming key freed up by a soft-deleted
      * report can be reused without colliding with the deleted report's stored files.
      */
-    public String buildKey(UUID reportId, int version, String type) {
-        return String.format("reports/%s/V%d/%s.pdf", reportId, version, type);
+    public String buildKey(UUID reportId, int version, String type, String extension) {
+        return String.format("reports/%s/V%d/%s%s", reportId, version, type, extension);
     }
 }

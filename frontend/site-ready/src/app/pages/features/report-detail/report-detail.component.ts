@@ -7,6 +7,7 @@ import {
   VersionResponse
 } from '../../../models/api.models';
 import {Router} from '@angular/router';
+import {extensionOf, isAcceptedReportFile} from '../../../models/file-types';
 import {ReportService} from '../../../services/report.service';
 import {AuthService} from '../../../services/auth/auth.service';
 import {AdminService} from '../../../services/admin.service';
@@ -31,6 +32,7 @@ interface HistoryRow {
   isResubmission: boolean;
   versionId: string;
   downloadType: 'vendor' | 'reviewed';
+  contentType: string;
   diff: PageDiff | null;
   hasDeletions: boolean;
   label: string;
@@ -74,6 +76,7 @@ export class ReportDetailComponent implements OnInit {
         isResubmission: false,
         versionId:     v.id,
         downloadType:  'vendor',
+        contentType:   v.contentType,
         diff:          v.pageDiff,                         // ← vendor's own diff
         hasDeletions:  v.pageDiff?.hasDeletions ?? false,
         label:         'Changes',
@@ -104,6 +107,7 @@ export class ReportDetailComponent implements OnInit {
           isResubmission,
           versionId:     v.id,
           downloadType:  'reviewed',
+          contentType:   v.contentType,
           diff:          v.reviewerPageDiff,               // ← engineer's own diff
           hasDeletions:  v.reviewerPageDiff?.hasDeletions ?? false,
           label:         'Changes',
@@ -260,7 +264,7 @@ export class ReportDetailComponent implements OnInit {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${r.namingKey}_V${r.currentVersion}_stamped.pdf`;
+      a.download = `${r.namingKey}_V${r.currentVersion}_stamped${extensionOf(r.contentType)}`;
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -273,7 +277,7 @@ export class ReportDetailComponent implements OnInit {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${r.namingKey}_V${v.versionNumber}_stamped.pdf`;
+      a.download = `${r.namingKey}_V${v.versionNumber}_stamped${extensionOf(v.contentType)}`;
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -307,7 +311,7 @@ export class ReportDetailComponent implements OnInit {
     event.preventDefault();
     this.dragging.set(false);
     const f = event.dataTransfer?.files[0];
-    if (f?.type === 'application/pdf') this.actionFile.set(f);
+    if (f && isAcceptedReportFile(f)) this.actionFile.set(f);
   }
 
   submitAction(): void {
@@ -422,7 +426,7 @@ export class ReportDetailComponent implements OnInit {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${r.namingKey}_V${row.versionNumber}_${row.downloadType}.pdf`;
+      a.download = `${r.namingKey}_V${row.versionNumber}_${row.downloadType}${extensionOf(row.contentType)}`;
       a.click();
       URL.revokeObjectURL(url);
     });
