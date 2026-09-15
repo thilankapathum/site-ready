@@ -2,17 +2,26 @@ package dev.thilanka.site_ready.controller;
 
 import dev.thilanka.site_ready.dto.AuthResponse;
 import dev.thilanka.site_ready.entity.Company;
+import dev.thilanka.site_ready.entity.Report;
+import dev.thilanka.site_ready.entity.ReportVersion;
 import dev.thilanka.site_ready.entity.User;
+import dev.thilanka.site_ready.entity.enums.AuditAction;
 import dev.thilanka.site_ready.entity.enums.UserRole;
 import dev.thilanka.site_ready.repository.CompanyRepository;
+import dev.thilanka.site_ready.repository.ReportRepository;
+import dev.thilanka.site_ready.repository.ReportVersionRepository;
 import dev.thilanka.site_ready.repository.UserRepository;
+import dev.thilanka.site_ready.service.AuditService;
 import dev.thilanka.site_ready.service.ManagerService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +35,9 @@ public class AdminController {
     private final PasswordEncoder passwordEncoder;
     private final CompanyRepository companyRepository;
     private final ManagerService managerService;
+    private final ReportRepository reportRepository;
+    private final ReportVersionRepository reportVersionRepository;
+    private final AuditService auditService;
 
     @GetMapping("/users")
     public ResponseEntity<List<AuthResponse>> listUsers() {
@@ -135,5 +147,36 @@ public class AdminController {
                 managerService.getEngineersForManager(managerId).stream()
                         .map(this::toResponse).toList()
         );
+    }
+
+    @DeleteMapping("/reports/{id}")
+    public ResponseEntity<Void> deleteReport(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User admin,
+            HttpServletRequest request
+    ) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Report not found"));
+        if (report.isDeleted()) {
+            throw new IllegalArgumentException("Report not found");
+        }
+        report.setDeleted(true);
+        report.setDeletedAt(OffsetDateTime.now());
+        report.setDeletedBy(admin);
+        reportRepository.save(report);
+
+        ReportVersion latestVersion = reportVersionRepository
+                .findByReportIdAndVersionNumber(report.getId(), report.getCurrentVersion())
+                .orElse(null);
+        if (latestVersion != null) {
+            auditService.log(latestVersion, admin, AuditAction.REPORT_DELETED, getIp(request),
+                    "reportId", report.getId().toString(), "namingKey", report.getNamingKey());
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    private String getIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        return (forwarded != null) ? forwarded.split(",")[0].trim() : request.getRemoteAddr();
     }
 }

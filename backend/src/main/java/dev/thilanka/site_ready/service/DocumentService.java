@@ -90,8 +90,8 @@ public class DocumentService {
         int fileVersion = Integer.parseInt(versionPart.substring(1));
         String namingKey = Report.buildNamingKey(request.siteId(), request.project(), request.rat());
 
-        if (reportRepository.existsByNamingKey(namingKey)) {
-            Report existing = reportRepository.findByNamingKey(namingKey).orElseThrow();
+        if (reportRepository.existsByNamingKeyAndDeletedFalse(namingKey)) {
+            Report existing = reportRepository.findByNamingKeyAndDeletedFalse(namingKey).orElseThrow();
             reportAccessService.assertCanUploadNextVersion(existing, managedUploader);
 
             int expectedVersion = existing.getCurrentVersion() + 1;
@@ -119,8 +119,8 @@ public class DocumentService {
         Report report;
         int versionNumber;
 
-        if (reportRepository.existsByNamingKey(namingKey)) {
-            report = reportRepository.findByNamingKey(namingKey).orElseThrow();
+        if (reportRepository.existsByNamingKeyAndDeletedFalse(namingKey)) {
+            report = reportRepository.findByNamingKeyAndDeletedFalse(namingKey).orElseThrow();
             versionNumber = report.getCurrentVersion() + 1;
         } else {
             User assignedEngineer = request.assignedEngineerId() != null
@@ -141,8 +141,14 @@ public class DocumentService {
             versionNumber = 1;
         }
 
+        // Save report first so it has an id (used to key storage objects) and version can reference it
+        report.setCurrentVersion(versionNumber);
+        report.setCurrentStatus(ReportStatus.PENDING_REVIEW);
+        report.setCurrentResponsibility(Responsibility.ENGINEER);
+        reportRepository.save(report);
+
         // Store original PDF
-        String originalKey = storageService.buildKey(namingKey, versionNumber, "original");
+        String originalKey = storageService.buildKey(report.getId(), versionNumber, "original");
         storageService.upload(originalKey, originalBytes, "application/pdf");
 
         // Create version record (needed for stamp — references version.getId())
@@ -156,11 +162,6 @@ public class DocumentService {
                 .statusAtUpload(ReportStatus.PENDING_REVIEW)
                 .build();
 
-        // Save report first so version can reference it
-        report.setCurrentVersion(versionNumber);
-        report.setCurrentStatus(ReportStatus.PENDING_REVIEW);
-        report.setCurrentResponsibility(Responsibility.ENGINEER);
-        reportRepository.save(report);
         version = versionRepository.save(version);
 
         // Compute page diff against previous version's original
@@ -217,7 +218,7 @@ public class DocumentService {
                     .findByReportIdOrderByVersionNumberDesc(report.getId());
             PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
                     originalBytes, managedUploader, version, sha256, allVersions, pageDiff);
-            String stampedKey = storageService.buildKey(namingKey, versionNumber, "stamped");
+            String stampedKey = storageService.buildKey(report.getId(), versionNumber, "stamped");
             storageService.upload(stampedKey, stamp.signedBytes(), "application/pdf");
             version.setStampedStorageKey(stampedKey);
             version.setPadesSignatureId(stamp.signatureId());
@@ -262,7 +263,7 @@ public class DocumentService {
         byte[] reviewBytes = reviewedFile.getBytes();
         String sha256 = sha256Hex(reviewBytes);
         int currentVer = report.getCurrentVersion();
-        String reviewKey = storageService.buildKey(report.getNamingKey(), currentVer, "reviewed-by-engineer");
+        String reviewKey = storageService.buildKey(report.getId(), currentVer, "reviewed-by-engineer");
         storageService.upload(reviewKey, reviewBytes, "application/pdf");
 
 
@@ -308,7 +309,7 @@ public class DocumentService {
             PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
                     reviewBytes, managedEngineer, version, sha256, allVersions, engineerDiff);
             String stampedReviewKey = storageService.buildKey(
-                    report.getNamingKey(), currentVer, "reviewed-stamped");
+                    report.getId(), currentVer, "reviewed-stamped");
             storageService.upload(stampedReviewKey, stamp.signedBytes(), "application/pdf");
             version.setReviewedStorageKey(stampedReviewKey);
         } catch (Exception e) {
@@ -393,7 +394,7 @@ public class DocumentService {
             PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
                     source, actor, rv, rv.getSha256Hash(), allVersions, diff);
             String newKey = storageService.buildKey(
-                    rv.getReport().getNamingKey(), rv.getVersionNumber(),
+                    rv.getReport().getId(), rv.getVersionNumber(),
                     review ? "reviewed-stamped" : "stamped");
             storageService.upload(newKey, stamp.signedBytes(), "application/pdf");
             if (review) {
@@ -412,9 +413,9 @@ public class DocumentService {
 
     public Page<Report> getMyReports(User user, Pageable pageable) {
         if (user.getRole() == UserRole.ENGINEER) {
-            return reportRepository.findByAssignedEngineerId(user.getId(), pageable);
+            return reportRepository.findByAssignedEngineerIdAndDeletedFalse(user.getId(), pageable);
         }
-        return reportRepository.findByCreatedByVendorId(user.getId(), pageable);
+        return reportRepository.findByCreatedByVendorIdAndDeletedFalse(user.getId(), pageable);
     }
 
     public Page<Report> search(String siteId, String project, String rat,

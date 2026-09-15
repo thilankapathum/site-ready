@@ -9,6 +9,7 @@ import {
 import {Router} from '@angular/router';
 import {ReportService} from '../../../services/report.service';
 import {AuthService} from '../../../services/auth/auth.service';
+import {AdminService} from '../../../services/admin.service';
 import {FormsModule} from '@angular/forms';
 
 type Decision = 'APPROVED' | 'CONDITIONALLY_APPROVED' | 'REJECTED' | 'RESUBMISSION_REQUIRED';
@@ -188,10 +189,13 @@ export class ReportDetailComponent implements OnInit {
     return false;
   });
 
+  deleting = signal(false);
+
   constructor(
     public router: Router,
     private reportService: ReportService,
-    private auth: AuthService
+    private auth: AuthService,
+    private adminService: AdminService
   ) {
   }
 
@@ -272,6 +276,25 @@ export class ReportDetailComponent implements OnInit {
       a.download = `${r.namingKey}_V${v.versionNumber}_stamped.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+    });
+  }
+
+  deleteReport(): void {
+    const r = this.report();
+    if (!r || this.deleting()) return;
+    const confirmed = confirm(
+      `Delete report ${r.siteId} / ${r.project}? This cannot be undone from here, and the ` +
+      `Site ID + Project slot will become available for a new upload.`
+    );
+    if (!confirmed) return;
+
+    this.deleting.set(true);
+    this.adminService.deleteReport(r.id).subscribe({
+      next: () => this.router.navigate(['/search']),
+      error: err => {
+        this.deleting.set(false);
+        this.actionError.set(err.error?.detail ?? 'Failed to delete report.');
+      },
     });
   }
 

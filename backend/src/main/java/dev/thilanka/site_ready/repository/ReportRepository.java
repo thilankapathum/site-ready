@@ -15,30 +15,31 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ReportRepository extends JpaRepository<Report, UUID> , JpaSpecificationExecutor<Report> {
-    Optional<Report> findByNamingKey(String namingKey);
+    Optional<Report> findByNamingKeyAndDeletedFalse(String namingKey);
 
-    boolean existsByNamingKey(String namingKey);
+    boolean existsByNamingKeyAndDeletedFalse(String namingKey);
 
     // Engineer dashboard — reports assigned to me
-    Page<Report> findByAssignedEngineerIdAndCurrentResponsibility(
+    Page<Report> findByAssignedEngineerIdAndCurrentResponsibilityAndDeletedFalse(
             UUID engineerId, Responsibility responsibility, Pageable pageable);
 
-    Page<Report> findByAssignedEngineerId(UUID engineerId, Pageable pageable);
+    Page<Report> findByAssignedEngineerIdAndDeletedFalse(UUID engineerId, Pageable pageable);
 
     // list version for stats computation
-    List<Report> findByAssignedEngineerId(UUID engineerId);
+    List<Report> findByAssignedEngineerIdAndDeletedFalse(UUID engineerId);
 
     // For manager queue across multiple engineers
-    Page<Report> findByAssignedEngineerIdIn(List<UUID> engineerIds, Pageable pageable);
+    Page<Report> findByAssignedEngineerIdInAndDeletedFalse(List<UUID> engineerIds, Pageable pageable);
 
     // Vendor dashboard — reports I created
-    Page<Report> findByCreatedByVendorId(UUID vendorId, Pageable pageable);
-    List<Report> findByCreatedByVendorId(UUID vendorId);
+    Page<Report> findByCreatedByVendorIdAndDeletedFalse(UUID vendorId, Pageable pageable);
+    List<Report> findByCreatedByVendorIdAndDeletedFalse(UUID vendorId);
 
     // Search / export — flexible filters
     @Query("""
         SELECT r FROM Report r
-        WHERE (:siteId IS NULL OR LOWER(r.siteId) LIKE LOWER(CONCAT('%', :siteId, '%')))
+        WHERE r.deleted = false
+          AND (:siteId IS NULL OR LOWER(r.siteId) LIKE LOWER(CONCAT('%', :siteId, '%')))
           AND (:project IS NULL OR LOWER(r.project) LIKE LOWER(CONCAT('%', :project, '%')))
           AND (:status IS NULL OR r.currentStatus = :status)
           AND (:engineerId IS NULL OR r.assignedEngineer.id = :engineerId)
@@ -57,7 +58,8 @@ public interface ReportRepository extends JpaRepository<Report, UUID> , JpaSpeci
     // All reports for export (no pagination)
     @Query("""
             SELECT r FROM Report r
-            WHERE (:siteId IS NULL OR LOWER(r.siteId) LIKE LOWER(CONCAT('%', :siteId, '%')))
+            WHERE r.deleted = false
+              AND (:siteId IS NULL OR LOWER(r.siteId) LIKE LOWER(CONCAT('%', :siteId, '%')))
               AND (:project IS NULL OR LOWER(r.project) LIKE LOWER(CONCAT('%', :project, '%')))
               AND (:status IS NULL OR r.currentStatus = :status)
               AND (:engineerId IS NULL OR r.assignedEngineer.id = :engineerId)

@@ -10,5 +10,6 @@ public enum AuditAction {
     DOWNLOADED,
     USER_CREATED,
     ROLE_CHANGED,
-    PASSWORD_CHANGED
+    PASSWORD_CHANGED,
+    REPORT_DELETED
 }
