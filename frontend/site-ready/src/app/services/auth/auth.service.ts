@@ -97,7 +97,14 @@ export class AuthService {
 
       if (this.expiryTimer) clearTimeout(this.expiryTimer);
 
-      if (msUntilWarning > 0) {
+      if (msUntilExpiry <= 0) {
+        // Token is already expired (e.g. stale bookmark/idle tab reopened) — don't
+        // wait for a failed API call to discover this.
+        if (this.isLoggedIn()) {
+          this.clearSession();
+          this.sessionExpired.show();
+        }
+      } else if (msUntilWarning > 0) {
         this.expiryTimer = setTimeout(() => {
           if (this.isLoggedIn()) {
             this.clearSession();
