@@ -34,7 +34,7 @@ public class Report {
     @Column(nullable = false, length = 20)
     private String rat;
 
-    @Column(name = "naming_key", nullable = false, unique = true)
+    @Column(name = "naming_key", nullable = false)
     private String namingKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -71,6 +71,17 @@ public class Report {
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean deleted = false;
+
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "deleted_by")
+    private User deletedBy;
 
     @PrePersist
     protected void onCreate() {

@@ -33,4 +33,8 @@ export class AdminService {
       params: new HttpParams().set('companyId', companyId),
     });
   }
+
+  deleteReport(reportId: string): Observable<void> {
+    return this.http.delete<void>(`${this.BASE}/reports/${reportId}`);
+  }
 }

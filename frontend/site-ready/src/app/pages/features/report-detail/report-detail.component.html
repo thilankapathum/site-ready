@@ -20,6 +20,14 @@
             {{ statusLabel(report()!.currentStatus) }}
           </span>
     }
+    @if (report() && isAdmin()) {
+      <button class="btn btn-error btn-sm" [disabled]="deleting()" (click)="deleteReport()">
+        @if (deleting()) {
+          <span class="loading loading-spinner loading-xs"></span>
+        }
+        Delete Report
+      </button>
+    }
   </div>
 
   @if (loading()) {

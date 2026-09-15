@@ -218,10 +218,7 @@ public class DocumentController {
         reportAccessService.assertCanRead(reportId, user);
         ReportVersion rv = versionRepository.findById(versionId)
                 .orElseThrow(() -> new IllegalArgumentException("Version not found"));
-        String key = rv.getStampedStorageKey() != null
-                ? rv.getStampedStorageKey() : rv.getOriginalStorageKey();
-        auditService.log(rv, user, AuditAction.DOWNLOADED, getIp(request));
-        byte[] data = storageService.download(key);
+        byte[] data = documentService.downloadVersionStamped(versionId, user, getIp(request));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + rv.getReport().getNamingKey() + "_V" + rv.getVersionNumber() + "_stamped.pdf\"")
@@ -282,11 +279,10 @@ public class DocumentController {
         reportAccessService.assertCanRead(reportId, user);
         ReportVersion rv = versionRepository.findById(versionId)
                 .orElseThrow(() -> new IllegalArgumentException("Version not found"));
-        if (rv.getReviewedStorageKey() == null) {
+        byte[] data = documentService.downloadReviewedStamped(versionId, user, getIp(request));
+        if (data == null) {
             return ResponseEntity.notFound().build();
         }
-        auditService.log(rv, user, AuditAction.DOWNLOADED, getIp(request));
-        byte[] data = storageService.download(rv.getReviewedStorageKey());
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + rv.getReport().getNamingKey()

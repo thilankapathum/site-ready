@@ -85,7 +85,7 @@ public class ManagerService {
 
         // All reports assigned to this engineer
         List<Report> reports =
-                reportRepository.findByAssignedEngineerId(eid);
+                reportRepository.findByAssignedEngineerIdAndDeletedFalse(eid);
 
         long total = reports.size();
         long pending = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.PENDING_REVIEW).count();
@@ -98,7 +98,7 @@ public class ManagerService {
         // Average review time: time between vendor upload and engineer's review upload
         // Computed across all reviewed versions assigned to this engineer
         List<Report> assignedReports =
-                reportRepository.findByAssignedEngineerId(eid);
+                reportRepository.findByAssignedEngineerIdAndDeletedFalse(eid);
 
         List<Double> reviewHours = new ArrayList<>();
         for (Report report : assignedReports) {
@@ -163,7 +163,7 @@ public class ManagerService {
         if (engineerIds.isEmpty()) {
             return Page.empty(pageable);
         }
-        return reportRepository.findByAssignedEngineerIdIn(engineerIds, pageable);
+        return reportRepository.findByAssignedEngineerIdInAndDeletedFalse(engineerIds, pageable);
     }
 
     public List<EngineerStatsResponse> getAllEngineerRankings() {
@@ -213,7 +213,7 @@ public class ManagerService {
     public PendingBreakdown engineerPendingBreakdown(User engineer) {
         // All reports assigned to this engineer
         List<Report> reports =
-                reportRepository.findByAssignedEngineerId(engineer.getId());
+                reportRepository.findByAssignedEngineerIdAndDeletedFalse(engineer.getId());
 
         List<Report> pending = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.PENDING_REVIEW).toList();
 
@@ -240,7 +240,7 @@ public class ManagerService {
     }
 
     public PendingBreakdown vendorPendingBreakdown(User vendor){
-        List<Report> reports = reportRepository.findByCreatedByVendorId(vendor.getId());
+        List<Report> reports = reportRepository.findByCreatedByVendorIdAndDeletedFalse(vendor.getId());
 
         List<Report> pending = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.RESUBMISSION_REQUIRED).toList();
 

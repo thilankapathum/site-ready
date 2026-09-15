@@ -18,6 +18,7 @@ public class ReportSpecification {
     ) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("deleted")));
             if (siteId != null && !siteId.isBlank())
                 predicates.add(cb.like(cb.lower(root.get("siteId")), "%" + siteId.toLowerCase() + "%"));
             if (project != null && !project.isBlank())
@@ -44,6 +45,7 @@ public class ReportSpecification {
     ) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("deleted")));
 
             if (siteId != null && !siteId.isBlank())
                 predicates.add(cb.like(cb.lower(root.get("siteId")), "%" + siteId.toLowerCase() + "%"));

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="008-report-soft-delete" author="ssv-dms">
+        <addColumn tableName="reports">
+            <column name="deleted" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="deleted_by" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint baseTableName="reports"
+                                  baseColumnNames="deleted_by"
+                                  constraintName="fk_reports_deleted_by"
+                                  referencedTableName="users"
+                                  referencedColumnNames="id"/>
+
+        <!-- Allow a naming key to be reused once the report holding it is soft-deleted -->
+        <dropUniqueConstraint tableName="reports"
+                              constraintName="uq_reports_naming_key"/>
+
+        <sql>CREATE UNIQUE INDEX uq_reports_naming_key_active ON reports(naming_key) WHERE deleted = false;</sql>
+        <rollback>
+            <sql>DROP INDEX uq_reports_naming_key_active;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="008-add-report-deleted-audit-action" author="ssv-dms">
+        <!-- Add REPORT_DELETED to the audit_action enum -->
+        <sql>ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'REPORT_DELETED';</sql>
+    </changeSet>
+
+</databaseChangeLog>

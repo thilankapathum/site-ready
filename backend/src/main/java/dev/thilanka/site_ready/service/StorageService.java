@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -68,9 +69,11 @@ public class StorageService {
 
     /**
      * Build a deterministic storage key for a report version.
-     * Pattern: reports/{namingKey}/V{version}/{type}.pdf
+     * Pattern: reports/{reportId}/V{version}/{type}.pdf
+     * Keyed by report id (not naming key) so a naming key freed up by a soft-deleted
+     * report can be reused without colliding with the deleted report's stored files.
      */
-    public String buildKey(String namingKey, int version, String type) {
-        return String.format("reports/%s/V%d/%s.pdf", namingKey, version, type);
+    public String buildKey(UUID reportId, int version, String type) {
+        return String.format("reports/%s/V%d/%s.pdf", reportId, version, type);
     }
 }

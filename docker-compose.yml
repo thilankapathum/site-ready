@@ -69,7 +69,7 @@ services:
       - ssv-net
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/actuator/health" ]
+      test: [ "CMD", "wget", "-qO-", "http://localhost:9090/actuator/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
