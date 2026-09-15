@@ -13,3 +13,8 @@ export function extensionOf(contentType: string | null | undefined): string {
   return contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ? '.xlsx' : '.pdf';
 }
+
+export function labelOf(contentType: string | null | undefined): string {
+  return contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ? 'Excel' : 'PDF';
+}

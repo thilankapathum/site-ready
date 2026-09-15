@@ -6,6 +6,7 @@ import {
   STATUS_BADGE_CLASS,
   STATUS_LABELS
 } from '../../../models/api.models';
+import {labelOf} from '../../../models/file-types';
 import {ReportService} from '../../../services/report.service';
 import {FormsModule} from '@angular/forms';
 import {Router} from '@angular/router';
@@ -192,5 +193,9 @@ export class SearchComponent implements OnInit {
   isCurrentUser(userId: string) {
     const u = this.user();
     return u !== null && userId === u.userId;
+  }
+
+  fileLabel(contentType: string | null | undefined): string {
+    return labelOf(contentType);
   }
 }

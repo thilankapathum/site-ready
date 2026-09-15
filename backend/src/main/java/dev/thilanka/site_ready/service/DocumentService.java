@@ -259,9 +259,9 @@ public class DocumentService {
 
 // Stamp and sign (PDF) or append audit worksheet (xlsx — no cryptographic signature equivalent)
         try {
+            List<ReportVersion> allVersions = versionRepository
+                    .findByReportIdOrderByVersionNumberDesc(report.getId());
             if (docType == DocType.PDF) {
-                List<ReportVersion> allVersions = versionRepository
-                        .findByReportIdOrderByVersionNumberDesc(report.getId());
                 PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
                         originalBytes, managedUploader, version, sha256, allVersions, pageDiff);
                 String stampedKey = storageService.buildKey(report.getId(), versionNumber, "stamped", docType.extension());
@@ -270,7 +270,7 @@ public class DocumentService {
                 version.setPadesSignatureId(stamp.signatureId());
             } else {
                 byte[] audited = auditWorksheetService.appendAuditSheet(
-                        originalBytes, managedUploader, version, sha256);
+                        originalBytes, managedUploader, version, sha256, allVersions);
                 String stampedKey = storageService.buildKey(report.getId(), versionNumber, "stamped", docType.extension());
                 storageService.upload(stampedKey, audited, docType.contentType());
                 version.setStampedStorageKey(stampedKey);
@@ -364,15 +364,15 @@ public class DocumentService {
         try {
             String stampedReviewKey = storageService.buildKey(
                     report.getId(), currentVer, "reviewed-stamped", docType.extension());
+            List<ReportVersion> allVersions = versionRepository
+                    .findByReportIdOrderByVersionNumberDesc(report.getId());
             if (docType == DocType.PDF) {
-                List<ReportVersion> allVersions = versionRepository
-                        .findByReportIdOrderByVersionNumberDesc(report.getId());
                 PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
                         reviewBytes, managedEngineer, version, sha256, allVersions, engineerDiff);
                 storageService.upload(stampedReviewKey, stamp.signedBytes(), docType.contentType());
             } else {
                 byte[] audited = auditWorksheetService.appendAuditSheet(
-                        reviewBytes, managedEngineer, version, sha256);
+                        reviewBytes, managedEngineer, version, sha256, allVersions);
                 storageService.upload(stampedReviewKey, audited, docType.contentType());
             }
             version.setReviewedStorageKey(stampedReviewKey);
@@ -454,16 +454,16 @@ public class DocumentService {
             byte[] source = storageService.download(key);
             User actor = review ? rv.getReviewedBy() : rv.getUploadedBy();
             PageDiff diff = review ? rv.getReviewerPageDiff() : rv.getPageDiff();
+            List<ReportVersion> allVersions = versionRepository
+                    .findByReportIdOrderByVersionNumberDesc(rv.getReport().getId());
             byte[] resultBytes;
             if (docType == DocType.PDF) {
-                List<ReportVersion> allVersions = versionRepository
-                        .findByReportIdOrderByVersionNumberDesc(rv.getReport().getId());
                 PdfStampService.StampResult stamp = pdfStampService.stampAndSign(
                         source, actor, rv, rv.getSha256Hash(), allVersions, diff);
                 resultBytes = stamp.signedBytes();
             } else {
                 resultBytes = auditWorksheetService.appendAuditSheet(
-                        source, actor, rv, rv.getSha256Hash());
+                        source, actor, rv, rv.getSha256Hash(), allVersions);
             }
             String newKey = storageService.buildKey(
                     rv.getReport().getId(), rv.getVersionNumber(),

@@ -63,8 +63,8 @@
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
           <div class="text-center">
-            <p class="font-medium text-sm">Drop PDF here or click to browse</p>
-            <p class="text-xs text-base-content/50 mt-0.5">PDF files only · max 50 MB</p>
+            <p class="font-medium text-sm">Drop PDF or Excel file here or click to browse</p>
+            <p class="text-xs text-base-content/50 mt-0.5">PDF or Excel (.xlsx) files only · max 50 MB</p>
           </div>
         }
       </div>
@@ -127,7 +127,7 @@
       >
         @if (uploading()) {
           <span class="loading loading-spinner loading-sm"></span>
-          Uploading & stamping PDF…
+          Uploading & stamping {{ fileLabel() }}…
         } @else {
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -138,7 +138,8 @@
       </button>
 
       <p class="text-xs text-base-content/30 text-center">
-        A tamper-evident audit trail page and PAdES digital signature will be appended to your PDF upon upload.
+        A tamper-evident audit trail, recording uploader identity, timestamp, and file hash,
+        will be appended to your file upon upload.
       </p>
     </div>
   </div>

@@ -7,7 +7,7 @@ import {
   VersionResponse
 } from '../../../models/api.models';
 import {Router} from '@angular/router';
-import {extensionOf, isAcceptedReportFile} from '../../../models/file-types';
+import {extensionOf, isAcceptedReportFile, labelOf} from '../../../models/file-types';
 import {ReportService} from '../../../services/report.service';
 import {AuthService} from '../../../services/auth/auth.service';
 import {AdminService} from '../../../services/admin.service';
@@ -408,6 +408,10 @@ export class ReportDetailComponent implements OnInit {
 
   formatSize(bytes: number): string {
     return bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+  }
+
+  fileLabel(contentType: string | null | undefined): string {
+    return labelOf(contentType);
   }
 
   toggleAssign(): void {

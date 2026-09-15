@@ -80,13 +80,13 @@ class DocumentServiceTest {
                 "file", "KY0001_Proj1_4G_V1.xlsx",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", XLSX_MAGIC);
         UploadRequest request = new UploadRequest("KY0001", "Proj1", "4G", null);
-        when(auditWorksheetService.appendAuditSheet(any(), any(), any(), any())).thenReturn(new byte[]{1});
+        when(auditWorksheetService.appendAuditSheet(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
         ReportResponse response = documentService.uploadReport(file, request, uploader, "127.0.0.1");
 
         assertEquals("KY0001_Proj1_4G", response.namingKey());
         assertNull(response.padesSignatureId());
-        verify(auditWorksheetService).appendAuditSheet(any(), any(), any(), any());
+        verify(auditWorksheetService).appendAuditSheet(any(), any(), any(), any(), any());
         verify(pdfStampService, never()).stampAndSign(any(), any(), any(), any(), any(), any());
     }
 
@@ -126,7 +126,7 @@ class DocumentServiceTest {
         ReportResponse response = documentService.uploadReport(file, request, uploader, "127.0.0.1");
 
         assertEquals("SSV-ABC123", response.padesSignatureId());
-        verify(auditWorksheetService, never()).appendAuditSheet(any(), any(), any(), any());
+        verify(auditWorksheetService, never()).appendAuditSheet(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -144,7 +144,7 @@ class DocumentServiceTest {
         when(versionRepository.findByReportIdAndVersionNumber(reportId, 1)).thenReturn(Optional.of(version));
         when(userRepository.findById(uploader.getId())).thenReturn(Optional.of(uploader));
         when(storageService.download(any())).thenReturn(new byte[]{1});
-        when(auditWorksheetService.appendAuditSheet(any(), any(), any(), any())).thenReturn(new byte[]{1});
+        when(auditWorksheetService.appendAuditSheet(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
         MockMultipartFile reviewedFile = new MockMultipartFile(
                 "file", "KY0001_Proj1_4G_V1.xlsx",
@@ -154,7 +154,7 @@ class DocumentServiceTest {
         ReportResponse response = documentService.reviewReport(reportId, reviewedFile, request, uploader, "127.0.0.1");
 
         assertEquals("APPROVED", response.reviewStatus());
-        verify(auditWorksheetService, times(1)).appendAuditSheet(any(), any(), any(), any());
+        verify(auditWorksheetService, times(1)).appendAuditSheet(any(), any(), any(), any(), any());
         verify(pdfStampService, never()).stampAndSign(any(), any(), any(), any(), any(), any());
     }
 

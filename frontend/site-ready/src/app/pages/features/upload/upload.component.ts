@@ -1,6 +1,6 @@
 import {Component, OnInit, signal} from '@angular/core';
 import {AuthResponse} from '../../../models/api.models';
-import {isAcceptedReportFile} from '../../../models/file-types';
+import {isAcceptedReportFile, labelOf} from '../../../models/file-types';
 import {ReportService} from '../../../services/report.service';
 import {FormsModule} from '@angular/forms';
 
@@ -105,5 +105,9 @@ export class UploadComponent implements OnInit {
 
   formatSize(bytes: number): string {
     return bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+  }
+
+  fileLabel(): string {
+    return labelOf(this.selectedFile()?.type);
   }
 }
