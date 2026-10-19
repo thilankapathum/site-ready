@@ -2,7 +2,7 @@
 
   <!-- Back -->
   <div class="flex items-center gap-3">
-    <button class="btn btn-ghost btn-sm btn-square" (click)="router.navigate(['/search'])">
+    <button class="btn btn-ghost btn-sm btn-square" (click)="goBack()">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
       </svg>
@@ -55,7 +55,7 @@
   } @else if (notFound()) {
     <div class="flex flex-col items-center justify-center py-24 gap-4">
       <p class="text-base-content/60 text-sm">Report not found.</p>
-      <button class="btn btn-ghost btn-sm" (click)="router.navigate(['/search'])">Back</button>
+      <button class="btn btn-ghost btn-sm" (click)="goBack()">Back</button>
     </div>
   } @else {
 

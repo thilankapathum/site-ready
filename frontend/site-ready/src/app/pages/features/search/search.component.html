@@ -185,9 +185,9 @@
           <div class="flex items-center gap-2">
             <span class="text-xs text-base-content/50">Rows</span>
             <select class="select select-bordered select-xs" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
-              <option [value]="10">10</option>
-              <option [value]="25">25</option>
-              <option [value]="50">50</option>
+              <option [ngValue]="10">10</option>
+              <option [ngValue]="25">25</option>
+              <option [ngValue]="50">50</option>
             </select>
           </div>
         </div>

@@ -9,7 +9,7 @@ import {
 import {labelOf} from '../../../models/file-types';
 import {ReportService} from '../../../services/report.service';
 import {FormsModule} from '@angular/forms';
-import {Router} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 import {AuthService} from '../../../services/auth/auth.service';
 
 @Component({
@@ -60,17 +60,46 @@ export class SearchComponent implements OnInit {
     siteId: '', project: '', status: '', rat: '', engineerId: ''
   };
 
-  constructor(private reportService: ReportService, private router: Router, private auth: AuthService) {
+  constructor(private reportService: ReportService, private router: Router, private route: ActivatedRoute,
+              private auth: AuthService) {
   }
 
   ngOnInit(): void {
     this.reportService.getActiveEngineers().subscribe(e => this.engineers.set(e));
-    this.search();
+    // URL query params are the source of truth, so filters survive navigating away and back
+    this.route.queryParamMap.subscribe(q => {
+      this.filters = {
+        siteId: q.get('siteId') ?? '',
+        project: q.get('project') ?? '',
+        rat: q.get('rat') ?? '',
+        status: q.get('status') ?? '',
+        engineerId: q.get('engineerId') ?? '',
+      };
+      this.page.set(Number(q.get('page')) || 0);
+      this.pageSize = Number(q.get('size')) || 10;
+      this.doSearch();
+    });
   }
 
   search(): void {
-    this.page.set(0);
-    this.doSearch();
+    this.updateUrl(0);
+  }
+
+  private updateUrl(page: number): void {
+    const url = this.router.createUrlTree([], {
+      relativeTo: this.route,
+      queryParams: {
+        ...this.buildExportFilters(),
+        ...(page > 0 && {page}),
+        ...(this.pageSize !== 10 && {size: this.pageSize}),
+      },
+    });
+    // Router ignores same-URL navigation, so re-run the search directly (e.g. Search clicked twice)
+    if (this.router.serializeUrl(url) === this.router.url) {
+      this.doSearch();
+    } else {
+      this.router.navigateByUrl(url, {replaceUrl: true});
+    }
   }
 
   doSearch(): void {
@@ -100,27 +129,23 @@ export class SearchComponent implements OnInit {
   }
 
   goToPage(p: number): void {
-    this.page.set(p);
-    this.doSearch();
+    this.updateUrl(p);
   }
 
   prevPage(): void {
     if (this.page() > 0) {
-      this.page.update(p => p - 1);
-      this.doSearch();
+      this.updateUrl(this.page() - 1);
     }
   }
 
   nextPage(): void {
     if (this.page() < this.totalPages() - 1) {
-      this.page.update(p => p + 1);
-      this.doSearch();
+      this.updateUrl(this.page() + 1);
     }
   }
 
   onPageSizeChange(): void {
-    this.page.set(0);
-    this.doSearch();
+    this.updateUrl(0);
   }
 
   download(r: ReportResponse): void {

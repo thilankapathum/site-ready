@@ -7,6 +7,7 @@ import {
   VersionResponse
 } from '../../../models/api.models';
 import {Router} from '@angular/router';
+import {Location} from '@angular/common';
 import {extensionOf, isAcceptedReportFile, labelOf} from '../../../models/file-types';
 import {ReportService} from '../../../services/report.service';
 import {AuthService} from '../../../services/auth/auth.service';
@@ -211,13 +212,25 @@ export class ReportDetailComponent implements OnInit {
 
   deleting = signal(false);
 
+  // False when opened directly (QR link, new tab, refresh) — there is no in-app page to go back to
+  private readonly canGoBack = !!this.router.getCurrentNavigation()?.previousNavigation;
+
   constructor(
     public router: Router,
+    private location: Location,
     private reportService: ReportService,
     private auth: AuthService,
     private adminService: AdminService,
     private managerService: ManagerService
   ) {
+  }
+
+  goBack(): void {
+    if (this.canGoBack) {
+      this.location.back();
+    } else {
+      this.router.navigate(['/search']);
+    }
   }
 
   ngOnInit(): void {
@@ -314,7 +327,7 @@ export class ReportDetailComponent implements OnInit {
 
     this.deleting.set(true);
     this.adminService.deleteReport(r.id).subscribe({
-      next: () => this.router.navigate(['/search']),
+      next: () => this.goBack(),
       error: err => {
         this.deleting.set(false);
         this.actionError.set(err.error?.detail ?? 'Failed to delete report.');

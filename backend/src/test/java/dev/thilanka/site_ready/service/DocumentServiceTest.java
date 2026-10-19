@@ -257,4 +257,18 @@ class DocumentServiceTest {
         assertThrows(AccessDeniedException.class, () -> documentService.reviewReport(reportId, reviewedFile,
                 new ReviewRequest(ReportStatus.APPROVED, null, null), engineer, "127.0.0.1"));
     }
+
+    @Test
+    void reviewReport_assignedEngineer_passesAccessCheck() {
+        UUID reportId = UUID.randomUUID();
+        User engineer = userWithRole(UserRole.ENGINEER);
+        pdfReportAssignedTo(engineer, reportId);
+        MockMultipartFile wrongType = new MockMultipartFile(
+                "file", "KY0001_Proj1_4G_V1.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", XLSX_MAGIC);
+
+        // Gets past access control and fails later on the file-type check
+        assertThrows(IllegalArgumentException.class, () -> documentService.reviewReport(reportId, wrongType,
+                new ReviewRequest(ReportStatus.APPROVED, null, null), engineer, "127.0.0.1"));
+    }
 }
