@@ -231,7 +231,7 @@ public class DocumentController {
 
 
     @PatchMapping("/{reportId}/assign-engineer")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('ENGINEER') or hasRole('VENDOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('VENDOR') or hasRole('MANAGER')")
     public ResponseEntity<ReportResponse> assignEngineer(
             @PathVariable UUID reportId,
             @RequestParam(required = false) UUID engineerId,
@@ -240,9 +240,12 @@ public class DocumentController {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found"));
 
-        // Vendors can only assign engineers to their own reports
-        if (user.getRole() == UserRole.VENDOR) {
+        // Vendors (own reports only) and managers can reassign only an unreviewed V1
+        if (user.getRole() == UserRole.VENDOR || user.getRole() == UserRole.MANAGER) {
             reportAccessService.assertCanRead(report, user);
+            if (user.getRole() == UserRole.MANAGER && engineerId == null) {
+                throw new IllegalStateException("Managers must select an engineer.");
+            }
             // Only allow assignment if version is 1
             // AND if the report is still pending (not yet reviewed)
             if (report.getCurrentStatus() != ReportStatus.PENDING_REVIEW) {
@@ -259,14 +262,15 @@ public class DocumentController {
                 ? userRepository.findById(engineerId)
                 .orElseThrow(() -> new IllegalArgumentException("Engineer not found"))
                 : null;
+        if (engineer != null && (engineer.getRole() != UserRole.ENGINEER || !engineer.isActive())) {
+            throw new IllegalArgumentException("Selected user is not an active engineer");
+        }
         report.setAssignedEngineer(engineer);
         reportRepository.save(report);
-        System.out.println("4");
 
         ReportVersion latest = versionRepository
                 .findByReportIdOrderByVersionNumberDesc(reportId)
                 .stream().findFirst().orElse(null);
-        System.out.println("5");
         return ResponseEntity.ok(ReportResponse.from(report, latest));
     }
 

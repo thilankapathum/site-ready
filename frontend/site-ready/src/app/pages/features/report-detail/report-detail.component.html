@@ -249,7 +249,11 @@
                 <span class="label-text text-sm">Select Engineer</span>
               </label>
               <select class="select w-fit select-bordered select-sm" [(ngModel)]="selectedEngineerId">
-                <option value="">— Unassigned —</option>
+                @if (!isManager()) {
+                  <option value="">— Unassigned —</option>
+                } @else {
+                  <option value="" disabled>— Select engineer —</option>
+                }
                 @for (e of engineers(); track e.userId) {
                   <option [value]="e.userId">
                     {{ e.fullName }} ({{ e.companyName}})
@@ -259,7 +263,7 @@
             </div>
             <button class="btn btn-primary btn-sm mb-1"
                     (click)="assignEngineer()"
-                    [disabled]="assigningEngineer()">
+                    [disabled]="assigningEngineer() || (isManager() && !selectedEngineerId)">
               @if (assigningEngineer()) {
                 <span class="loading loading-spinner loading-xs"></span>
               }

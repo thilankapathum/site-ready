@@ -122,6 +122,10 @@ export class ReportDetailComponent implements OnInit {
     if (!r) return false;
     // Admin can always reassign
     if (this.isAdmin()) return true;
+    // Managers can reassign only an unreviewed V1
+    if (this.isManager()) {
+      return r.currentStatus === 'PENDING_REVIEW' && r.currentVersion === 1;
+    }
     // Owning vendor can assign when unassigned or report is still pending
     if (this.isOwnerVendor()) {
       return (!r.assignedEngineerId || r.currentStatus === 'PENDING_REVIEW') && r.currentVersion ===1;
