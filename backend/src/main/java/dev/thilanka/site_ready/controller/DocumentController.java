@@ -218,8 +218,7 @@ public class DocumentController {
             HttpServletRequest request
     ) {
         reportAccessService.assertCanRead(reportId, user);
-        ReportVersion rv = versionRepository.findById(versionId)
-                .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        ReportVersion rv = findVersionOfReport(reportId, versionId);
         byte[] data = documentService.downloadVersionStamped(versionId, user, getIp(request));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
@@ -284,8 +283,7 @@ public class DocumentController {
             HttpServletRequest request
     ) {
         reportAccessService.assertCanRead(reportId, user);
-        ReportVersion rv = versionRepository.findById(versionId)
-                .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        ReportVersion rv = findVersionOfReport(reportId, versionId);
         byte[] data = documentService.downloadReviewedStamped(versionId, user, getIp(request));
         if (data == null) {
             return ResponseEntity.notFound().build();
@@ -328,6 +326,14 @@ public class DocumentController {
                 PageRequest.of(page, size, Sort.by("updatedAt").descending()));
 
         return ResponseEntity.ok(reports.map(r -> ReportResponse.from(r, null)));
+    }
+
+    // Access is checked on reportId, so the version must belong to that report — otherwise
+    // a caller could pair a report they can read with another company's versionId.
+    private ReportVersion findVersionOfReport(UUID reportId, UUID versionId) {
+        return versionRepository.findById(versionId)
+                .filter(v -> v.getReport().getId().equals(reportId))
+                .orElseThrow(() -> new IllegalArgumentException("Version not found"));
     }
 
     private String getIp(HttpServletRequest request) {
