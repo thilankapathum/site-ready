@@ -502,13 +502,13 @@
           <h2 class="font-bold text-primary">
             @if (isOwnerVendor() && report()!.currentStatus === 'RESUBMISSION_REQUIRED') {
               Submit Next Version (V{{ report()!.currentVersion + 1 }})
-            } @else if (isAssignedEngineer() && report()!.currentStatus === 'PENDING_REVIEW') {
+            } @else if (canReview() && report()!.currentStatus === 'PENDING_REVIEW') {
               REVIEW REPORT <span class="text-neutral font-semibold">(V{{ report()!.currentVersion }})</span>
             }
           </h2>
 
           <!-- Download for engineer -->
-          @if (isAssignedEngineer() && report()!.currentStatus === 'PENDING_REVIEW') {
+          @if (canReview() && report()!.currentStatus === 'PENDING_REVIEW') {
             <div class="bg-base-200 rounded-lg p-4 flex items-start gap-3">
               <svg class="w-5 h-5 text-info shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -575,7 +575,7 @@
           </div>
 
           <!-- Engineer decision -->
-          @if (isAssignedEngineer() && report()!.currentStatus === 'PENDING_REVIEW') {
+          @if (canReview() && report()!.currentStatus === 'PENDING_REVIEW') {
             <div class="form-control">
               <label class="label"><span class="label-text font-bold">Decision <span
                 class="text-error">*</span></span></label>
@@ -641,7 +641,7 @@
 
           <button class="btn btn-primary w-full"
                   (click)="submitAction()"
-                  [disabled]="submitting() || !actionFile() || (isAssignedEngineer() && !decision())">
+                  [disabled]="submitting() || !actionFile() || (canReview() && !decision())">
             @if (submitting()) {
               <span class="loading loading-spinner loading-sm"></span>
               Processing…

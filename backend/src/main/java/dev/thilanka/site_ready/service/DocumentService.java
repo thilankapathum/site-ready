@@ -11,6 +11,7 @@ import dev.thilanka.site_ready.entity.enums.AuditAction;
 import dev.thilanka.site_ready.entity.enums.ReportStatus;
 import dev.thilanka.site_ready.entity.enums.Responsibility;
 import dev.thilanka.site_ready.entity.enums.UserRole;
+import dev.thilanka.site_ready.repository.ManagerEngineerAssignmentRepository;
 import dev.thilanka.site_ready.repository.ReportRepository;
 import dev.thilanka.site_ready.repository.ReportVersionRepository;
 import dev.thilanka.site_ready.repository.UserRepository;
@@ -20,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,6 +47,7 @@ public class DocumentService {
     private final AuditService auditService;
     private final ReportAccessService reportAccessService;
     private final PdfDiffService pdfDiffService;
+    private final ManagerEngineerAssignmentRepository managerEngineerAssignmentRepository;
 
     /** File types accepted for report uploads and reviews. */
     private enum DocType {
@@ -303,6 +306,20 @@ public class DocumentService {
 
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found: " + reportId));
+
+        // Managers review in place of the assigned engineer, only if that engineer reports to them
+        if (managedEngineer.getRole() == UserRole.MANAGER) {
+            User assigned = report.getAssignedEngineer();
+            if (report.isDeleted() || assigned == null || !managerEngineerAssignmentRepository
+                    .existsByManagerIdAndEngineerId(managedEngineer.getId(), assigned.getId())) {
+                throw new AccessDeniedException("You can only review reports assigned to your engineers");
+            }
+        }
+        // Engineers can only review reports assigned to them
+        if (managedEngineer.getRole() == UserRole.ENGINEER && (report.getAssignedEngineer() == null
+                || !report.getAssignedEngineer().getId().equals(managedEngineer.getId()))) {
+            throw new AccessDeniedException("You can only review reports assigned to you");
+        }
 
         if (report.getCurrentStatus() != ReportStatus.PENDING_REVIEW) {
             throw new IllegalStateException("Report is not pending review");

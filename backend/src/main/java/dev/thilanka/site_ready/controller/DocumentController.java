@@ -65,7 +65,7 @@ public class DocumentController {
     }
 
     @PostMapping(value = "/{reportId}/review", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('ENGINEER')")
+    @PreAuthorize("hasRole('ENGINEER') or hasRole('MANAGER')")
     public ResponseEntity<ReportResponse> review(
             @PathVariable UUID reportId,
             @RequestPart("file") MultipartFile reviewedFile,

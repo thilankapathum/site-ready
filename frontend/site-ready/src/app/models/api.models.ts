@@ -112,6 +112,7 @@ export interface VersionResponse {
   reviewerNotes: string | null;
   conditions: string | null;
   reviewerName: string | null;
+  reviewerRole: string | null;
   reviewedAt: string | null;
   hasStampedPdf: boolean;
   hasReviewedPdf: boolean;
