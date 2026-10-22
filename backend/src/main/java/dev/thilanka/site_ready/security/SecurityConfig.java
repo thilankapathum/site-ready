@@ -37,7 +37,8 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(
                         (req, res, ex) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        // Only login/register are public; /auth/me and /auth/change-password need a valid token
+                        .requestMatchers("/auth/login", "/auth/register").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/reports/verify/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/companies/**").permitAll()   // ← all can read

@@ -271,4 +271,28 @@ class DocumentServiceTest {
         assertThrows(IllegalArgumentException.class, () -> documentService.reviewReport(reportId, wrongType,
                 new ReviewRequest(ReportStatus.APPROVED, null, null), engineer, "127.0.0.1"));
     }
+
+    @Test
+    void verifyMatchesOnlyExactStoredCopies() throws Exception {
+        Report report = Report.builder().id(UUID.randomUUID()).siteId("KY0001").project("P1").rat("4G")
+                .currentVersion(1).currentStatus(ReportStatus.APPROVED).build();
+        ReportVersion v = ReportVersion.builder().id(UUID.randomUUID()).report(report).versionNumber(1)
+                .stampedStorageKey("r/V1/stamped.pdf").reviewedStorageKey("r/V1/reviewed-stamped.pdf").build();
+        when(versionRepository.findById(v.getId())).thenReturn(Optional.of(v));
+        when(storageService.download("r/V1/stamped.pdf")).thenReturn("vendor-stamped".getBytes());
+        when(storageService.download("r/V1/reviewed-stamped.pdf")).thenReturn("engineer-reviewed".getBytes());
+
+        assertNull(documentService.verify(v.getId(), null).orElseThrow().match());
+        assertEquals("STAMPED_UPLOAD", documentService.verify(v.getId(), "vendor-stamped".getBytes()).orElseThrow().match());
+        assertEquals("REVIEWED", documentService.verify(v.getId(), "engineer-reviewed".getBytes()).orElseThrow().match());
+        assertEquals("NONE", documentService.verify(v.getId(), "engineer-reviewed!".getBytes()).orElseThrow().match());
+
+        // Stamping failed: key still points at the engineer's unsigned upload, which must not verify
+        v.setReviewedStorageKey("r/V1/reviewed-by-engineer.pdf");
+        when(storageService.download("r/V1/reviewed-by-engineer.pdf")).thenReturn("engineer-reviewed".getBytes());
+        assertEquals("NONE", documentService.verify(v.getId(), "engineer-reviewed".getBytes()).orElseThrow().match());
+
+        report.setDeleted(true);
+        assertTrue(documentService.verify(v.getId(), null).isEmpty());
+    }
 }

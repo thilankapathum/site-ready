@@ -42,7 +42,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String username = jwtUtil.extractUsername(token);
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                if (jwtUtil.isTokenValid(token, userDetails)) {
+                // Re-check active status on every request so deactivation takes effect immediately,
+                // not only when the token expires
+                if (userDetails.isEnabled() && jwtUtil.isTokenValid(token, userDetails)) {
                     var auth = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

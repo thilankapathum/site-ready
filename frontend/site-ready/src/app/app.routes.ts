@@ -19,6 +19,12 @@ export const routes: Routes =  [
       import('./pages/shell/user-actions/register/register.component').then(m => m.RegisterComponent),
   },
   {
+    // Public — opened from the QR code on stamped documents
+    path: 'verify/:id',
+    loadComponent: () =>
+      import('./pages/features/verify/verify.component').then(m => m.VerifyComponent),
+  },
+  {
     path: '',
     loadComponent: () =>
       import('./pages/shell/shell.component').then(m => m.ShellComponent),

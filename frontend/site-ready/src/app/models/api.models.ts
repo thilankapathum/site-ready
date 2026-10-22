@@ -120,6 +120,25 @@ export interface VersionResponse {
   reviewerPageDiff: PageDiff | null;
 }
 
+export type VerificationMatch = 'STAMPED_UPLOAD' | 'REVIEWED' | 'ORIGINAL' | 'NONE';
+
+export interface VerificationResponse {
+  versionId: string;
+  siteId: string;
+  project: string;
+  rat: string;
+  versionNumber: number;
+  latestVersion: number;
+  currentStatus: ReportStatus;
+  vendorCompany: string | null;
+  uploadedAt: string;
+  sha256Hash: string;
+  padesSignatureId: string | null;
+  reviewStatus: ReportStatus | null;
+  reviewedAt: string | null;
+  match: VerificationMatch | null;
+}
+
 export type CompanyType = 'VENDOR' | 'TELCO' | 'CONTRACTOR';
 
 export interface CompanyResponse {

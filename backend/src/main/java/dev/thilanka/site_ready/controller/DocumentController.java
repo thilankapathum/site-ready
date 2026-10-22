@@ -4,6 +4,7 @@ import dev.thilanka.site_ready.dto.ReportResponse;
 import dev.thilanka.site_ready.dto.ReviewRequest;
 
 import dev.thilanka.site_ready.dto.UploadRequest;
+import dev.thilanka.site_ready.dto.VerificationResponse;
 import dev.thilanka.site_ready.dto.VersionResponse;
 import dev.thilanka.site_ready.entity.Report;
 import dev.thilanka.site_ready.entity.ReportVersion;
@@ -179,11 +180,18 @@ public class DocumentController {
                 .body(data);
     }
 
-    // Public verification endpoint — used by QR codes in stamped PDFs
+    // Public verification endpoints — used by the QR code on stamped documents
     @GetMapping("/verify/{versionId}")
-    public ResponseEntity<String> verify(@PathVariable UUID versionId) {
-        // Returns basic tamper-check info — extend as needed
-        return ResponseEntity.ok("Verification endpoint for version: " + versionId);
+    public ResponseEntity<VerificationResponse> verify(@PathVariable UUID versionId) throws Exception {
+        return ResponseEntity.of(documentService.verify(versionId, null));
+    }
+
+    @PostMapping(value = "/verify/{versionId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<VerificationResponse> verifyFile(
+            @PathVariable UUID versionId,
+            @RequestPart("file") MultipartFile file
+    ) throws Exception {
+        return ResponseEntity.of(documentService.verify(versionId, file.getBytes()));
     }
 
     @GetMapping("/{reportId}")

@@ -4,6 +4,7 @@ import dev.thilanka.site_ready.dto.PageDiff;
 import dev.thilanka.site_ready.dto.ReportResponse;
 import dev.thilanka.site_ready.dto.ReviewRequest;
 import dev.thilanka.site_ready.dto.UploadRequest;
+import dev.thilanka.site_ready.dto.VerificationResponse;
 import dev.thilanka.site_ready.entity.Report;
 import dev.thilanka.site_ready.entity.ReportVersion;
 import dev.thilanka.site_ready.entity.User;
@@ -31,6 +32,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -499,6 +501,44 @@ public class DocumentService {
         }
     }
 
+
+    /**
+     * Public tamper check behind the QR code on stamped documents. Without a file, returns the
+     * version's record. With a file, compares its SHA-256 against the stamped copies the system
+     * issued for this version (and the vendor's original hash) — any edit to the document,
+     * including its audit page or signature, makes it match nothing.
+     * Empty for unknown or soft-deleted reports.
+     */
+    @Transactional(readOnly = true)
+    public Optional<VerificationResponse> verify(UUID versionId, byte[] fileBytes) throws Exception {
+        Optional<ReportVersion> found = versionRepository.findById(versionId)
+                .filter(v -> !v.getReport().isDeleted());
+        if (found.isEmpty()) {
+            return Optional.empty();
+        }
+        ReportVersion rv = found.get();
+        if (fileBytes == null) {
+            return Optional.of(VerificationResponse.from(rv, null));
+        }
+
+        String hash = sha256Hex(fileBytes);
+        String match = "NONE";
+        // Keys still point at the unstamped file when stamping failed — never vouch for those
+        if (isStampedKey(rv.getStampedStorageKey())
+                && hash.equals(sha256Hex(storageService.download(rv.getStampedStorageKey())))) {
+            match = "STAMPED_UPLOAD";
+        } else if (isStampedKey(rv.getReviewedStorageKey())
+                && hash.equals(sha256Hex(storageService.download(rv.getReviewedStorageKey())))) {
+            match = "REVIEWED";
+        } else if (hash.equals(rv.getSha256Hash())) {
+            match = "ORIGINAL";
+        }
+        return Optional.of(VerificationResponse.from(rv, match));
+    }
+
+    private static boolean isStampedKey(String key) {
+        return key != null && key.matches(".*stamped\\.[a-z]+");
+    }
 
     public Page<Report> getMyReports(User user, Pageable pageable) {
         if (user.getRole() == UserRole.ENGINEER) {
