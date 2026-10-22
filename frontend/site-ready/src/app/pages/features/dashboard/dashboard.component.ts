@@ -75,6 +75,10 @@ export class DashboardComponent implements OnInit {
       this.router.navigate(['/manager']);
       return;
     }
+    if (this.role() === 'VENDOR_MANAGER') {
+      this.router.navigate(['/vendor-team']);
+      return;
+    }
 
     if (this.role() === 'ENGINEER') {
       this.loading.set(true);

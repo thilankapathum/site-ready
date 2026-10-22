@@ -4,6 +4,7 @@ import dev.thilanka.site_ready.dto.Breakdown;
 import dev.thilanka.site_ready.dto.EngineerRankResponse;
 import dev.thilanka.site_ready.dto.EngineerStatsResponse;
 import dev.thilanka.site_ready.dto.PendingBreakdown;
+import dev.thilanka.site_ready.dto.VendorStatsResponse;
 import dev.thilanka.site_ready.entity.ManagerEngineerAssignment;
 import dev.thilanka.site_ready.entity.Report;
 import dev.thilanka.site_ready.entity.ReportVersion;
@@ -153,6 +154,65 @@ public class ManagerService {
 
     public EngineerStatsResponse getEngineerStats(User engineer) {
         return buildEngineerStats(engineer);
+    }
+
+    // ── Vendor manager: submission progress of every vendor in the same company ──
+
+    public List<VendorStatsResponse> getVendorTeamStats(User vendorManager) {
+        return userRepository.findByCompanyIdAndRoleInAndActiveTrue(
+                        vendorManager.getCompany().getId(),
+                        List.of(UserRole.VENDOR, UserRole.VENDOR_MANAGER))
+                .stream()
+                .map(this::buildVendorStats)
+                .sorted(Comparator.comparing(VendorStatsResponse::vendorName))
+                .toList();
+    }
+
+    VendorStatsResponse buildVendorStats(User vendor) {
+        List<Report> reports = reportRepository.findByCreatedByVendorIdAndDeletedFalse(vendor.getId());
+
+        long total = reports.size();
+        long pending = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.PENDING_REVIEW).count();
+        long resubmission = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.RESUBMISSION_REQUIRED).count();
+        long approved = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.APPROVED).count();
+        long condApproved = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.CONDITIONALLY_APPROVED).count();
+        long rejected = reports.stream().filter(r -> r.getCurrentStatus() == ReportStatus.REJECTED).count();
+
+        // Average resubmission time: engineer's RESUBMISSION_REQUIRED review -> next version upload
+        // (still-outstanding resubmissions count up to now, like pending reviews in engineer stats)
+        List<Double> resubHours = new ArrayList<>();
+        for (Report report : reports) {
+            Map<Integer, ReportVersion> byNumber = versionRepository
+                    .findByReportIdOrderByVersionNumberDesc(report.getId()).stream()
+                    .collect(Collectors.toMap(ReportVersion::getVersionNumber, v -> v));
+            for (ReportVersion v : byNumber.values()) {
+                if (v.getReviewStatus() != ReportStatus.RESUBMISSION_REQUIRED || v.getReviewedAt() == null) continue;
+                ReportVersion next = byNumber.get(v.getVersionNumber() + 1);
+                OffsetDateTime end = next != null && next.getUploadedAt() != null
+                        ? next.getUploadedAt() : OffsetDateTime.now();
+                double hours = Duration.between(v.getReviewedAt(), end).toMinutes() / 60.0;
+                if (hours >= 0) resubHours.add(hours);
+            }
+        }
+        Double avgResubHours = resubHours.isEmpty() ? null
+                : resubHours.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+
+        Optional<Report> oldest = reports.stream()
+                .filter(r -> r.getCurrentStatus() == ReportStatus.RESUBMISSION_REQUIRED)
+                .min(Comparator.comparing(Report::getUpdatedAt));
+
+        return new VendorStatsResponse(
+                vendor.getId(),
+                vendor.getFullName(),
+                vendor.getEmail(),
+                vendor.getRole().name(),
+                total, pending, resubmission,
+                approved, condApproved, approved + condApproved,
+                rejected, avgResubHours,
+                oldest.map(r -> Duration.between(r.getUpdatedAt(), OffsetDateTime.now()).toDays()).orElse(null),
+                oldest.map(Report::getNamingKey).orElse(null),
+                oldest.map(Report::getId).orElse(null)
+        );
     }
 
     // ── Manager's combined review queue ──

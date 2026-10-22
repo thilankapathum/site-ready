@@ -181,7 +181,8 @@ export class ReportDetailComponent implements OnInit {
     const r = this.report();
     const u = this.user();
     if (!u || !r) return false;
-    return this.isVendor() && r.vendorId === u.userId;
+    // Vendor managers act for any report of their company (the backend only serves those)
+    return (this.isVendor() && r.vendorId === u.userId) || this.role() === 'VENDOR_MANAGER';
   });
 
   isAssignedEngineer = computed(() => {

@@ -1,0 +1,169 @@
+<div class="space-y-4">
+  <div>
+    <h1 class="text-2xl font-bold">
+      Welcome back, {{ user()?.fullName?.split(' ')![0] }} 👋
+    </h1>
+    <p class="text-base-content/60 text-sm mt-1">
+      Submission performance summary for your company's vendor accounts.
+    </p>
+  </div>
+
+  <!-- Summary stat cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+    @for (stat of summaryStats(); track stat.label) {
+      <div class="card bg-white border border-base-300 ">
+        <div class="card-body p-4">
+          <p class="text-xs text-base-content/60 font-medium uppercase tracking-wide">
+            {{ stat.label }}
+          </p>
+          <p class="text-3xl font-bold mt-1" [class]="stat.color">{{ stat.value }}</p>
+          @if (stat.sub) {
+            <p class="text-xs text-base-content/50 mt-0.5">{{ stat.sub }}</p>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Vendor submission table -->
+  <div class="card bg-white border border-base-300  overflow-hidden">
+    <div class="card-body p-0">
+      <div class="px-5 py-4 border-b border-base-200 flex items-center justify-between">
+        <h2 class="font-bold">SUBMISSION PROGRESS</h2>
+        <a routerLink="/search" class="btn border  btn-xs text-sm text-neutral">
+          View All Reports
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12H19M13 18L19 12L13 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+
+      @if (loading()) {
+        <div class="flex justify-center py-12">
+          <span class="loading loading-spinner loading-md text-primary"></span>
+        </div>
+      } @else if (stats().length === 0) {
+        <div class="text-center py-12 text-base-content/50">
+          <p class="text-sm">No active vendor accounts in your company yet.</p>
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead class="bg-base-200 text-xs uppercase tracking-wide text-base-content/50">
+            <tr>
+              <th>Vendor</th>
+              <th class="text-center">Total</th>
+              <th class="text-center">Pending Review</th>
+              <th class="text-center">Resubmission</th>
+              <th class="text-center">Approved</th>
+              <th class="text-center">Rejected</th>
+              <th class="text-center" title="Average time from 'Resubmission Required' review to the next upload">
+                Avg Resubmission
+              </th>
+              <th class="text-center" title="Days the oldest pending resubmission has been waiting">
+                Oldest Resubmission
+              </th>
+              <th class="text-center">Status</th>
+            </tr>
+            </thead>
+            <tbody>
+              @for (e of stats(); track e.vendorId) {
+                <tr class="bg-opacity-5 hover:bg-base-200/80"
+                    [class.bg-error]="e.oldestResubmissionDays !== null && e.oldestResubmissionDays > 7">
+                  <td>
+                    <div>
+                      <p class="font-medium text-sm">{{ e.vendorName }}</p>
+                      <p class="text-xs text-base-content/50">
+                        {{ e.vendorEmail }}@if (e.role === 'VENDOR_MANAGER') { · Manager }
+                      </p>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="font-mono font-bold">{{ e.totalReports }}</span>
+                  </td>
+                  <td class="text-center">
+                    @if (e.pendingReview > 0) {
+                      <span class="badge badge-info badge-sm">{{ e.pendingReview }}</span>
+                    } @else {
+                      <span class="text-base-content/30 text-xs">—</span>
+                    }
+                  </td>
+                  <td class="text-center">
+                    @if (e.resubmissionRequired > 0) {
+                      <span class="badge badge-warning badge-sm badge-outline">{{ e.resubmissionRequired }}</span>
+                    } @else {
+                      <span class="text-base-content/30 text-xs">—</span>
+                    }
+                  </td>
+                  <td class="text-center">
+                    @if (e.totalApproved > 0) {
+                      <div class="flex flex-col items-center">
+                        <span class="badge badge-success badge-sm">{{ e.totalApproved }}</span>
+                        @if (e.conditionallyApproved > 0) {
+                          <span class="text-xs text-base-content/50 mt-0.5">({{ e.conditionallyApproved }} cond.)</span>
+                        }
+                      </div>
+                    } @else {
+                      <span class="text-base-content/30 text-xs">—</span>
+                    }
+                  </td>
+                  <td class="text-center">
+                    @if (e.rejected > 0) {
+                      <span class="badge badge-error badge-sm badge-outline">{{ e.rejected }}</span>
+                    } @else {
+                      <span class="text-base-content/30 text-xs">—</span>
+                    }
+                  </td>
+                  <td class="text-center">
+                    @if (e.avgResubmissionHours !== null) {
+                      <span class="text-sm font-mono"
+                            [class.text-success]="e.avgResubmissionHours < 72"
+                            [class.text-warning]="e.avgResubmissionHours >= 72 && e.avgResubmissionHours < 168"
+                            [class.text-error]="e.avgResubmissionHours >= 168">
+                        {{ formatHours(e.avgResubmissionHours) }}
+                      </span>
+                    } @else {
+                      <span class="text-base-content/30 text-xs">—</span>
+                    }
+                  </td>
+                  <td class="text-center">
+                    @if (e.oldestResubmissionDays !== null) {
+                      <div class="flex flex-col items-center">
+                        <span class="font-mono text-sm font-bold"
+                              [class.text-error]="e.oldestResubmissionDays > 28"
+                              [class.text-warning]="e.oldestResubmissionDays >= 7 && e.oldestResubmissionDays <= 28"
+                              [class.text-success]="e.oldestResubmissionDays < 7">
+                          {{ e.oldestResubmissionDays }}d
+                        </span>
+                        @if (e.oldestResubmissionReportId) {
+                          <a class="text-xs text-base-content/40 font-mono truncate max-w-24 link link-hover"
+                             [routerLink]="['/reports', e.oldestResubmissionReportId]"
+                             [title]="e.oldestResubmissionReport">
+                            {{ e.oldestResubmissionReport }}
+                          </a>
+                        }
+                      </div>
+                    } @else {
+                      <span class="text-base-content/30 text-xs">—</span>
+                    }
+                  </td>
+                  <td class="text-center align-middle">
+                    <div [class]="performanceLabel(e)" class="w-3 h-3 rounded-full mx-auto"></div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Team totals footer -->
+        <div class="px-4 py-2 border-t border-base-200 bg-base-50 flex gap-6 text-xs text-base-content/60">
+          <span>{{ stats().length }} member{{ stats().length !== 1 ? 's' : '' }}</span>
+          <span>{{ teamTotal() }} total reports</span>
+          <span class="text-warning">{{ teamResub() }} pending resubmission</span>
+          <span class="text-success">{{ teamApproved() }} approved</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>

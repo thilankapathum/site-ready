@@ -40,7 +40,7 @@ export const routes: Routes =  [
         loadComponent: () =>
           import('./pages/features/upload/upload.component').then(m => m.UploadComponent),
         canActivate: [roleGuard],
-        data: { roles: ['ROLE_VENDOR'] },
+        data: { roles: ['ROLE_VENDOR', 'ROLE_VENDOR_MANAGER'] },
       },
       {
         path: 'review',
@@ -81,6 +81,14 @@ export const routes: Routes =  [
             .then(m => m.ManagerDashboardComponent),
         canActivate: [roleGuard],
         data: { roles: ['ROLE_MANAGER', 'ROLE_ADMIN'] },
+      },
+      {
+        path: 'vendor-team',
+        loadComponent: () =>
+          import('./pages/features/vendor-manager-dashboard/vendor-manager-dashboard.component')
+            .then(m => m.VendorManagerDashboardComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['ROLE_VENDOR_MANAGER'] },
       },
       {
         path: 'profile',

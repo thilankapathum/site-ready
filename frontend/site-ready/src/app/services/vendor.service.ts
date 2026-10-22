@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable} from 'rxjs';
-import {PendingBreakdown} from '../models/api.models';
+import {PendingBreakdown, VendorStatsResponse} from '../models/api.models';
 
 @Injectable({
   providedIn: 'root'
@@ -13,5 +13,9 @@ export class VendorService {
 
   getBreakdowns(): Observable<PendingBreakdown> {
     return this.http.get<PendingBreakdown>(`${this.BASE}/breakdowns`);
+  }
+
+  getTeamStats(): Observable<VendorStatsResponse[]> {
+    return this.http.get<VendorStatsResponse[]>(`${this.BASE}/team-stats`);
   }
 }

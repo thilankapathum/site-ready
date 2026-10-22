@@ -1,4 +1,4 @@
-export type UserRole = 'VENDOR' | 'ENGINEER' | 'MANAGER' | 'ADMIN';
+export type UserRole = 'VENDOR' | 'ENGINEER' | 'MANAGER' | 'ADMIN' | 'VENDOR_MANAGER';
 
 export type ReportStatus =
   | 'PENDING_REVIEW'
@@ -204,6 +204,24 @@ export interface EngineerStatsResponse {
   longestPendingDays: number | null;
   longestPendingReport: string | null;
   longestPendingReportId: string | null;
+}
+
+export interface VendorStatsResponse {
+  vendorId: string;
+  vendorName: string;
+  vendorEmail: string;
+  role: UserRole;
+  totalReports: number;
+  pendingReview: number;
+  resubmissionRequired: number;
+  approved: number;
+  conditionallyApproved: number;
+  totalApproved: number;
+  rejected: number;
+  avgResubmissionHours: number | null;
+  oldestResubmissionDays: number | null;
+  oldestResubmissionReport: string | null;
+  oldestResubmissionReportId: string | null;
 }
 
 export interface EngineerRankResponse {

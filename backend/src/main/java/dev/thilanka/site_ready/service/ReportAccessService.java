@@ -39,7 +39,7 @@ public class ReportAccessService {
 
     public void assertCanUploadNextVersion(Report report, User user) {
         // Only the owning vendor company can upload subsequent versions
-        if (user.getRole() == UserRole.VENDOR) {
+        if (user.getRole().isVendorSide()) {
             assertVendorOwnsReport(report, user);
         }
     }

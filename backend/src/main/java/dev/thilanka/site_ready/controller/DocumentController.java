@@ -48,7 +48,7 @@ public class DocumentController {
     private final ManagerService managerService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('VENDOR')")
+    @PreAuthorize("hasAnyRole('VENDOR', 'VENDOR_MANAGER')")
     public ResponseEntity<ReportResponse> upload(
             @RequestPart("file") MultipartFile file,
             @RequestPart("siteId") String siteId,
@@ -125,7 +125,7 @@ public class DocumentController {
     ) {
         // Vendors can only see their own company's reports — enforce this server-side
         UUID vendorCompanyId = null;
-        if (currentUser.getRole() == UserRole.VENDOR) {
+        if (currentUser.getRole().isVendorSide()) {
             vendorCompanyId = currentUser.getCompany().getId();
         }
 
@@ -148,7 +148,7 @@ public class DocumentController {
             @AuthenticationPrincipal User currentUser
     ) throws Exception {
 
-        UUID derivedVendorCompanyId = currentUser.getRole() == UserRole.VENDOR
+        UUID derivedVendorCompanyId = currentUser.getRole().isVendorSide()
                 ? currentUser.getCompany().getId() : null;
 
         List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId, derivedVendorCompanyId);
@@ -170,7 +170,7 @@ public class DocumentController {
             @RequestParam(required = false) UUID vendorCompanyId,
             @AuthenticationPrincipal User currentUser
     ) {
-        UUID derivedVendorCompanyId = currentUser.getRole() == UserRole.VENDOR
+        UUID derivedVendorCompanyId = currentUser.getRole().isVendorSide()
                 ? currentUser.getCompany().getId() : null;
         List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId, derivedVendorCompanyId);
         byte[] data = exportService.exportCsv(reports);
@@ -238,7 +238,7 @@ public class DocumentController {
 
 
     @PatchMapping("/{reportId}/assign-engineer")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('VENDOR') or hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDOR', 'VENDOR_MANAGER', 'MANAGER')")
     public ResponseEntity<ReportResponse> assignEngineer(
             @PathVariable UUID reportId,
             @RequestParam(required = false) UUID engineerId,
@@ -248,7 +248,7 @@ public class DocumentController {
                 .orElseThrow(() -> new IllegalArgumentException("Report not found"));
 
         // Vendors (own reports only) and managers can reassign only an unreviewed V1
-        if (user.getRole() == UserRole.VENDOR || user.getRole() == UserRole.MANAGER) {
+        if (user.getRole().isVendorSide() || user.getRole() == UserRole.MANAGER) {
             reportAccessService.assertCanRead(report, user);
             if (user.getRole() == UserRole.MANAGER && engineerId == null) {
                 throw new IllegalStateException("Managers must select an engineer.");
@@ -324,7 +324,7 @@ public class DocumentController {
         }
 
         UUID vendorCompanyId = null;
-        if (currentUser.getRole() == UserRole.VENDOR) {
+        if (currentUser.getRole().isVendorSide()) {
             vendorCompanyId = currentUser.getCompany().getId();
         }
 
