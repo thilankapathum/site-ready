@@ -1,5 +1,6 @@
 package dev.thilanka.site_ready.controller;
 
+import dev.thilanka.site_ready.dto.EngineerPendingResponse;
 import dev.thilanka.site_ready.dto.PendingBreakdown;
 import dev.thilanka.site_ready.dto.VendorStatsResponse;
 import dev.thilanka.site_ready.entity.User;
@@ -34,5 +35,13 @@ public class VendorController {
             @AuthenticationPrincipal User user
     ) {
         return ResponseEntity.ok(managerService.getVendorTeamStats(user));
+    }
+
+    @GetMapping("/review-pending")
+    @PreAuthorize("hasRole('VENDOR_MANAGER')")
+    public ResponseEntity<List<EngineerPendingResponse>> getReviewPending(
+            @AuthenticationPrincipal User user
+    ) {
+        return ResponseEntity.ok(managerService.getVendorReviewPending(user));
     }
 }

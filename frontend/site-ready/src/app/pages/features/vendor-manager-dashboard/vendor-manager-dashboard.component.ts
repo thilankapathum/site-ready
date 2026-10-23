@@ -1,5 +1,6 @@
 import {Component, computed, OnInit, signal} from '@angular/core';
-import {VendorStatsResponse} from '../../../models/api.models';
+import {EngineerPendingResponse, VendorStatsResponse} from '../../../models/api.models';
+import {forkJoin} from 'rxjs';
 import {VendorService} from '../../../services/vendor.service';
 import {RouterLink} from '@angular/router';
 import {AuthService} from '../../../services/auth/auth.service';
@@ -36,11 +37,23 @@ export class VendorManagerDashboardComponent implements OnInit {
   teamResub = computed(() => this.stats().reduce((a, e) => a + e.resubmissionRequired, 0));
   teamApproved = computed(() => this.stats().reduce((a, e) => a + e.totalApproved, 0));
 
+  reviewPending = signal<EngineerPendingResponse[]>([]);
+  pendingTotal  = computed(() => this.reviewPending().reduce((a, e) => a + e.pendingCount, 0));
+  maxPending    = computed(() => Math.max(1, ...this.reviewPending().map(e => e.pendingCount)));
+  engineerCount = computed(() => this.reviewPending().filter(e => e.engineerId !== null).length);
+
   constructor(private vendorService: VendorService, private auth: AuthService) {}
 
   ngOnInit(): void {
-    this.vendorService.getTeamStats().subscribe({
-      next: s => { this.stats.set(s); this.loading.set(false); },
+    forkJoin({
+      stats: this.vendorService.getTeamStats(),
+      pending: this.vendorService.getReviewPending(),
+    }).subscribe({
+      next: d => {
+        this.stats.set(d.stats);
+        this.reviewPending.set(d.pending);
+        this.loading.set(false);
+      },
       error: () => this.loading.set(false),
     });
   }

@@ -59,6 +59,34 @@ class ManagerServiceTest {
         assertEquals(b.getId(), s.oldestResubmissionReportId());
     }
 
+    @Test
+    void reviewPendingGroupsByEngineerOldestFirst() {
+        Company zte = Company.builder().id(UUID.randomUUID()).name("ZTE").type(CompanyType.VENDOR).build();
+        User manager = User.builder().id(UUID.randomUUID()).company(zte).role(UserRole.VENDOR_MANAGER).build();
+        User eng = User.builder().id(UUID.randomUUID()).fullName("Peshan").role(UserRole.ENGINEER).build();
+        OffsetDateTime now = OffsetDateTime.now();
+
+        Report e1 = report(ReportStatus.PENDING_REVIEW, now.minusDays(2));
+        Report e2 = report(ReportStatus.PENDING_REVIEW, now.minusDays(5));
+        e1.setAssignedEngineer(eng);
+        e2.setAssignedEngineer(eng);
+        Report unassigned = report(ReportStatus.PENDING_REVIEW, now.minusDays(9));
+
+        when(reportRepository.findByVendorCompanyIdAndCurrentStatusAndDeletedFalse(zte.getId(), ReportStatus.PENDING_REVIEW))
+                .thenReturn(List.of(e1, e2, unassigned));
+
+        var rows = managerService.getVendorReviewPending(manager);
+
+        assertEquals(2, rows.size());
+        assertNull(rows.get(0).engineerId());               // oldest (9d) first
+        assertEquals("Not assigned", rows.get(0).engineerName());
+        assertEquals(9, rows.get(0).oldestPendingDays());
+        assertEquals(eng.getId(), rows.get(1).engineerId());
+        assertEquals(2, rows.get(1).pendingCount());
+        assertEquals(5, rows.get(1).oldestPendingDays());
+        assertEquals(e2.getId(), rows.get(1).oldestPendingReportId());
+    }
+
     private Report report(ReportStatus status, OffsetDateTime updatedAt) {
         return Report.builder().id(UUID.randomUUID()).namingKey("SITE_P_4G-" + status)
                 .currentStatus(status).updatedAt(updatedAt).build();

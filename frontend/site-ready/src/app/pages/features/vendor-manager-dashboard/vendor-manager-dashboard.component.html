@@ -166,4 +166,60 @@
       }
     </div>
   </div>
+
+  <!-- Company reports waiting on operator engineers, longest wait first -->
+  @if (!loading()) {
+    <div class="card bg-white border border-base-300 overflow-hidden">
+      <div class="card-body p-0">
+        <div class="px-5 py-4 border-b border-base-200 flex items-center justify-between gap-4">
+          <h2 class="font-bold uppercase">Awaiting review</h2>
+          @if (reviewPending().length > 0) {
+            <span class="text-xs text-base-content/60">
+              {{ pendingTotal() }} report{{ pendingTotal() !== 1 ? 's' : '' }},
+              {{ engineerCount() }} engineer{{ engineerCount() !== 1 ? 's' : '' }}
+            </span>
+          }
+        </div>
+
+        @if (reviewPending().length === 0) {
+          <p class="text-center text-sm py-10 text-base-content/50">No reports are waiting for review.</p>
+        } @else {
+          <ul class="divide-y divide-base-200">
+            @for (e of reviewPending(); track e.engineerId) {
+              <li class="px-5 py-3 flex items-center gap-4 hover:bg-base-200/60">
+                <span class="w-40 shrink-0 truncate text-sm font-medium"
+                      [class.opacity-60]="e.engineerId === null"
+                      [title]="e.engineerName">{{ e.engineerName }}</span>
+
+                <div class="hidden sm:block flex-1 h-2.5 bg-base-200 rounded-full overflow-hidden">
+                  <div class="h-full bg-info rounded-full"
+                       [style.width.%]="(e.pendingCount / maxPending()) * 100"></div>
+                </div>
+
+                <span class="w-8 text-right font-mono font-bold text-sm ml-auto sm:ml-0">{{ e.pendingCount }}</span>
+
+                <span class="w-20 text-right text-xs"
+                      [title]="'Oldest: ' + e.oldestPendingReport">
+                  oldest
+                  <span class="font-mono font-bold text-sm"
+                        [class.text-error]="e.oldestPendingDays > 28"
+                        [class.text-warning]="e.oldestPendingDays >= 7 && e.oldestPendingDays <= 28"
+                        [class.text-success]="e.oldestPendingDays < 7">{{ e.oldestPendingDays }}d</span>
+                </span>
+
+                @if (e.engineerId) {
+                  <a class="btn border btn-xs text-neutral shrink-0 w-24"
+                     routerLink="/search"
+                     [queryParams]="{ engineerId: e.engineerId, status: 'PENDING_REVIEW' }">View reports</a>
+                } @else {
+                  <a class="btn border btn-xs text-neutral shrink-0 w-24"
+                     [routerLink]="['/reports', e.oldestPendingReportId]">Open report</a>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  }
 </div>

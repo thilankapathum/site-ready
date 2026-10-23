@@ -1,6 +1,7 @@
 package dev.thilanka.site_ready.service;
 
 import dev.thilanka.site_ready.dto.Breakdown;
+import dev.thilanka.site_ready.dto.EngineerPendingResponse;
 import dev.thilanka.site_ready.dto.EngineerRankResponse;
 import dev.thilanka.site_ready.dto.EngineerStatsResponse;
 import dev.thilanka.site_ready.dto.PendingBreakdown;
@@ -213,6 +214,34 @@ public class ManagerService {
                 oldest.map(Report::getNamingKey).orElse(null),
                 oldest.map(Report::getId).orElse(null)
         );
+    }
+
+    // ── Vendor manager: company reports awaiting engineer review, per engineer ──
+
+    @Transactional(readOnly = true)
+    public List<EngineerPendingResponse> getVendorReviewPending(User vendorManager) {
+        List<Report> pending = reportRepository.findByVendorCompanyIdAndCurrentStatusAndDeletedFalse(
+                vendorManager.getCompany().getId(), ReportStatus.PENDING_REVIEW);
+
+        // Optional key: unassigned reports form their own group
+        Map<Optional<UUID>, List<Report>> byEngineer = pending.stream()
+                .collect(Collectors.groupingBy(r -> Optional.ofNullable(r.getAssignedEngineer()).map(User::getId)));
+
+        OffsetDateTime now = OffsetDateTime.now();
+        return byEngineer.values().stream()
+                .map(reports -> {
+                    Report oldest = reports.stream().min(Comparator.comparing(Report::getUpdatedAt)).orElseThrow();
+                    User engineer = oldest.getAssignedEngineer();
+                    return new EngineerPendingResponse(
+                            engineer != null ? engineer.getId() : null,
+                            engineer != null ? engineer.getFullName() : "Not assigned",
+                            reports.size(),
+                            Duration.between(oldest.getUpdatedAt(), now).toDays(),
+                            oldest.getNamingKey(),
+                            oldest.getId());
+                })
+                .sorted(Comparator.comparing(EngineerPendingResponse::oldestPendingDays).reversed())
+                .toList();
     }
 
     // ── Manager's combined review queue ──

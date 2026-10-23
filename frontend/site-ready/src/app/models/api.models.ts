@@ -224,6 +224,15 @@ export interface VendorStatsResponse {
   oldestResubmissionReportId: string | null;
 }
 
+export interface EngineerPendingResponse {
+  engineerId: string | null; // null = not assigned
+  engineerName: string;
+  pendingCount: number;
+  oldestPendingDays: number;
+  oldestPendingReport: string;
+  oldestPendingReportId: string;
+}
+
 export interface EngineerRankResponse {
   rank: number | null;
   totalRanked: number;
