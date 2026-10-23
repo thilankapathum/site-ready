@@ -10,6 +10,7 @@ import dev.thilanka.site_ready.entity.User;
 import dev.thilanka.site_ready.entity.enums.CompanyType;
 import dev.thilanka.site_ready.entity.enums.ReportStatus;
 import dev.thilanka.site_ready.entity.enums.UserRole;
+import dev.thilanka.site_ready.repository.ManagerEngineerAssignmentRepository;
 import dev.thilanka.site_ready.repository.ReportRepository;
 import dev.thilanka.site_ready.repository.ReportVersionRepository;
 import dev.thilanka.site_ready.repository.UserRepository;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +40,7 @@ class DocumentServiceTest {
     @Mock private AuditService auditService;
     @Mock private ReportAccessService reportAccessService;
     @Mock private PdfDiffService pdfDiffService;
+    @Mock private ManagerEngineerAssignmentRepository managerEngineerAssignmentRepository;
 
     private DocumentService documentService;
     private User uploader;
@@ -50,7 +53,8 @@ class DocumentServiceTest {
         MockitoAnnotations.openMocks(this);
         documentService = new DocumentService(
                 reportRepository, versionRepository, userRepository, storageService,
-                pdfStampService, auditWorksheetService, auditService, reportAccessService, pdfDiffService);
+                pdfStampService, auditWorksheetService, auditService, reportAccessService, pdfDiffService,
+                managerEngineerAssignmentRepository);
 
         Company company = Company.builder().id(UUID.randomUUID()).name("Acme").shortName("ACME")
                 .type(CompanyType.VENDOR).build();
@@ -177,5 +181,118 @@ class DocumentServiceTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 documentService.reviewReport(reportId, reviewedFile, request, uploader, "127.0.0.1"));
+    }
+
+    private Report pdfReportAssignedTo(User engineer, UUID reportId) {
+        Report report = Report.builder().id(reportId).siteId("KY0001").project("Proj1").rat("4G")
+                .createdByVendor(uploader).assignedEngineer(engineer)
+                .currentStatus(ReportStatus.PENDING_REVIEW).currentVersion(1).build();
+        ReportVersion version = ReportVersion.builder().id(UUID.randomUUID()).report(report)
+                .versionNumber(1).uploadedBy(uploader).contentType("application/pdf").build();
+        when(reportRepository.findById(reportId)).thenReturn(Optional.of(report));
+        when(versionRepository.findByReportIdAndVersionNumber(reportId, 1)).thenReturn(Optional.of(version));
+        return report;
+    }
+
+    private User userWithRole(UserRole role) {
+        User u = User.builder().id(UUID.randomUUID()).fullName(role.name()).company(uploader.getCompany())
+                .role(role).build();
+        when(userRepository.findById(u.getId())).thenReturn(Optional.of(u));
+        return u;
+    }
+
+    @Test
+    void reviewReport_managerOfAssignedEngineer_reviewsAsManager() throws Exception {
+        UUID reportId = UUID.randomUUID();
+        User engineer = userWithRole(UserRole.ENGINEER);
+        User manager = userWithRole(UserRole.MANAGER);
+        pdfReportAssignedTo(engineer, reportId);
+        when(managerEngineerAssignmentRepository.existsByManagerIdAndEngineerId(manager.getId(), engineer.getId()))
+                .thenReturn(true);
+        when(storageService.download(any())).thenReturn(PDF_MAGIC);
+        when(pdfStampService.stampAndSign(any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PdfStampService.StampResult(new byte[]{1}, "SSV-X"));
+
+        MockMultipartFile reviewedFile = new MockMultipartFile(
+                "file", "KY0001_Proj1_4G_V1.pdf", "application/pdf", PDF_MAGIC);
+        ReportResponse response = documentService.reviewReport(reportId, reviewedFile,
+                new ReviewRequest(ReportStatus.RESUBMISSION_REQUIRED, null, null), manager, "127.0.0.1");
+
+        assertEquals("RESUBMISSION_REQUIRED", response.reviewStatus());
+        verify(versionRepository).save(argThat(v -> v.getReviewedBy() == manager));
+    }
+
+    @Test
+    void reviewReport_managerOfOtherEngineer_denied() {
+        UUID reportId = UUID.randomUUID();
+        User manager = userWithRole(UserRole.MANAGER);
+        pdfReportAssignedTo(userWithRole(UserRole.ENGINEER), reportId);
+        MockMultipartFile reviewedFile = new MockMultipartFile(
+                "file", "KY0001_Proj1_4G_V1.pdf", "application/pdf", PDF_MAGIC);
+
+        assertThrows(AccessDeniedException.class, () -> documentService.reviewReport(reportId, reviewedFile,
+                new ReviewRequest(ReportStatus.APPROVED, null, null), manager, "127.0.0.1"));
+    }
+
+    @Test
+    void reviewReport_managerOnUnassignedReport_denied() {
+        UUID reportId = UUID.randomUUID();
+        User manager = userWithRole(UserRole.MANAGER);
+        pdfReportAssignedTo(null, reportId);
+        MockMultipartFile reviewedFile = new MockMultipartFile(
+                "file", "KY0001_Proj1_4G_V1.pdf", "application/pdf", PDF_MAGIC);
+
+        assertThrows(AccessDeniedException.class, () -> documentService.reviewReport(reportId, reviewedFile,
+                new ReviewRequest(ReportStatus.APPROVED, null, null), manager, "127.0.0.1"));
+    }
+
+    @Test
+    void reviewReport_engineerNotAssigned_denied() {
+        UUID reportId = UUID.randomUUID();
+        User engineer = userWithRole(UserRole.ENGINEER);
+        pdfReportAssignedTo(userWithRole(UserRole.ENGINEER), reportId);
+        MockMultipartFile reviewedFile = new MockMultipartFile(
+                "file", "KY0001_Proj1_4G_V1.pdf", "application/pdf", PDF_MAGIC);
+
+        assertThrows(AccessDeniedException.class, () -> documentService.reviewReport(reportId, reviewedFile,
+                new ReviewRequest(ReportStatus.APPROVED, null, null), engineer, "127.0.0.1"));
+    }
+
+    @Test
+    void reviewReport_assignedEngineer_passesAccessCheck() {
+        UUID reportId = UUID.randomUUID();
+        User engineer = userWithRole(UserRole.ENGINEER);
+        pdfReportAssignedTo(engineer, reportId);
+        MockMultipartFile wrongType = new MockMultipartFile(
+                "file", "KY0001_Proj1_4G_V1.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", XLSX_MAGIC);
+
+        // Gets past access control and fails later on the file-type check
+        assertThrows(IllegalArgumentException.class, () -> documentService.reviewReport(reportId, wrongType,
+                new ReviewRequest(ReportStatus.APPROVED, null, null), engineer, "127.0.0.1"));
+    }
+
+    @Test
+    void verifyMatchesOnlyExactStoredCopies() throws Exception {
+        Report report = Report.builder().id(UUID.randomUUID()).siteId("KY0001").project("P1").rat("4G")
+                .currentVersion(1).currentStatus(ReportStatus.APPROVED).build();
+        ReportVersion v = ReportVersion.builder().id(UUID.randomUUID()).report(report).versionNumber(1)
+                .stampedStorageKey("r/V1/stamped.pdf").reviewedStorageKey("r/V1/reviewed-stamped.pdf").build();
+        when(versionRepository.findById(v.getId())).thenReturn(Optional.of(v));
+        when(storageService.download("r/V1/stamped.pdf")).thenReturn("vendor-stamped".getBytes());
+        when(storageService.download("r/V1/reviewed-stamped.pdf")).thenReturn("engineer-reviewed".getBytes());
+
+        assertNull(documentService.verify(v.getId(), null).orElseThrow().match());
+        assertEquals("STAMPED_UPLOAD", documentService.verify(v.getId(), "vendor-stamped".getBytes()).orElseThrow().match());
+        assertEquals("REVIEWED", documentService.verify(v.getId(), "engineer-reviewed".getBytes()).orElseThrow().match());
+        assertEquals("NONE", documentService.verify(v.getId(), "engineer-reviewed!".getBytes()).orElseThrow().match());
+
+        // Stamping failed: key still points at the engineer's unsigned upload, which must not verify
+        v.setReviewedStorageKey("r/V1/reviewed-by-engineer.pdf");
+        when(storageService.download("r/V1/reviewed-by-engineer.pdf")).thenReturn("engineer-reviewed".getBytes());
+        assertEquals("NONE", documentService.verify(v.getId(), "engineer-reviewed".getBytes()).orElseThrow().match());
+
+        report.setDeleted(true);
+        assertTrue(documentService.verify(v.getId(), null).isEmpty());
     }
 }

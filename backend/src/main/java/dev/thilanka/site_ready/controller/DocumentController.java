@@ -4,6 +4,7 @@ import dev.thilanka.site_ready.dto.ReportResponse;
 import dev.thilanka.site_ready.dto.ReviewRequest;
 
 import dev.thilanka.site_ready.dto.UploadRequest;
+import dev.thilanka.site_ready.dto.VerificationResponse;
 import dev.thilanka.site_ready.dto.VersionResponse;
 import dev.thilanka.site_ready.entity.Report;
 import dev.thilanka.site_ready.entity.ReportVersion;
@@ -47,7 +48,7 @@ public class DocumentController {
     private final ManagerService managerService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('VENDOR')")
+    @PreAuthorize("hasAnyRole('VENDOR', 'VENDOR_MANAGER')")
     public ResponseEntity<ReportResponse> upload(
             @RequestPart("file") MultipartFile file,
             @RequestPart("siteId") String siteId,
@@ -65,7 +66,7 @@ public class DocumentController {
     }
 
     @PostMapping(value = "/{reportId}/review", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('ENGINEER')")
+    @PreAuthorize("hasRole('ENGINEER') or hasRole('MANAGER')")
     public ResponseEntity<ReportResponse> review(
             @PathVariable UUID reportId,
             @RequestPart("file") MultipartFile reviewedFile,
@@ -124,7 +125,7 @@ public class DocumentController {
     ) {
         // Vendors can only see their own company's reports — enforce this server-side
         UUID vendorCompanyId = null;
-        if (currentUser.getRole() == UserRole.VENDOR) {
+        if (currentUser.getRole().isVendorSide()) {
             vendorCompanyId = currentUser.getCompany().getId();
         }
 
@@ -147,7 +148,7 @@ public class DocumentController {
             @AuthenticationPrincipal User currentUser
     ) throws Exception {
 
-        UUID derivedVendorCompanyId = currentUser.getRole() == UserRole.VENDOR
+        UUID derivedVendorCompanyId = currentUser.getRole().isVendorSide()
                 ? currentUser.getCompany().getId() : null;
 
         List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId, derivedVendorCompanyId);
@@ -169,7 +170,7 @@ public class DocumentController {
             @RequestParam(required = false) UUID vendorCompanyId,
             @AuthenticationPrincipal User currentUser
     ) {
-        UUID derivedVendorCompanyId = currentUser.getRole() == UserRole.VENDOR
+        UUID derivedVendorCompanyId = currentUser.getRole().isVendorSide()
                 ? currentUser.getCompany().getId() : null;
         List<Report> reports = documentService.searchAll(siteId, project, rat, status, engineerId, vendorId, derivedVendorCompanyId);
         byte[] data = exportService.exportCsv(reports);
@@ -179,11 +180,18 @@ public class DocumentController {
                 .body(data);
     }
 
-    // Public verification endpoint — used by QR codes in stamped PDFs
+    // Public verification endpoints — used by the QR code on stamped documents
     @GetMapping("/verify/{versionId}")
-    public ResponseEntity<String> verify(@PathVariable UUID versionId) {
-        // Returns basic tamper-check info — extend as needed
-        return ResponseEntity.ok("Verification endpoint for version: " + versionId);
+    public ResponseEntity<VerificationResponse> verify(@PathVariable UUID versionId) throws Exception {
+        return ResponseEntity.of(documentService.verify(versionId, null));
+    }
+
+    @PostMapping(value = "/verify/{versionId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<VerificationResponse> verifyFile(
+            @PathVariable UUID versionId,
+            @RequestPart("file") MultipartFile file
+    ) throws Exception {
+        return ResponseEntity.of(documentService.verify(versionId, file.getBytes()));
     }
 
     @GetMapping("/{reportId}")
@@ -218,8 +226,7 @@ public class DocumentController {
             HttpServletRequest request
     ) {
         reportAccessService.assertCanRead(reportId, user);
-        ReportVersion rv = versionRepository.findById(versionId)
-                .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        ReportVersion rv = findVersionOfReport(reportId, versionId);
         byte[] data = documentService.downloadVersionStamped(versionId, user, getIp(request));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
@@ -231,7 +238,7 @@ public class DocumentController {
 
 
     @PatchMapping("/{reportId}/assign-engineer")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('ENGINEER') or hasRole('VENDOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDOR', 'VENDOR_MANAGER', 'MANAGER')")
     public ResponseEntity<ReportResponse> assignEngineer(
             @PathVariable UUID reportId,
             @RequestParam(required = false) UUID engineerId,
@@ -240,9 +247,12 @@ public class DocumentController {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found"));
 
-        // Vendors can only assign engineers to their own reports
-        if (user.getRole() == UserRole.VENDOR) {
+        // Vendors (own reports only) and managers can reassign only an unreviewed V1
+        if (user.getRole().isVendorSide() || user.getRole() == UserRole.MANAGER) {
             reportAccessService.assertCanRead(report, user);
+            if (user.getRole() == UserRole.MANAGER && engineerId == null) {
+                throw new IllegalStateException("Managers must select an engineer.");
+            }
             // Only allow assignment if version is 1
             // AND if the report is still pending (not yet reviewed)
             if (report.getCurrentStatus() != ReportStatus.PENDING_REVIEW) {
@@ -259,14 +269,15 @@ public class DocumentController {
                 ? userRepository.findById(engineerId)
                 .orElseThrow(() -> new IllegalArgumentException("Engineer not found"))
                 : null;
+        if (engineer != null && (engineer.getRole() != UserRole.ENGINEER || !engineer.isActive())) {
+            throw new IllegalArgumentException("Selected user is not an active engineer");
+        }
         report.setAssignedEngineer(engineer);
         reportRepository.save(report);
-        System.out.println("4");
 
         ReportVersion latest = versionRepository
                 .findByReportIdOrderByVersionNumberDesc(reportId)
                 .stream().findFirst().orElse(null);
-        System.out.println("5");
         return ResponseEntity.ok(ReportResponse.from(report, latest));
     }
 
@@ -280,8 +291,7 @@ public class DocumentController {
             HttpServletRequest request
     ) {
         reportAccessService.assertCanRead(reportId, user);
-        ReportVersion rv = versionRepository.findById(versionId)
-                .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        ReportVersion rv = findVersionOfReport(reportId, versionId);
         byte[] data = documentService.downloadReviewedStamped(versionId, user, getIp(request));
         if (data == null) {
             return ResponseEntity.notFound().build();
@@ -314,7 +324,7 @@ public class DocumentController {
         }
 
         UUID vendorCompanyId = null;
-        if (currentUser.getRole() == UserRole.VENDOR) {
+        if (currentUser.getRole().isVendorSide()) {
             vendorCompanyId = currentUser.getCompany().getId();
         }
 
@@ -324,6 +334,14 @@ public class DocumentController {
                 PageRequest.of(page, size, Sort.by("updatedAt").descending()));
 
         return ResponseEntity.ok(reports.map(r -> ReportResponse.from(r, null)));
+    }
+
+    // Access is checked on reportId, so the version must belong to that report — otherwise
+    // a caller could pair a report they can read with another company's versionId.
+    private ReportVersion findVersionOfReport(UUID reportId, UUID versionId) {
+        return versionRepository.findById(versionId)
+                .filter(v -> v.getReport().getId().equals(reportId))
+                .orElseThrow(() -> new IllegalArgumentException("Version not found"));
     }
 
     private String getIp(HttpServletRequest request) {

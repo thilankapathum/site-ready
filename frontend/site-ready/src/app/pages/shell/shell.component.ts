@@ -37,7 +37,8 @@ export class ShellComponent {
 
   user       = this.auth.currentUser;
   role       = this.auth.role;
-  isVendor   = computed(() => this.role() === 'VENDOR');
+  isVendor   = computed(() => this.role() === 'VENDOR' || this.role() === 'VENDOR_MANAGER');
+  isVendorManager = computed(() => this.role() === 'VENDOR_MANAGER');
   isEngineer = computed(() => this.role() === 'ENGINEER');
   isManager  = computed(() => this.role() === 'MANAGER');
   isAdmin    = computed(() => this.role() === 'ADMIN');
@@ -49,7 +50,8 @@ export class ShellComponent {
 
   roleBadge = computed(() => {
     const map: Record<string, string> = {
-      VENDOR: 'Vendor', ENGINEER: 'Engineer', ADMIN: 'Administrator', MANAGER: 'Manager'
+      VENDOR: 'Vendor', ENGINEER: 'Engineer', ADMIN: 'Administrator', MANAGER: 'Manager',
+      VENDOR_MANAGER: 'Vendor Manager'
     };
     return map[this.role() ?? ''] ?? '';
   });

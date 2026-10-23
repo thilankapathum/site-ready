@@ -35,6 +35,8 @@ public interface ReportRepository extends JpaRepository<Report, UUID> , JpaSpeci
     Page<Report> findByCreatedByVendorIdAndDeletedFalse(UUID vendorId, Pageable pageable);
     List<Report> findByCreatedByVendorIdAndDeletedFalse(UUID vendorId);
 
+    List<Report> findByVendorCompanyIdAndCurrentStatusAndDeletedFalse(UUID companyId, ReportStatus status);
+
     // Search / export — flexible filters
     @Query("""
         SELECT r FROM Report r

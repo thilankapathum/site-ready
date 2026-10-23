@@ -1,7 +1,14 @@
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {map, Observable} from 'rxjs';
-import {AuthResponse, PageResponse, ReportResponse, ReportStatus, VersionResponse} from '../models/api.models';
+import {
+  AuthResponse,
+  PageResponse,
+  ReportResponse,
+  ReportStatus,
+  VerificationResponse,
+  VersionResponse
+} from '../models/api.models';
 
 @Injectable({
   providedIn: 'root'
@@ -115,6 +122,16 @@ export class ReportService {
     return this.http.get(`${this.BASE}/${reportId}/download-version/${versionId}/reviewed`, {
       responseType: 'blob',
     });
+  }
+
+  verify(versionId: string): Observable<VerificationResponse> {
+    return this.http.get<VerificationResponse>(`${this.BASE}/verify/${versionId}`);
+  }
+
+  verifyFile(versionId: string, file: File): Observable<VerificationResponse> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<VerificationResponse>(`${this.BASE}/verify/${versionId}`, fd);
   }
 
   getReportCountByStatus(status: string, role: string, userId: string): Observable<number> {

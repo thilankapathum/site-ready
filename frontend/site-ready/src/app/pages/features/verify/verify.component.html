@@ -1,0 +1,87 @@
+<div class="min-h-screen bg-base-200 flex items-center justify-center p-4">
+  <div class="w-full max-w-xl">
+
+    <div class="text-center mb-6">
+      <h1 class="text-2xl font-bold text-secondary">SLTMobitel <span class="text-base-content/10 font-thin">|</span> <span class="title-font font-normal text-accent"> SiteReady</span></h1>
+      <p class="text-base-content/60 text-sm mt-1">Document verification</p>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl border border-base-300">
+      <div class="card-body gap-4">
+
+        @if (record(); as r) {
+          <div>
+            <h2 class="text-lg font-semibold">{{ r.siteId }} · {{ r.project }} · {{ r.rat }} — V{{ r.versionNumber }}</h2>
+            @if (r.vendorCompany) { <p class="text-sm text-base-content/60">{{ r.vendorCompany }}</p> }
+          </div>
+
+          <table class="table table-sm">
+            <tbody>
+              <tr><th>Uploaded</th><td>{{ r.uploadedAt | date:'yyyy-MM-dd HH:mm' }}</td></tr>
+              <tr>
+                <th>Review decision</th>
+                <td>
+                  @if (r.reviewStatus) {
+                    <span [class]="statusBadge[r.reviewStatus]">{{ statusLabels[r.reviewStatus] }}</span>
+                    <span class="text-xs text-base-content/60 ml-2">{{ r.reviewedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+                  } @else { Not yet reviewed }
+                </td>
+              </tr>
+              <tr>
+                <th>Report now</th>
+                <td>
+                  V{{ r.latestVersion }} — <span [class]="statusBadge[r.currentStatus]">{{ statusLabels[r.currentStatus] }}</span>
+                  @if (r.latestVersion > r.versionNumber) {
+                    <div class="text-xs text-warning mt-1">This version has been superseded by V{{ r.latestVersion }}.</div>
+                  }
+                </td>
+              </tr>
+              <tr><th>Original SHA-256</th><td class="font-mono text-xs break-all">{{ r.sha256Hash }}</td></tr>
+              @if (r.padesSignatureId) {
+                <tr><th>Signature ID</th><td class="font-mono text-xs break-all">{{ r.padesSignatureId }}</td></tr>
+              }
+            </tbody>
+          </table>
+
+          <div class="divider text-xs text-base-content/40 my-0">Check your copy</div>
+
+          <p class="text-sm text-base-content/70">
+            Select the document you received. It is checked byte-for-byte against the copies this system issued;
+            any modification makes it fail.
+          </p>
+          <input type="file" class="file-input file-input-bordered w-full" [accept]="accept"
+                 (change)="check($event)" [disabled]="checking()" />
+
+          @if (checking()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          @if (error()) {
+            <div class="alert alert-error text-sm py-2">{{ error() }}</div>
+          }
+          @if (result(); as res) {
+            @switch (res.match) {
+              @case ('STAMPED_UPLOAD') {
+                <div class="alert alert-success text-sm">Authentic — matches the stamped vendor submission for V{{ res.versionNumber }}.</div>
+              }
+              @case ('REVIEWED') {
+                <div class="alert alert-success text-sm">Authentic — matches the stamped reviewed copy for V{{ res.versionNumber }}.</div>
+              }
+              @case ('ORIGINAL') {
+                <div class="alert alert-warning text-sm">Matches the vendor's original upload, but this is the unstamped copy, not an issued document.</div>
+              }
+              @default {
+                <div class="alert alert-error text-sm">Not authentic — this file does not match any copy issued for this version. It may have been modified.</div>
+              }
+            }
+          }
+        } @else if (notFound()) {
+          <div class="alert alert-error text-sm">
+            No document record exists for this verification link. The document may be forged, or its report was withdrawn.
+          </div>
+        } @else {
+          <span class="loading loading-spinner loading-md mx-auto"></span>
+        }
+      </div>
+    </div>
+  </div>
+</div>

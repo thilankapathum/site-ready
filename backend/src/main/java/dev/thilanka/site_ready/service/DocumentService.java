@@ -4,6 +4,7 @@ import dev.thilanka.site_ready.dto.PageDiff;
 import dev.thilanka.site_ready.dto.ReportResponse;
 import dev.thilanka.site_ready.dto.ReviewRequest;
 import dev.thilanka.site_ready.dto.UploadRequest;
+import dev.thilanka.site_ready.dto.VerificationResponse;
 import dev.thilanka.site_ready.entity.Report;
 import dev.thilanka.site_ready.entity.ReportVersion;
 import dev.thilanka.site_ready.entity.User;
@@ -11,6 +12,7 @@ import dev.thilanka.site_ready.entity.enums.AuditAction;
 import dev.thilanka.site_ready.entity.enums.ReportStatus;
 import dev.thilanka.site_ready.entity.enums.Responsibility;
 import dev.thilanka.site_ready.entity.enums.UserRole;
+import dev.thilanka.site_ready.repository.ManagerEngineerAssignmentRepository;
 import dev.thilanka.site_ready.repository.ReportRepository;
 import dev.thilanka.site_ready.repository.ReportVersionRepository;
 import dev.thilanka.site_ready.repository.UserRepository;
@@ -20,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,6 +32,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -45,6 +49,7 @@ public class DocumentService {
     private final AuditService auditService;
     private final ReportAccessService reportAccessService;
     private final PdfDiffService pdfDiffService;
+    private final ManagerEngineerAssignmentRepository managerEngineerAssignmentRepository;
 
     /** File types accepted for report uploads and reviews. */
     private enum DocType {
@@ -304,6 +309,20 @@ public class DocumentService {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found: " + reportId));
 
+        // Managers review in place of the assigned engineer, only if that engineer reports to them
+        if (managedEngineer.getRole() == UserRole.MANAGER) {
+            User assigned = report.getAssignedEngineer();
+            if (report.isDeleted() || assigned == null || !managerEngineerAssignmentRepository
+                    .existsByManagerIdAndEngineerId(managedEngineer.getId(), assigned.getId())) {
+                throw new AccessDeniedException("You can only review reports assigned to your engineers");
+            }
+        }
+        // Engineers can only review reports assigned to them
+        if (managedEngineer.getRole() == UserRole.ENGINEER && (report.getAssignedEngineer() == null
+                || !report.getAssignedEngineer().getId().equals(managedEngineer.getId()))) {
+            throw new AccessDeniedException("You can only review reports assigned to you");
+        }
+
         if (report.getCurrentStatus() != ReportStatus.PENDING_REVIEW) {
             throw new IllegalStateException("Report is not pending review");
         }
@@ -482,6 +501,44 @@ public class DocumentService {
         }
     }
 
+
+    /**
+     * Public tamper check behind the QR code on stamped documents. Without a file, returns the
+     * version's record. With a file, compares its SHA-256 against the stamped copies the system
+     * issued for this version (and the vendor's original hash) — any edit to the document,
+     * including its audit page or signature, makes it match nothing.
+     * Empty for unknown or soft-deleted reports.
+     */
+    @Transactional(readOnly = true)
+    public Optional<VerificationResponse> verify(UUID versionId, byte[] fileBytes) throws Exception {
+        Optional<ReportVersion> found = versionRepository.findById(versionId)
+                .filter(v -> !v.getReport().isDeleted());
+        if (found.isEmpty()) {
+            return Optional.empty();
+        }
+        ReportVersion rv = found.get();
+        if (fileBytes == null) {
+            return Optional.of(VerificationResponse.from(rv, null));
+        }
+
+        String hash = sha256Hex(fileBytes);
+        String match = "NONE";
+        // Keys still point at the unstamped file when stamping failed — never vouch for those
+        if (isStampedKey(rv.getStampedStorageKey())
+                && hash.equals(sha256Hex(storageService.download(rv.getStampedStorageKey())))) {
+            match = "STAMPED_UPLOAD";
+        } else if (isStampedKey(rv.getReviewedStorageKey())
+                && hash.equals(sha256Hex(storageService.download(rv.getReviewedStorageKey())))) {
+            match = "REVIEWED";
+        } else if (hash.equals(rv.getSha256Hash())) {
+            match = "ORIGINAL";
+        }
+        return Optional.of(VerificationResponse.from(rv, match));
+    }
+
+    private static boolean isStampedKey(String key) {
+        return key != null && key.matches(".*stamped\\.[a-z]+");
+    }
 
     public Page<Report> getMyReports(User user, Pageable pageable) {
         if (user.getRole() == UserRole.ENGINEER) {

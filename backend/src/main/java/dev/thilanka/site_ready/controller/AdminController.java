@@ -6,6 +6,7 @@ import dev.thilanka.site_ready.entity.Report;
 import dev.thilanka.site_ready.entity.ReportVersion;
 import dev.thilanka.site_ready.entity.User;
 import dev.thilanka.site_ready.entity.enums.AuditAction;
+import dev.thilanka.site_ready.entity.enums.CompanyType;
 import dev.thilanka.site_ready.entity.enums.UserRole;
 import dev.thilanka.site_ready.repository.CompanyRepository;
 import dev.thilanka.site_ready.repository.ReportRepository;
@@ -54,6 +55,9 @@ public class AdminController {
     ) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (role == UserRole.VENDOR_MANAGER && user.getCompany().getType() == CompanyType.TELCO) {
+            throw new IllegalArgumentException("VENDOR_MANAGER can only be assigned to vendor-side users");
+        }
         user.setRole(role);
         userRepository.save(user);
         return ResponseEntity.ok(new AuthResponse(

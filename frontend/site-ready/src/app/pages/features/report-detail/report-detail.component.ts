@@ -7,10 +7,12 @@ import {
   VersionResponse
 } from '../../../models/api.models';
 import {Router} from '@angular/router';
+import {Location} from '@angular/common';
 import {extensionOf, isAcceptedReportFile, labelOf} from '../../../models/file-types';
 import {ReportService} from '../../../services/report.service';
 import {AuthService} from '../../../services/auth/auth.service';
 import {AdminService} from '../../../services/admin.service';
+import {ManagerService} from '../../../services/manager.service';
 import {FormsModule} from '@angular/forms';
 
 type Decision = 'APPROVED' | 'CONDITIONALLY_APPROVED' | 'REJECTED' | 'RESUBMISSION_REQUIRED';
@@ -96,7 +98,7 @@ export class ReportDetailComponent implements OnInit {
             isRejected     ? 'badge badge-error' :
               isResubmission ? 'badge badge-warning badge-outline' : 'badge badge-ghost',
           actorName:     v.reviewerName,
-          actorRole:     'ENGINEER',
+          actorRole:     v.reviewerRole ?? 'ENGINEER',
           dateTime:      v.reviewedAt ? this.formatDate(v.reviewedAt) : '—',
           filename:      `Reviewed V${v.versionNumber}`,
           notes:         v.reviewerNotes,
@@ -122,6 +124,10 @@ export class ReportDetailComponent implements OnInit {
     if (!r) return false;
     // Admin can always reassign
     if (this.isAdmin()) return true;
+    // Managers can reassign only an unreviewed V1
+    if (this.isManager()) {
+      return r.currentStatus === 'PENDING_REVIEW' && r.currentVersion === 1;
+    }
     // Owning vendor can assign when unassigned or report is still pending
     if (this.isOwnerVendor()) {
       return (!r.assignedEngineerId || r.currentStatus === 'PENDING_REVIEW') && r.currentVersion ===1;
@@ -175,7 +181,8 @@ export class ReportDetailComponent implements OnInit {
     const r = this.report();
     const u = this.user();
     if (!u || !r) return false;
-    return this.isVendor() && r.vendorId === u.userId;
+    // Vendor managers act for any report of their company (the backend only serves those)
+    return (this.isVendor() && r.vendorId === u.userId) || this.role() === 'VENDOR_MANAGER';
   });
 
   isAssignedEngineer = computed(() => {
@@ -185,27 +192,54 @@ export class ReportDetailComponent implements OnInit {
       r.assignedEngineerId === u.userId;
   });
 
+  // Engineer IDs reporting to the current manager (empty for other roles)
+  managedEngineerIds = signal<string[]>([]);
+
+  // Assigned engineer, or a manager the assigned engineer reports to
+  canReview = computed(() => {
+    const r = this.report();
+    if (this.isAssignedEngineer()) return true;
+    return !!r?.assignedEngineerId && this.isManager() &&
+      this.managedEngineerIds().includes(r.assignedEngineerId);
+  });
+
   canTakeAction = computed(() => {
     const r = this.report();
     if (!r || this.actionSuccess()) return false;
     if (this.isOwnerVendor() && r.currentStatus === 'RESUBMISSION_REQUIRED') return true;
-    if ((this.isAssignedEngineer() || this.isAdmin()) && r.currentStatus === 'PENDING_REVIEW') return true;
+    if ((this.canReview() || this.isAdmin()) && r.currentStatus === 'PENDING_REVIEW') return true;
     return false;
   });
 
   deleting = signal(false);
 
+  // False when opened directly (QR link, new tab, refresh) — there is no in-app page to go back to
+  private readonly canGoBack = !!this.router.getCurrentNavigation()?.previousNavigation;
+
   constructor(
     public router: Router,
+    private location: Location,
     private reportService: ReportService,
     private auth: AuthService,
-    private adminService: AdminService
+    private adminService: AdminService,
+    private managerService: ManagerService
   ) {
+  }
+
+  goBack(): void {
+    if (this.canGoBack) {
+      this.location.back();
+    } else {
+      this.router.navigate(['/search']);
+    }
   }
 
   ngOnInit(): void {
     this.load();
     this.reportService.getActiveEngineers().subscribe(e => this.engineers.set(e));
+    if (this.isManager()) {
+      this.managerService.getMyEngineers().subscribe(e => this.managedEngineerIds.set(e.map(x => x.userId)));
+    }
   }
 
   load(): void {
@@ -294,7 +328,7 @@ export class ReportDetailComponent implements OnInit {
 
     this.deleting.set(true);
     this.adminService.deleteReport(r.id).subscribe({
-      next: () => this.router.navigate(['/search']),
+      next: () => this.goBack(),
       error: err => {
         this.deleting.set(false);
         this.actionError.set(err.error?.detail ?? 'Failed to delete report.');
@@ -319,8 +353,8 @@ export class ReportDetailComponent implements OnInit {
     const file = this.actionFile();
     if (!r || !file) return;
 
-    if (this.isAssignedEngineer() || this.isAdmin()) {
-      // Engineer review
+    if (this.canReview() || this.isAdmin()) {
+      // Engineer review (or manager on the engineer's behalf)
       const d = this.decision();
       if (!d) return;
       if (d === 'CONDITIONALLY_APPROVED' && !this.conditions.trim()) {

@@ -102,20 +102,27 @@ export class AuthService {
         // wait for a failed API call to discover this.
         if (this.isLoggedIn()) {
           this.clearSession();
-          this.sessionExpired.show();
+          if (!this.onPublicPage()) this.sessionExpired.show();
         }
       } else if (msUntilWarning > 0) {
         this.expiryTimer = setTimeout(() => {
           if (this.isLoggedIn()) {
             this.clearSession();
             // FIX: Use the constructor-injected service instead of inject()
-            this.sessionExpired.show();
+            if (!this.onPublicPage()) this.sessionExpired.show();
           }
         }, msUntilWarning);
       }
     } catch {
       // If decode fails, fall back to reactive 401 detection
     }
+  }
+
+  // Public pages (QR verification) don't need a session, so an expired token there is
+  // dropped silently instead of bouncing the visitor to /login. location.pathname, not
+  // router.url: at startup the router hasn't navigated yet.
+  private onPublicPage(): boolean {
+    return location.pathname.startsWith('/verify/');
   }
 
   clearSession(): void {

@@ -1,4 +1,4 @@
-export type UserRole = 'VENDOR' | 'ENGINEER' | 'MANAGER' | 'ADMIN';
+export type UserRole = 'VENDOR' | 'ENGINEER' | 'MANAGER' | 'ADMIN' | 'VENDOR_MANAGER';
 
 export type ReportStatus =
   | 'PENDING_REVIEW'
@@ -112,11 +112,31 @@ export interface VersionResponse {
   reviewerNotes: string | null;
   conditions: string | null;
   reviewerName: string | null;
+  reviewerRole: string | null;
   reviewedAt: string | null;
   hasStampedPdf: boolean;
   hasReviewedPdf: boolean;
   pageDiff: PageDiff | null;
   reviewerPageDiff: PageDiff | null;
+}
+
+export type VerificationMatch = 'STAMPED_UPLOAD' | 'REVIEWED' | 'ORIGINAL' | 'NONE';
+
+export interface VerificationResponse {
+  versionId: string;
+  siteId: string;
+  project: string;
+  rat: string;
+  versionNumber: number;
+  latestVersion: number;
+  currentStatus: ReportStatus;
+  vendorCompany: string | null;
+  uploadedAt: string;
+  sha256Hash: string;
+  padesSignatureId: string | null;
+  reviewStatus: ReportStatus | null;
+  reviewedAt: string | null;
+  match: VerificationMatch | null;
 }
 
 export type CompanyType = 'VENDOR' | 'TELCO' | 'CONTRACTOR';
@@ -184,6 +204,33 @@ export interface EngineerStatsResponse {
   longestPendingDays: number | null;
   longestPendingReport: string | null;
   longestPendingReportId: string | null;
+}
+
+export interface VendorStatsResponse {
+  vendorId: string;
+  vendorName: string;
+  vendorEmail: string;
+  role: UserRole;
+  totalReports: number;
+  pendingReview: number;
+  resubmissionRequired: number;
+  approved: number;
+  conditionallyApproved: number;
+  totalApproved: number;
+  rejected: number;
+  avgResubmissionHours: number | null;
+  oldestResubmissionDays: number | null;
+  oldestResubmissionReport: string | null;
+  oldestResubmissionReportId: string | null;
+}
+
+export interface EngineerPendingResponse {
+  engineerId: string | null; // null = not assigned
+  engineerName: string;
+  pendingCount: number;
+  oldestPendingDays: number;
+  oldestPendingReport: string;
+  oldestPendingReportId: string;
 }
 
 export interface EngineerRankResponse {

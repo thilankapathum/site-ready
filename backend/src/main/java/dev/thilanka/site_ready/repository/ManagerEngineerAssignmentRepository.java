@@ -14,6 +14,8 @@ public interface ManagerEngineerAssignmentRepository extends JpaRepository<Manag
 
     List<ManagerEngineerAssignment> findByEngineerId(UUID engineerId);
 
+    boolean existsByManagerIdAndEngineerId(UUID managerId, UUID engineerId);
+
     void deleteByManagerIdAndEngineerId(UUID managerId, UUID engineerId);
 
     void deleteByManagerId(UUID managerId);

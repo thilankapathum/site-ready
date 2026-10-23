@@ -490,7 +490,7 @@ public class PdfStampService {
                     addChangeRow(changeTable, bg,
                             "V" + rv.getVersionNumber(),
                             rv.getReviewedBy().getFullName(),
-                            "ENGINEER",
+                            rv.getReviewedBy().getRole().name(),
                             pagesSummary, pagesColor,
                             changeDetail,
                             rDiff.hasDeletions(), true,
